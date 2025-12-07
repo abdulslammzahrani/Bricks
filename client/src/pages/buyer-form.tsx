@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import BuyerWishForm from "@/components/BuyerWishForm";
+import InteractiveWishForm from "@/components/InteractiveWishForm";
 import Footer from "@/components/Footer";
 
 export default function BuyerFormPage() {
@@ -7,7 +7,7 @@ export default function BuyerFormPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <BuyerWishForm />
+        <InteractiveWishForm />
       </main>
       <Footer />
     </div>
