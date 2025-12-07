@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import BuyerFormPage from "@/pages/buyer-form";
 import SellerFormPage from "@/pages/seller-form";
+import AdminDashboard from "@/pages/admin";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/buyer-form" component={BuyerFormPage} />
       <Route path="/seller-form" component={SellerFormPage} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

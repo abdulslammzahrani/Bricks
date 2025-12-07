@@ -1,16 +1,332 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // ============ BUYER ROUTES ============
+
+  // Register buyer wish (creates user + preference)
+  app.post("/api/buyers/register", async (req, res) => {
+    try {
+      const { name, email, phone, city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose } = req.body;
+
+      // Validate required fields
+      if (!name || typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "الاسم مطلوب" });
+      }
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+      }
+      if (!phone || typeof phone !== "string" || phone.length < 10) {
+        return res.status(400).json({ error: "رقم الجوال مطلوب" });
+      }
+      if (!city || typeof city !== "string") {
+        return res.status(400).json({ error: "المدينة مطلوبة" });
+      }
+      if (!propertyType || typeof propertyType !== "string") {
+        return res.status(400).json({ error: "نوع العقار مطلوب" });
+      }
+
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          email: email.trim(),
+          phone: phone.trim(),
+          name: name.trim(),
+          role: "buyer",
+        });
+      }
+
+      // Parse budget values safely
+      const parsedBudgetMin = budgetMin ? parseInt(String(budgetMin), 10) : null;
+      const parsedBudgetMax = budgetMax ? parseInt(String(budgetMax), 10) : null;
+
+      // Create preference
+      const preference = await storage.createBuyerPreference({
+        userId: user.id,
+        city,
+        districts: Array.isArray(districts) ? districts : [],
+        propertyType,
+        rooms: rooms || null,
+        area: area || null,
+        budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
+        budgetMax: isNaN(parsedBudgetMax!) ? null : parsedBudgetMax,
+        paymentMethod: paymentMethod || null,
+        purpose: purpose || null,
+        isActive: true,
+      });
+
+      // Find matches for this preference
+      await storage.findMatchesForPreference(preference.id);
+
+      res.json({ success: true, user, preference });
+    } catch (error: any) {
+      console.error("Error registering buyer:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get buyer's preferences
+  app.get("/api/buyers/:userId/preferences", async (req, res) => {
+    try {
+      const preferences = await storage.getBuyerPreferencesByUser(req.params.userId);
+      res.json(preferences);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get matches for a preference
+  app.get("/api/buyers/preferences/:prefId/matches", async (req, res) => {
+    try {
+      const matches = await storage.getMatchesByBuyerPreference(req.params.prefId);
+      
+      // Enrich with property details
+      const enrichedMatches = await Promise.all(
+        matches.map(async (match) => {
+          const property = match.propertyId ? await storage.getProperty(match.propertyId) : null;
+          return { ...match, property };
+        })
+      );
+      
+      res.json(enrichedMatches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save/unsave a match
+  app.patch("/api/matches/:matchId/save", async (req, res) => {
+    try {
+      const { isSaved } = req.body;
+      const match = await storage.updateMatch(req.params.matchId, { isSaved });
+      res.json(match);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ SELLER ROUTES ============
+
+  // Register seller and add property
+  app.post("/api/sellers/register", async (req, res) => {
+    try {
+      const { name, email, phone, accountType, entityName, propertyType, city, district, price, area, rooms, description, status, images } = req.body;
+
+      // Validate required fields
+      if (!name || typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "الاسم مطلوب" });
+      }
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+      }
+      if (!phone || typeof phone !== "string" || phone.length < 10) {
+        return res.status(400).json({ error: "رقم الجوال مطلوب" });
+      }
+      if (!city || typeof city !== "string") {
+        return res.status(400).json({ error: "المدينة مطلوبة" });
+      }
+      if (!district || typeof district !== "string") {
+        return res.status(400).json({ error: "الحي مطلوب" });
+      }
+      if (!propertyType || typeof propertyType !== "string") {
+        return res.status(400).json({ error: "نوع العقار مطلوب" });
+      }
+      if (!price) {
+        return res.status(400).json({ error: "السعر مطلوب" });
+      }
+
+      // Parse price safely
+      const parsedPrice = parseInt(String(price), 10);
+      if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        return res.status(400).json({ error: "السعر غير صحيح" });
+      }
+
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          email: email.trim(),
+          phone: phone.trim(),
+          name: name.trim(),
+          role: "seller",
+          accountType: accountType || null,
+          entityName: entityName || null,
+        });
+      }
+
+      // Create property
+      const property = await storage.createProperty({
+        sellerId: user.id,
+        propertyType,
+        city,
+        district,
+        price: parsedPrice,
+        area: area || null,
+        rooms: rooms || null,
+        description: description || null,
+        status: status || "ready",
+        images: Array.isArray(images) ? images : [],
+        isActive: true,
+      });
+
+      // Find matches for this property
+      await storage.findMatchesForProperty(property.id);
+
+      res.json({ success: true, user, property });
+    } catch (error: any) {
+      console.error("Error registering seller:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get seller's properties
+  app.get("/api/sellers/:sellerId/properties", async (req, res) => {
+    try {
+      const properties = await storage.getPropertiesBySeller(req.params.sellerId);
+      res.json(properties);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get interested buyers for a property
+  app.get("/api/properties/:propertyId/interested", async (req, res) => {
+    try {
+      const matches = await storage.getMatchesByProperty(req.params.propertyId);
+      res.json({ count: matches.length, matches });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ PROPERTY ROUTES ============
+
+  // Get all properties
+  app.get("/api/properties", async (req, res) => {
+    try {
+      const properties = await storage.getAllProperties();
+      res.json(properties);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single property
+  app.get("/api/properties/:id", async (req, res) => {
+    try {
+      const property = await storage.getProperty(req.params.id);
+      if (!property) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      await storage.incrementPropertyViews(req.params.id);
+      res.json(property);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update property
+  app.patch("/api/properties/:id", async (req, res) => {
+    try {
+      const property = await storage.updateProperty(req.params.id, req.body);
+      res.json(property);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ CONTACT ROUTES ============
+
+  // Create contact request
+  app.post("/api/contact-requests", async (req, res) => {
+    try {
+      const request = await storage.createContactRequest(req.body);
+      res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ ADMIN ROUTES ============
+
+  // Get all users
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const role = req.query.role as string | undefined;
+      const users = await storage.getUsers(role);
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all buyer preferences
+  app.get("/api/admin/preferences", async (req, res) => {
+    try {
+      const preferences = await storage.getAllBuyerPreferences();
+      res.json(preferences);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Analytics: Top districts
+  app.get("/api/admin/analytics/top-districts", async (req, res) => {
+    try {
+      const city = (req.query.city as string) || "جدة";
+      const topDistricts = await storage.getTopDistricts(city);
+      res.json(topDistricts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Analytics: Average budget by city
+  app.get("/api/admin/analytics/budget-by-city", async (req, res) => {
+    try {
+      const data = await storage.getAverageBudgetByCity();
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Analytics: Demand by property type
+  app.get("/api/admin/analytics/demand-by-type", async (req, res) => {
+    try {
+      const data = await storage.getDemandByPropertyType();
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Dashboard stats
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const buyers = await storage.getUsers("buyer");
+      const sellers = await storage.getUsers("seller");
+      const properties = await storage.getAllProperties();
+      const preferences = await storage.getAllBuyerPreferences();
+
+      res.json({
+        totalBuyers: buyers.length,
+        totalSellers: sellers.length,
+        totalProperties: properties.length,
+        totalPreferences: preferences.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   return httpServer;
 }

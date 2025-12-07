@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, X, Check } from "lucide-react";
+import { Send, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 type ConversationStep = "intro" | "name" | "city" | "propertyType" | "purpose" | "budget" | "contact" | "complete";
 
@@ -14,6 +16,8 @@ interface ExtractedData {
   propertyType: string;
   purpose: string;
   budget: string;
+  budgetMin: number | null;
+  budgetMax: number | null;
   phone: string;
   email: string;
 }
@@ -25,7 +29,7 @@ const stepPrompts: Record<ConversationStep, string> = {
   propertyType: "ما نوع العقار الذي تريده؟ (شقة، فيلا، عمارة، أرض)",
   purpose: "هل الشراء للسكن أم للاستثمار؟",
   budget: "ما ميزانيتك المتوقعة؟",
-  contact: "أخيراً، ما رقم جوالك للتواصل؟",
+  contact: "أخيراً، ما رقم جوالك وإيميلك للتواصل؟",
   complete: "شكراً! تم تسجيل رغبتك بنجاح",
 };
 
@@ -35,7 +39,23 @@ const suggestions = [
   "أرغب بشراء شقة",
   "للسكن العائلي",
   "ميزانيتي 800 ألف",
+  "جوالي 0501234567",
 ];
+
+const propertyTypeMap: Record<string, string> = {
+  "شقة": "apartment",
+  "فيلا": "villa",
+  "عمارة": "building",
+  "أرض": "land",
+  "دوبلكس": "apartment",
+};
+
+const purposeMap: Record<string, string> = {
+  "سكن": "residence",
+  "استثمار": "investment",
+  "للسكن": "residence",
+  "للاستثمار": "investment",
+};
 
 export default function InteractiveWishForm() {
   const { toast } = useToast();
@@ -52,18 +72,51 @@ export default function InteractiveWishForm() {
     propertyType: "",
     purpose: "",
     budget: "",
+    budgetMin: null,
+    budgetMax: null,
     phone: "",
     email: "",
   });
   const [isTyping, setIsTyping] = useState(false);
 
+  const registerMutation = useMutation({
+    mutationFn: async (data: ExtractedData) => {
+      const response = await apiRequest("POST", "/api/buyers/register", {
+        name: data.name,
+        email: data.email || `${data.phone}@temp.tatabuq.sa`,
+        phone: data.phone,
+        city: data.city,
+        districts: data.district ? [data.district] : [],
+        propertyType: propertyTypeMap[data.propertyType] || "apartment",
+        purpose: purposeMap[data.purpose] || "residence",
+        budgetMin: data.budgetMin,
+        budgetMax: data.budgetMax,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم تسجيل رغبتك بنجاح!",
+        description: "سنرسل لك العروض المناسبة قريباً عبر واتساب والإيميل",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "حدث خطأ",
+        description: "يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    },
+  });
+
   const highlightPatterns = [
-    { pattern: /(اسمي|أنا)\s+([\u0600-\u06FF\s]+)/g, type: "name", color: "text-primary" },
-    { pattern: /(جدة|الرياض|مكة|المدينة|الدمام|الخبر)/g, type: "city", color: "text-chart-2" },
-    { pattern: /(شقة|فيلا|عمارة|أرض|دوبلكس)/g, type: "propertyType", color: "text-chart-3" },
-    { pattern: /(سكن|استثمار|للسكن|للاستثمار)/g, type: "purpose", color: "text-chart-4" },
-    { pattern: /(\d+)\s*(ألف|مليون|ريال)/g, type: "budget", color: "text-chart-5" },
-    { pattern: /(05\d{8})/g, type: "phone", color: "text-primary" },
+    { pattern: /(اسمي|أنا)\s+([\u0600-\u06FF\s]+)/g, color: "text-primary" },
+    { pattern: /(جدة|الرياض|مكة|المدينة|الدمام|الخبر)/g, color: "text-chart-2" },
+    { pattern: /(شقة|فيلا|عمارة|أرض|دوبلكس)/g, color: "text-chart-3" },
+    { pattern: /(سكن|استثمار|للسكن|للاستثمار)/g, color: "text-chart-4" },
+    { pattern: /(\d+)\s*(ألف|مليون|ريال)/g, color: "text-chart-5" },
+    { pattern: /(05\d{8})/g, color: "text-primary" },
+    { pattern: /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, color: "text-chart-3" },
   ];
 
   const extractInfo = (text: string) => {
@@ -82,10 +135,20 @@ export default function InteractiveWishForm() {
     if (purposeMatch) newData.purpose = purposeMatch[1].replace("لل", "");
     
     const budgetMatch = text.match(/(\d+)\s*(ألف|مليون)/);
-    if (budgetMatch) newData.budget = `${budgetMatch[1]} ${budgetMatch[2]}`;
+    if (budgetMatch) {
+      const value = parseInt(budgetMatch[1]);
+      const multiplier = budgetMatch[2] === "مليون" ? 1000000 : 1000;
+      const budget = value * multiplier;
+      newData.budget = `${budgetMatch[1]} ${budgetMatch[2]}`;
+      newData.budgetMin = Math.round(budget * 0.8);
+      newData.budgetMax = Math.round(budget * 1.2);
+    }
     
     const phoneMatch = text.match(/(05\d{8})/);
     if (phoneMatch) newData.phone = phoneMatch[1];
+
+    const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) newData.email = emailMatch[1];
     
     setExtractedData(newData);
     return newData;
@@ -121,6 +184,9 @@ export default function InteractiveWishForm() {
     ]);
     
     setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.textContent = "";
+    }
     setIsTyping(true);
     
     setTimeout(() => {
@@ -128,14 +194,11 @@ export default function InteractiveWishForm() {
       setCurrentStep(nextStep);
       
       if (nextStep === "complete") {
+        registerMutation.mutate(newData);
         setConversation(prev => [
           ...prev,
           { type: "system", text: "ممتاز! تم جمع كل المعلومات. سنبدأ بالبحث عن العقارات المناسبة لك." }
         ]);
-        toast({
-          title: "تم تسجيل رغبتك بنجاح!",
-          description: "سنرسل لك العروض المناسبة قريباً",
-        });
       } else {
         setConversation(prev => [
           ...prev,
@@ -147,7 +210,11 @@ export default function InteractiveWishForm() {
   };
 
   const addSuggestion = (suggestion: string) => {
-    setInputText(prev => prev ? `${prev} ${suggestion}` : suggestion);
+    const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
+    setInputText(newText);
+    if (textareaRef.current) {
+      textareaRef.current.textContent = newText;
+    }
     textareaRef.current?.focus();
   };
 
@@ -158,7 +225,14 @@ export default function InteractiveWishForm() {
     }
   };
 
-  const filledFields = Object.entries(extractedData).filter(([_, v]) => v).length;
+  const filledFields = [
+    extractedData.name,
+    extractedData.city,
+    extractedData.propertyType,
+    extractedData.purpose,
+    extractedData.budget,
+    extractedData.phone,
+  ].filter(Boolean).length;
   const totalFields = 6;
   const progress = (filledFields / totalFields) * 100;
 
@@ -248,7 +322,7 @@ export default function InteractiveWishForm() {
             <div className="relative">
               <div
                 ref={textareaRef}
-                contentEditable
+                contentEditable={currentStep !== "complete"}
                 className="min-h-[60px] max-h-[150px] overflow-y-auto p-4 pr-14 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                 onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                 onKeyDown={handleKeyDown}
@@ -259,7 +333,7 @@ export default function InteractiveWishForm() {
                 size="icon"
                 className="absolute left-2 bottom-2"
                 onClick={handleSubmit}
-                disabled={!inputText.trim() || currentStep === "complete"}
+                disabled={!inputText.trim() || currentStep === "complete" || registerMutation.isPending}
                 data-testid="button-send"
               >
                 <Send className="h-4 w-4" />

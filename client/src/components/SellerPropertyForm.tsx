@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Check, Building2, MapPin, User, Phone, ImagePlus, Home, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Building2, MapPin, User, ImagePlus, Home, Wallet, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 const cities = ["جدة", "الرياض", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر"];
 const jeddahDistricts = ["الحمراء", "الروضة", "الزهراء", "السليمانية", "النسيم", "البوادي", "المروة", "الصفا", "الفيصلية"];
@@ -38,6 +40,7 @@ export default function SellerPropertyForm() {
     entityName: "",
     contactName: "",
     phone: "",
+    email: "",
     propertyType: "",
     city: "جدة",
     district: "",
@@ -47,6 +50,42 @@ export default function SellerPropertyForm() {
     description: "",
     status: "",
     images: [] as string[],
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/sellers/register", {
+        name: formData.contactName,
+        email: formData.email || `${formData.phone}@seller.tatabuq.sa`,
+        phone: formData.phone,
+        accountType: formData.accountType,
+        entityName: formData.entityName,
+        propertyType: formData.propertyType,
+        city: formData.city,
+        district: formData.district,
+        price: formData.price,
+        area: formData.area,
+        rooms: formData.rooms,
+        description: formData.description,
+        status: formData.status,
+        images: formData.images,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "تم إضافة العقار بنجاح!",
+        description: "سيتم مراجعة العقار ونشره قريباً وإشعار المشترين المهتمين",
+      });
+      setCurrentStep(5); // Success state
+    },
+    onError: () => {
+      toast({
+        title: "حدث خطأ",
+        description: "يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateFormData = (field: string, value: string | string[]) => {
@@ -66,14 +105,31 @@ export default function SellerPropertyForm() {
   };
 
   const handleSubmit = () => {
-    console.log("Property submitted:", formData);
-    toast({
-      title: "تم إضافة العقار بنجاح!",
-      description: "سيتم مراجعة العقار ونشره قريباً وإشعار المشترين المهتمين",
-    });
+    registerMutation.mutate();
   };
 
   const progress = (currentStep / TOTAL_STEPS) * 100;
+
+  if (currentStep === 5) {
+    return (
+      <div className="min-h-screen bg-muted/30 py-8 md:py-16">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <Card className="p-8 text-center">
+            <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-primary/10 mb-6">
+              <Check className="h-10 w-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-3">تم إضافة العقار بنجاح!</h2>
+            <p className="text-muted-foreground mb-6">
+              سيتم مراجعة العقار ونشره قريباً. سنقوم بإشعار المشترين المهتمين بعقارك.
+            </p>
+            <Button onClick={() => { setCurrentStep(1); setFormData({ ...formData, propertyType: "", district: "", price: "", area: "", rooms: "", description: "", status: "" }); }}>
+              إضافة عقار آخر
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-muted/30 py-8 md:py-16">
@@ -161,6 +217,19 @@ export default function SellerPropertyForm() {
                     dir="ltr"
                     className="text-right"
                     data-testid="input-seller-phone"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sellerEmail">البريد الإلكتروني (اختياري)</Label>
+                  <Input
+                    id="sellerEmail"
+                    type="email"
+                    placeholder="example@email.com"
+                    value={formData.email}
+                    onChange={(e) => updateFormData("email", e.target.value)}
+                    dir="ltr"
+                    className="text-right"
+                    data-testid="input-seller-email"
                   />
                 </div>
               </div>
@@ -375,8 +444,12 @@ export default function SellerPropertyForm() {
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} data-testid="button-seller-submit">
-                <Check className="ml-2 h-4 w-4" />
+              <Button onClick={handleSubmit} disabled={registerMutation.isPending} data-testid="button-seller-submit">
+                {registerMutation.isPending ? (
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="ml-2 h-4 w-4" />
+                )}
                 نشر العقار
               </Button>
             )}
