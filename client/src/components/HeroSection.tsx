@@ -1668,24 +1668,6 @@ export default function HeroSection() {
                       className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      onMouseDown={(e) => {
-                        // Prevent focus and scroll behavior - handle click ourselves
-                        e.preventDefault();
-                        // Switch to fullscreen chat mode with welcome message
-                        const welcomeMessages: Record<string, string> = {
-                          buyer: "أهلاً وسهلاً! أنا مساعدك للبحث عن عقار. قول لي وش تبي وأنا أساعدك",
-                          seller: "أهلاً! أنا مساعدك لعرض عقارك. وصف لي العقار اللي تبي تبيعه",
-                          investor: "مرحباً! أنا مساعدك للاستثمار العقاري. كيف أقدر أخدمك؟"
-                        };
-                        if (conversation.length === 0) {
-                          setConversation([{ type: "system", text: welcomeMessages[mode] }]);
-                        }
-                        setIsFullScreenChat(true);
-                      }}
-                      onFocus={(e) => {
-                        // Prevent focus on this element - we switch to fullscreen instead
-                        e.currentTarget.blur();
-                      }}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       data-testid="input-interactive"
                     />
