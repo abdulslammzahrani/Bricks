@@ -61,7 +61,7 @@ export function FileUploadButton({
     },
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     const validFiles = selectedFiles
       .filter(file => file.size <= maxFileSize)
@@ -71,13 +71,36 @@ export function FileUploadButton({
       file,
       preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
       progress: 0,
-      status: "pending" as const,
+      status: "uploading" as const,
     }));
 
+    const startIndex = files.length;
     setFiles(prev => [...prev, ...newFiles]);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+
+    for (let i = 0; i < newFiles.length; i++) {
+      const fileIndex = startIndex + i;
+      try {
+        const url = await uploadMutation.mutateAsync(newFiles[i].file);
+        setFiles(prev => {
+          const updated = [...prev];
+          if (updated[fileIndex]) {
+            updated[fileIndex] = { ...updated[fileIndex], status: "success", progress: 100, url };
+          }
+          return updated;
+        });
+      } catch (error) {
+        setFiles(prev => {
+          const updated = [...prev];
+          if (updated[fileIndex]) {
+            updated[fileIndex] = { ...updated[fileIndex], status: "error", progress: 0 };
+          }
+          return updated;
+        });
+      }
     }
   };
 
@@ -263,15 +286,9 @@ export function FileUploadButton({
             </div>
           )}
 
-          <div className="flex gap-2 justify-end">
-            {!allUploaded && hasFiles && (
-              <Button 
-                onClick={uploadFiles}
-                disabled={uploadMutation.isPending}
-                data-testid="button-start-upload"
-              >
-                {uploadMutation.isPending ? "جاري الرفع..." : "رفع الملفات"}
-              </Button>
+          <div className="flex gap-2 justify-end items-center">
+            {hasFiles && !allUploaded && (
+              <span className="text-sm text-muted-foreground">جاري الرفع...</span>
             )}
             {allUploaded && (
               <Button 
