@@ -2,12 +2,35 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
+
+interface AIAnalysisResult {
+  success: boolean;
+  role: "buyer" | "seller" | "investor" | null;
+  data: {
+    name: string | null;
+    phone: string | null;
+    city: string | null;
+    districts: string[];
+    propertyType: string | null;
+    budgetMin: number | null;
+    budgetMax: number | null;
+    paymentMethod: string | null;
+    purchasePurpose: string | null;
+    area: number | null;
+    rooms: number | null;
+    floor: number | null;
+    additionalNotes: string | null;
+  };
+  confidence: number;
+  classificationTags: string[];
+  missingFields: string[];
+}
 
 type UserMode = "buyer" | "seller" | "investor";
 
@@ -85,6 +108,8 @@ export default function HeroSection() {
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
   const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
+  const [aiConfidence, setAiConfidence] = useState<number>(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
@@ -146,6 +171,13 @@ export default function HeroSection() {
         description: "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       });
+    },
+  });
+
+  const aiAnalysisMutation = useMutation({
+    mutationFn: async (text: string): Promise<AIAnalysisResult> => {
+      const res = await apiRequest("POST", "/api/intake/analyze", { text });
+      return res.json();
     },
   });
 
@@ -474,6 +506,10 @@ export default function HeroSection() {
 
   const submitData = (data: Record<string, string>) => {
     if (mode === "buyer") {
+      // Use AI-extracted budgetMin/Max if available
+      const budgetMinVal = data.budgetMin ? parseInt(data.budgetMin) : 0;
+      const budgetMaxVal = data.budgetMax ? parseInt(data.budgetMax) : (data.budget ? parseInt(data.budget) : 0);
+      
       buyerMutation.mutate({
         name: data.name,
         email: `${data.phone}@temp.com`,
@@ -481,8 +517,8 @@ export default function HeroSection() {
         city: data.city,
         districts: data.district ? [data.district] : [],
         propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
-        budgetMin: 0,
-        budgetMax: parseInt(data.budget || "0"),
+        budgetMin: budgetMinVal,
+        budgetMax: budgetMaxVal,
         paymentMethod: data.paymentMethod || "cash",
       });
       setConversation(prev => [
@@ -528,7 +564,7 @@ export default function HeroSection() {
     setConfirmationFields([]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const hasInput = inputText.trim().length > 0;
     const userText = inputText.trim();
     
@@ -550,10 +586,137 @@ export default function HeroSection() {
       return;
     }
     
-    let mergedData = { ...extractedData };
+    if (!hasInput) return;
     
-    if (hasInput) {
-      const newData = mode === "buyer" ? extractBuyerInfo(inputText) : mode === "seller" ? extractSellerInfo(inputText) : extractInvestorInfo(inputText);
+    // Add user message to conversation
+    setConversation(prev => [
+      ...prev,
+      { type: "user", text: inputText }
+    ]);
+    
+    setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.textContent = "";
+    }
+    
+    // Use AI analysis
+    setIsAnalyzing(true);
+    setIsTyping(true);
+    
+    try {
+      const aiResult = await aiAnalysisMutation.mutateAsync(userText);
+      
+      // Convert AI result to merged data format
+      let mergedData = { ...extractedData };
+      
+      // Handle case when AI analysis didn't succeed - fall back to regex
+      if (!aiResult || !aiResult.success) {
+        const newData = mode === "buyer" ? extractBuyerInfo(userText) : mode === "seller" ? extractSellerInfo(userText) : extractInvestorInfo(userText);
+        Object.keys(newData).forEach(key => {
+          if (newData[key]) {
+            mergedData[key] = newData[key];
+          }
+        });
+        setExtractedData(mergedData);
+        setAiConfidence(50);
+      } else if (aiResult.data) {
+        if (aiResult.data.name) mergedData.name = aiResult.data.name;
+        if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
+        if (aiResult.data.city) mergedData.city = aiResult.data.city;
+        if (aiResult.data.districts && aiResult.data.districts.length > 0) {
+          mergedData.district = aiResult.data.districts[0];
+        }
+        if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
+        if (aiResult.data.budgetMax) mergedData.budget = aiResult.data.budgetMax.toString();
+        if (aiResult.data.budgetMin) mergedData.budgetMin = aiResult.data.budgetMin.toString();
+        if (aiResult.data.budgetMax) mergedData.budgetMax = aiResult.data.budgetMax.toString();
+        if (aiResult.data.paymentMethod) mergedData.paymentMethod = aiResult.data.paymentMethod;
+        if (aiResult.data.additionalNotes) mergedData.additionalNotes = aiResult.data.additionalNotes;
+        
+        // For sellers
+        if (aiResult.data.budgetMax && mode === "seller") {
+          mergedData.price = aiResult.data.budgetMax.toString();
+        }
+        
+        // Auto-detect role if not set
+        if (aiResult.role && mode === "buyer" && aiResult.role !== "buyer") {
+          // Suggest switching mode
+          if (aiResult.role === "seller") {
+            setConversation(prev => [
+              ...prev,
+              { type: "system", text: "يبدو أنك تريد عرض عقار للبيع. هل تريد التبديل لوضع البائع؟" }
+            ]);
+          }
+        }
+        
+        setAiConfidence(aiResult.confidence);
+        setExtractedData(mergedData);
+      }
+      
+      // Check required fields based on mode
+      if (mode === "buyer") {
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
+        if (hasRequired) {
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
+        } else {
+          const missing: string[] = (aiResult?.missingFields && aiResult.missingFields.length > 0) ? [...aiResult.missingFields] : [];
+          if (!mergedData.name && !missing.includes("الاسم")) missing.push("الاسم");
+          if (!mergedData.phone && !missing.includes("رقم الجوال")) missing.push("رقم الجوال");
+          if (!mergedData.city && !missing.includes("المدينة")) missing.push("المدينة");
+          if (!mergedData.propertyType && !missing.includes("نوع العقار")) missing.push("نوع العقار");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
+      } else if (mode === "seller") {
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
+        if (hasRequired) {
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
+        } else {
+          const missing: string[] = [];
+          if (!mergedData.name) missing.push("الاسم");
+          if (!mergedData.phone) missing.push("رقم الجوال");
+          if (!mergedData.city) missing.push("المدينة");
+          if (!mergedData.district) missing.push("الحي");
+          if (!mergedData.propertyType) missing.push("نوع العقار");
+          if (!mergedData.price) missing.push("السعر");
+          if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
+          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
+      } else {
+        // Investor mode - use cities from AI
+        if (aiResult?.data?.city) {
+          mergedData.cities = aiResult.data.city;
+        }
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
+        if (hasRequired) {
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
+        } else {
+          const missing: string[] = [];
+          if (!mergedData.name) missing.push("الاسم");
+          if (!mergedData.phone) missing.push("رقم الجوال");
+          if (!mergedData.cities) missing.push("المدن المستهدفة");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
+      }
+    } catch (error) {
+      // Fallback to regex extraction if AI fails
+      let mergedData = { ...extractedData };
+      const newData = mode === "buyer" ? extractBuyerInfo(userText) : mode === "seller" ? extractSellerInfo(userText) : extractInvestorInfo(userText);
       Object.keys(newData).forEach(key => {
         if (newData[key]) {
           mergedData[key] = newData[key];
@@ -561,20 +724,7 @@ export default function HeroSection() {
       });
       setExtractedData(mergedData);
       
-      setConversation(prev => [
-        ...prev,
-        { type: "user", text: inputText }
-      ]);
-      
-      setInputText("");
-      if (textareaRef.current) {
-        textareaRef.current.textContent = "";
-      }
-    }
-    
-    setIsTyping(true);
-    
-    setTimeout(() => {
+      // Check required fields
       if (mode === "buyer") {
         const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
         if (hasRequired) {
@@ -614,7 +764,6 @@ export default function HeroSection() {
           ]);
         }
       } else {
-        // Investor mode
         const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
         if (hasRequired) {
           setPendingConfirmation(true);
@@ -631,8 +780,10 @@ export default function HeroSection() {
           ]);
         }
       }
+    } finally {
+      setIsAnalyzing(false);
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -749,10 +900,20 @@ export default function HeroSection() {
                 {isTyping && (
                   <div className="flex justify-end">
                     <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
-                      <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <div className="flex items-center gap-2">
+                        {isAnalyzing && (
+                          <div className="flex items-center gap-1 text-xs text-primary">
+                            <Brain className="h-3 w-3 animate-pulse" />
+                            <span>جارٍ التحليل بالذكاء الاصطناعي</span>
+                          </div>
+                        )}
+                        {!isAnalyzing && (
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

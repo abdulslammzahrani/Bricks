@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema, insertSendLogSchema } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { analyzeIntakeWithAI } from "./ai-service";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
@@ -75,6 +76,25 @@ export async function registerRoutes(
         return res.sendStatus(404);
       }
       return res.sendStatus(500);
+    }
+  });
+
+  // ============ AI INTAKE ANALYSIS ============
+
+  // Analyze text input with AI
+  app.post("/api/intake/analyze", async (req, res) => {
+    try {
+      const { text } = req.body;
+      
+      if (!text || typeof text !== "string" || text.trim().length < 10) {
+        return res.status(400).json({ error: "النص قصير جداً، يرجى كتابة المزيد من التفاصيل" });
+      }
+
+      const result = await analyzeIntakeWithAI(text);
+      res.json(result);
+    } catch (error: any) {
+      console.error("AI analysis error:", error);
+      res.status(500).json({ error: "فشل في تحليل النص" });
     }
   });
 
