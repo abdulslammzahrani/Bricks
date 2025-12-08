@@ -81,10 +81,13 @@ export function FileUploadButton({
       fileInputRef.current.value = "";
     }
 
+    const uploadedUrls: string[] = [];
+    
     for (let i = 0; i < newFiles.length; i++) {
       const fileIndex = startIndex + i;
       try {
         const url = await uploadMutation.mutateAsync(newFiles[i].file);
+        uploadedUrls.push(url);
         setFiles(prev => {
           const updated = [...prev];
           if (updated[fileIndex]) {
@@ -102,6 +105,14 @@ export function FileUploadButton({
         });
       }
     }
+
+    if (uploadedUrls.length > 0 && onFilesUploaded) {
+      onFilesUploaded(uploadedUrls);
+      setTimeout(() => {
+        setOpen(false);
+        setFiles([]);
+      }, 500);
+    }
   };
 
   const removeFile = (index: number) => {
@@ -115,56 +126,10 @@ export function FileUploadButton({
     });
   };
 
-  const uploadFiles = async () => {
-    const uploadedUrls: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].status === "success") {
-        if (files[i].url) uploadedUrls.push(files[i].url as string);
-        continue;
-      }
-
-      setFiles(prev => {
-        const updated = [...prev];
-        updated[i] = { ...updated[i], status: "uploading", progress: 30 };
-        return updated;
-      });
-
-      try {
-        const url = await uploadMutation.mutateAsync(files[i].file);
-        uploadedUrls.push(url);
-        
-        setFiles(prev => {
-          const updated = [...prev];
-          updated[i] = { ...updated[i], status: "success", progress: 100, url };
-          return updated;
-        });
-      } catch (error) {
-        setFiles(prev => {
-          const updated = [...prev];
-          updated[i] = { ...updated[i], status: "error", progress: 0 };
-          return updated;
-        });
-      }
-    }
-
-    if (uploadedUrls.length > 0 && onFilesUploaded) {
-      onFilesUploaded(uploadedUrls);
-    }
-  };
 
   const allUploaded = files.length > 0 && files.every(f => f.status === "success");
   const hasFiles = files.length > 0;
   const canAddMore = files.length < maxFiles;
-
-  const handleDone = () => {
-    const urls = files.filter(f => f.url).map(f => f.url!);
-    if (urls.length > 0 && onFilesUploaded) {
-      onFilesUploaded(urls);
-    }
-    setOpen(false);
-    setFiles([]);
-  };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
@@ -286,20 +251,11 @@ export function FileUploadButton({
             </div>
           )}
 
-          <div className="flex gap-2 justify-end items-center">
-            {hasFiles && !allUploaded && (
-              <span className="text-sm text-muted-foreground">جاري الرفع...</span>
-            )}
-            {allUploaded && (
-              <Button 
-                onClick={handleDone}
-                className="bg-green-600 hover:bg-green-700"
-                data-testid="button-done-upload"
-              >
-                تم
-              </Button>
-            )}
-          </div>
+          {hasFiles && !allUploaded && (
+            <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground">
+              <span>جاري الرفع...</span>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
