@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Check } from "lucide-react";
+import { Send, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -122,7 +122,6 @@ export default function InteractiveWishForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [charIndex, setCharIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<"examples" | "write">("examples");
 
   // Typewriter effect for the example text
   useEffect(() => {
@@ -405,48 +404,16 @@ export default function InteractiveWishForm() {
         </div>
 
         <Card className="p-0 overflow-hidden shadow-2xl">
-          {/* Tabs Header */}
+          {/* Typewriter Example - Always visible as instructional guide */}
           {!isComplete && (
-            <div className="flex border-b">
-              <button
-                onClick={() => setActiveTab("write")}
-                className={`flex-1 py-3 text-center font-medium transition-colors ${
-                  activeTab === "write" 
-                    ? "text-foreground border-b-2 border-primary" 
-                    : "text-muted-foreground"
-                }`}
-                data-testid="tab-write"
-              >
-                اكتب رغبتك
-              </button>
-              <button
-                onClick={() => setActiveTab("examples")}
-                className={`flex-1 py-3 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
-                  activeTab === "examples" 
-                    ? "text-foreground border-b-2 border-primary" 
-                    : "text-muted-foreground"
-                }`}
-                data-testid="tab-examples"
-              >
-                <Sparkles className="h-4 w-4" />
-                أمثلة
-              </button>
-            </div>
-          )}
-
-          {/* Tab Content */}
-          {!isComplete && activeTab === "examples" && (
-            <div className="p-6 bg-muted/10">
-              {/* Typewriter example */}
+            <div className="p-4 border-b bg-muted/10">
+              <p className="text-sm text-muted-foreground mb-2 text-center">مثال على طريقة الكتابة:</p>
               <div 
                 className="text-center cursor-pointer"
-                onClick={() => {
-                  addSuggestion(fullExampleText);
-                  setActiveTab("write");
-                }}
+                onClick={() => addSuggestion(fullExampleText)}
                 data-testid="button-typewriter-example"
               >
-                <p className="text-xl leading-loose min-h-[4rem]">
+                <p className="text-lg leading-relaxed">
                   {renderTypedText()}
                   <span className="animate-pulse text-primary font-bold">|</span>
                 </p>
@@ -454,73 +421,69 @@ export default function InteractiveWishForm() {
             </div>
           )}
 
-          {/* Write Tab Content */}
-          {(activeTab === "write" || isComplete) && (
-            <>
-              {/* Conversation area */}
-              {conversation.length > 0 && (
-                <div className="min-h-[200px] max-h-[300px] overflow-y-auto p-6 space-y-4 bg-muted/20">
-                  {conversation.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          msg.type === "user"
-                            ? "bg-primary text-primary-foreground rounded-tr-none"
-                            : "bg-card border rounded-tl-none"
-                        }`}
-                      >
-                        {msg.highlights ? (
-                          <div dangerouslySetInnerHTML={{ __html: msg.highlights[0] }} />
-                        ) : (
-                          <p>{msg.text}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex justify-end">
-                      <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
-                        <div className="flex gap-1">
-                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+          {/* Conversation area */}
+          {conversation.length > 0 && (
+            <div className="min-h-[150px] max-h-[250px] overflow-y-auto p-4 space-y-3 bg-muted/20">
+              {conversation.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      msg.type === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                        : "bg-card border rounded-tl-none"
+                    }`}
+                  >
+                    {msg.highlights ? (
+                      <div dangerouslySetInnerHTML={{ __html: msg.highlights[0] }} />
+                    ) : (
+                      <p>{msg.text}</p>
+                    )}
+                  </div>
                 </div>
-              )}
-
-              <div className="p-4 border-t bg-card">
-                <div className="relative">
-                  <div className="flex items-start gap-3">
-                    <Button
-                      size="icon"
-                      onClick={handleSubmit}
-                      disabled={!inputText.trim() || isComplete || registerMutation.isPending}
-                      data-testid="button-send"
-                      className="flex-shrink-0"
-                    >
-                      <Send className="h-5 w-5" />
-                    </Button>
-                    <div className="flex-1 relative">
-                      <div
-                        ref={textareaRef}
-                        contentEditable={!isComplete}
-                        className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        onInput={(e) => setInputText(e.currentTarget.textContent || "")}
-                        onKeyDown={handleKeyDown}
-                        data-placeholder="اكتب هنا... مثال: اسمي أحمد من الرياض أبحث عن فيلا"
-                        data-testid="input-interactive"
-                      />
+              ))}
+              {isTyping && (
+                <div className="flex justify-end">
+                  <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
                   </div>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Input area - Always visible */}
+          {!isComplete && (
+            <div className="p-4 border-t bg-card">
+              <div className="flex items-start gap-3">
+                <Button
+                  size="icon"
+                  onClick={handleSubmit}
+                  disabled={!inputText.trim() || registerMutation.isPending}
+                  data-testid="button-send"
+                  className="flex-shrink-0"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+                <div className="flex-1">
+                  <div
+                    ref={textareaRef}
+                    contentEditable
+                    className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                    onKeyDown={handleKeyDown}
+                    data-placeholder="اكتب هنا بطريقتك..."
+                    data-testid="input-interactive"
+                  />
+                </div>
               </div>
-            </>
+            </div>
           )}
         </Card>
 
