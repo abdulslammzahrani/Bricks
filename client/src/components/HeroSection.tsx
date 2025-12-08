@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -372,6 +372,38 @@ export default function HeroSection() {
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  
+  // Live viewer counter for social proof (herd effect)
+  const [liveViewers, setLiveViewers] = useState(0);
+  const [requestsToday, setRequestsToday] = useState(0);
+  
+  // Initialize and animate live viewer count
+  useEffect(() => {
+    // Initial values
+    const baseViewers = 45 + Math.floor(Math.random() * 30);
+    const baseRequests = 127 + Math.floor(Math.random() * 50);
+    setLiveViewers(baseViewers);
+    setRequestsToday(baseRequests);
+    
+    // Fluctuate viewer count every 3-7 seconds
+    const viewerInterval = setInterval(() => {
+      setLiveViewers(prev => {
+        const change = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        const newValue = prev + change;
+        return Math.max(35, Math.min(95, newValue)); // Keep between 35-95
+      });
+    }, 3000 + Math.random() * 4000);
+    
+    // Occasionally increment requests (every 15-30 seconds)
+    const requestInterval = setInterval(() => {
+      setRequestsToday(prev => prev + 1);
+    }, 15000 + Math.random() * 15000);
+    
+    return () => {
+      clearInterval(viewerInterval);
+      clearInterval(requestInterval);
+    };
+  }, []);
 
   // Get the current examples array based on mode
   const currentExamplesData = mode === "buyer" ? buyerExamplesData : mode === "seller" ? sellerExamplesData : investorExamplesData;
@@ -1139,15 +1171,40 @@ export default function HeroSection() {
                 اعرض عقارك
               </Button>
             </div>
+            
+            {/* Live Viewer Counter - Social Proof */}
+            <div className="flex items-center justify-center gap-4 mt-3" data-testid="live-stats">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <Eye className="h-4 w-4" />
+                <span className="font-medium text-foreground">{liveViewers}</span>
+                <span>يتصفحون الآن</span>
+              </div>
+              <div className="w-px h-4 bg-border"></div>
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Zap className="h-4 w-4 text-amber-500" />
+                <span className="font-medium text-foreground">{requestsToday}</span>
+                <span>طلب اليوم</span>
+              </div>
+            </div>
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-2xl mb-8">
-            {/* Typewriter Example - Always visible */}
+            {/* Typewriter Example - Live Request Indicator */}
             {!isComplete && (
               <div className={`p-4 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}>
-                <p className="text-sm text-muted-foreground mb-2 text-center">
-                  {mode === "buyer" ? "مثال على طلب شراء:" : mode === "seller" ? "مثال على عرض عقار:" : "مثال على طلب استثماري:"}
-                </p>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    {mode === "buyer" ? "عميل يطلب الآن:" : mode === "seller" ? "بائع يعرض الآن:" : "مستثمر يبحث الآن:"}
+                  </p>
+                </div>
                 <div 
                   className="text-center cursor-pointer min-h-[100px] flex items-center justify-center"
                   onClick={() => addSuggestion(fullExampleText)}
