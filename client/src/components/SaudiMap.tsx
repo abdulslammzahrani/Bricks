@@ -36,13 +36,17 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
       maxBoundsViscosity: 1.0,
       zoomControl: false,
       attributionControl: false,
+      dragging: false,
+      touchZoom: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "",
     }).addTo(map);
-
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
 
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
@@ -95,7 +99,7 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
     <div
       ref={mapRef}
       className={`w-full rounded-lg overflow-hidden ${className}`}
-      style={{ minHeight: "200px" }}
+      style={{ minHeight: "200px", pointerEvents: "none" }}
       data-testid="saudi-map"
     />
   );
