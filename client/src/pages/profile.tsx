@@ -730,6 +730,108 @@ export default function ProfilePage() {
                                 />
                               </div>
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">نوع المعاملة</Label>
+                                <Select 
+                                  value={inlineEditData.transactionType || "buy"} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("transactionType", v, pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("transactionType", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-transaction-type-${pref.id}`}>
+                                    <SelectValue placeholder="اختر" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="buy">شراء</SelectItem>
+                                    <SelectItem value="rent">إيجار</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">طريقة الدفع</Label>
+                                <Select 
+                                  value={inlineEditData.paymentMethod || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("paymentMethod", v, pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("paymentMethod", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-payment-method-${pref.id}`}>
+                                    <SelectValue placeholder="اختر" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="cash">كاش</SelectItem>
+                                    <SelectItem value="bank">تمويل بنكي</SelectItem>
+                                    <SelectItem value="both">كاش أو بنك</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الغرض</Label>
+                                <Select 
+                                  value={inlineEditData.purpose || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("purpose", v, pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("purpose", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-purpose-${pref.id}`}>
+                                    <SelectValue placeholder="اختر" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="residence">سكن</SelectItem>
+                                    <SelectItem value="investment">استثمار</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الجدول الزمني</Label>
+                                <Select 
+                                  value={inlineEditData.purchaseTimeline || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("purchaseTimeline", v, pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("purchaseTimeline", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-timeline-${pref.id}`}>
+                                    <SelectValue placeholder="اختر" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="asap">فوراً</SelectItem>
+                                    <SelectItem value="within_month">خلال شهر</SelectItem>
+                                    <SelectItem value="within_3months">خلال 3 أشهر</SelectItem>
+                                    <SelectItem value="within_6months">خلال 6 أشهر</SelectItem>
+                                    <SelectItem value="within_year">خلال سنة</SelectItem>
+                                    <SelectItem value="flexible">مرن</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">نوع العميل</Label>
+                              <Select 
+                                value={inlineEditData.clientType || "direct"} 
+                                onValueChange={(v) => {
+                                  handleInlineFieldChange("clientType", v, pref.id);
+                                  setTimeout(() => handleInlineFieldBlur("clientType", pref.id), 100);
+                                }}
+                              >
+                                <SelectTrigger data-testid={`inline-select-client-type-${pref.id}`}>
+                                  <SelectValue placeholder="اختر" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="direct">مباشر (المالك)</SelectItem>
+                                  <SelectItem value="broker">وسيط عقاري</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                             
                             <div className="flex items-center gap-2 text-xs text-green-600">
                               <Check className="h-3 w-3" />
