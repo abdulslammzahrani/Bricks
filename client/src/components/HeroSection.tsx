@@ -1027,38 +1027,48 @@ export default function HeroSection() {
         });
         setExtractedData(mergedData);
         setAiConfidence(50);
-      } else if (aiResult.data) {
-        if (aiResult.data.name) mergedData.name = aiResult.data.name;
-        if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
-        if (aiResult.data.city) mergedData.city = aiResult.data.city;
-        if (aiResult.data.districts && aiResult.data.districts.length > 0) {
-          mergedData.district = aiResult.data.districts[0];
-        }
-        if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
-        if (aiResult.data.budgetMax) mergedData.budget = aiResult.data.budgetMax.toString();
-        if (aiResult.data.budgetMin) mergedData.budgetMin = aiResult.data.budgetMin.toString();
-        if (aiResult.data.budgetMax) mergedData.budgetMax = aiResult.data.budgetMax.toString();
-        if (aiResult.data.paymentMethod) mergedData.paymentMethod = aiResult.data.paymentMethod;
-        if (aiResult.data.additionalNotes) mergedData.additionalNotes = aiResult.data.additionalNotes;
-        
-        // For sellers
-        if (aiResult.data.budgetMax && mode === "seller") {
-          mergedData.price = aiResult.data.budgetMax.toString();
+      } else {
+        // Add AI assistant reply to conversation (for data intent)
+        if (aiResult.assistantReply) {
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: aiResult.assistantReply! }
+          ]);
         }
         
-        // Auto-detect role if not set
-        if (aiResult.role && mode === "buyer" && aiResult.role !== "buyer") {
-          // Suggest switching mode
-          if (aiResult.role === "seller") {
-            setConversation(prev => [
-              ...prev,
-              { type: "system", text: formatFriendlyMessage("modeSwitch", mode, mergedData.name) }
-            ]);
+        if (aiResult.data) {
+          if (aiResult.data.name) mergedData.name = aiResult.data.name;
+          if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
+          if (aiResult.data.city) mergedData.city = aiResult.data.city;
+          if (aiResult.data.districts && aiResult.data.districts.length > 0) {
+            mergedData.district = aiResult.data.districts[0];
           }
+          if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
+          if (aiResult.data.budgetMax) mergedData.budget = aiResult.data.budgetMax.toString();
+          if (aiResult.data.budgetMin) mergedData.budgetMin = aiResult.data.budgetMin.toString();
+          if (aiResult.data.budgetMax) mergedData.budgetMax = aiResult.data.budgetMax.toString();
+          if (aiResult.data.paymentMethod) mergedData.paymentMethod = aiResult.data.paymentMethod;
+          if (aiResult.data.additionalNotes) mergedData.additionalNotes = aiResult.data.additionalNotes;
+          
+          // For sellers
+          if (aiResult.data.budgetMax && mode === "seller") {
+            mergedData.price = aiResult.data.budgetMax.toString();
+          }
+          
+          // Auto-detect role if not set
+          if (aiResult.role && mode === "buyer" && aiResult.role !== "buyer") {
+            // Suggest switching mode
+            if (aiResult.role === "seller") {
+              setConversation(prev => [
+                ...prev,
+                { type: "system", text: formatFriendlyMessage("modeSwitch", mode, mergedData.name) }
+              ]);
+            }
+          }
+          
+          setAiConfidence(aiResult.confidence);
+          setExtractedData(mergedData);
         }
-        
-        setAiConfidence(aiResult.confidence);
-        setExtractedData(mergedData);
       }
       
       // Check required fields based on mode - ALL fields must be complete!
