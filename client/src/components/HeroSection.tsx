@@ -1426,6 +1426,13 @@ export default function HeroSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           
+          {/* Icon above title */}
+          <div className="flex justify-center mb-3">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          
           {/* Main Headline - Larger */}
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold leading-tight mb-3" data-testid="text-hero-title">
             سجّل رغبتك العقارية
