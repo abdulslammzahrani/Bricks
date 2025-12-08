@@ -319,7 +319,7 @@ export default function HeroSection() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/seller-form">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto gap-2" data-testid="button-list-property">
+              <Button size="lg" className="w-full sm:w-auto gap-2 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30 px-8" data-testid="button-list-property">
                 <Building2 className="h-5 w-5" />
                 اعرض عقارك
               </Button>
