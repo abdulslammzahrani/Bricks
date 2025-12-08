@@ -447,15 +447,21 @@ export default function HeroSection() {
     setCharIndex(0);
   }, [mode]);
   
-  // Show mic tooltip when chat first expands
+  // Show mic tooltip when chat first expands (1 message = first AI greeting)
   useEffect(() => {
-    if (conversation.length >= 1 && conversation.length <= 2) {
-      setShowMicTooltip(true);
-      // Auto-hide after 6 seconds
-      const timer = setTimeout(() => {
+    if (conversation.length === 1) {
+      // Delay a bit to let the UI render first
+      const showTimer = setTimeout(() => {
+        setShowMicTooltip(true);
+      }, 500);
+      // Auto-hide after 8 seconds
+      const hideTimer = setTimeout(() => {
         setShowMicTooltip(false);
-      }, 6000);
-      return () => clearTimeout(timer);
+      }, 8000);
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     }
   }, [conversation.length]);
 
@@ -1799,13 +1805,13 @@ export default function HeroSection() {
                     {/* Mic tooltip */}
                     {showMicTooltip && !isRecording && (
                       <div 
-                        className="absolute top-full mt-2 right-0 bg-primary text-primary-foreground px-3 py-2 rounded-lg text-sm whitespace-nowrap shadow-lg animate-bounce z-50"
+                        className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-3 rounded-lg text-sm shadow-lg z-50"
                         onClick={() => setShowMicTooltip(false)}
                       >
-                        <div className="absolute -top-1 right-3 w-2 h-2 bg-primary rotate-45" />
-                        <div className="flex items-center gap-2">
-                          <Mic className="h-4 w-4" />
-                          <span>تستطيع تسجيل الطلب صوتياً ونقوم بالتحليل الفوري</span>
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rotate-45" />
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <Mic className="h-4 w-4 flex-shrink-0" />
+                          <span>سجّل طلبك صوتياً وسنحلله فوراً</span>
                         </div>
                       </div>
                     )}
