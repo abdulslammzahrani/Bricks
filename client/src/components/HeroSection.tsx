@@ -237,7 +237,7 @@ export default function HeroSection() {
               <div className="p-4 border-b bg-muted/10">
                 <p className="text-sm text-muted-foreground mb-2 text-center">مثال على طريقة الكتابة:</p>
                 <div 
-                  className="text-center cursor-pointer"
+                  className="text-center cursor-pointer min-h-[100px] flex items-center justify-center"
                   onClick={() => addSuggestion(fullExampleText)}
                   data-testid="button-typewriter-example"
                 >
