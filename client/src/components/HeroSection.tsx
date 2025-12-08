@@ -371,6 +371,7 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showMicTooltip, setShowMicTooltip] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
   const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
@@ -445,6 +446,18 @@ export default function HeroSection() {
     setExampleIndex(0);
     setCharIndex(0);
   }, [mode]);
+  
+  // Show mic tooltip when chat first expands
+  useEffect(() => {
+    if (isExpanded && conversation.length <= 2) {
+      setShowMicTooltip(true);
+      // Auto-hide after 6 seconds
+      const timer = setTimeout(() => {
+        setShowMicTooltip(false);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [isExpanded, conversation.length]);
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1767,17 +1780,36 @@ export default function HeroSection() {
                     <Send className="h-5 w-5" />
                   </Button>
                   
-                  {/* Voice recording button */}
-                  <Button
-                    size="icon"
-                    variant={isRecording ? "destructive" : "outline"}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isTranscribing}
-                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                    data-testid="button-voice-record-landing"
-                  >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                  </Button>
+                  {/* Voice recording button with tooltip */}
+                  <div className="relative flex-shrink-0">
+                    <Button
+                      size="icon"
+                      variant={isRecording ? "destructive" : "outline"}
+                      onClick={() => {
+                        setShowMicTooltip(false);
+                        isRecording ? stopRecording() : startRecording();
+                      }}
+                      disabled={isTranscribing}
+                      className={`${isRecording ? "animate-pulse" : ""} ${showMicTooltip ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`}
+                      data-testid="button-voice-record-landing"
+                    >
+                      {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                    </Button>
+                    
+                    {/* Mic tooltip */}
+                    {showMicTooltip && !isRecording && (
+                      <div 
+                        className="absolute top-full mt-2 right-0 bg-primary text-primary-foreground px-3 py-2 rounded-lg text-sm whitespace-nowrap shadow-lg animate-bounce z-50"
+                        onClick={() => setShowMicTooltip(false)}
+                      >
+                        <div className="absolute -top-1 right-3 w-2 h-2 bg-primary rotate-45" />
+                        <div className="flex items-center gap-2">
+                          <Mic className="h-4 w-4" />
+                          <span>تستطيع تسجيل الطلب صوتياً ونقوم بالتحليل الفوري</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Upload button for sellers */}
                   {mode === "seller" && (
