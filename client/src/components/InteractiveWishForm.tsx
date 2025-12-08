@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, Check, AlertCircle } from "lucide-react";
+import { Send, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -468,87 +468,6 @@ export default function InteractiveWishForm() {
           </div>
         </Card>
 
-        {filledRequiredFields > 0 && (
-          <Card className="mt-6 p-4">
-            <h3 className="font-bold mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              المعلومات المستخرجة
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {extractedData.name && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الاسم:</span>
-                  <span className="text-primary font-bold">{extractedData.name}</span>
-                </Badge>
-              )}
-              {extractedData.phone && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الجوال:</span>
-                  <span className="text-primary font-bold" dir="ltr">{extractedData.phone}</span>
-                </Badge>
-              )}
-              {extractedData.city && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">المدينة:</span>
-                  <span className="text-chart-2 font-bold">{extractedData.city}</span>
-                </Badge>
-              )}
-              {extractedData.district && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الحي:</span>
-                  <span className="text-chart-2 font-bold">{extractedData.district}</span>
-                </Badge>
-              )}
-              {extractedData.propertyType && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">النوع:</span>
-                  <span className="text-chart-3 font-bold">{extractedData.propertyType}</span>
-                </Badge>
-              )}
-              {extractedData.propertyDetails && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">التفاصيل:</span>
-                  <span className="text-chart-3 font-bold">{extractedData.propertyDetails}</span>
-                </Badge>
-              )}
-              {extractedData.paymentMethod && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الدفع:</span>
-                  <span className="text-chart-4 font-bold">{extractedData.paymentMethod}</span>
-                </Badge>
-              )}
-              {extractedData.budget && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الميزانية:</span>
-                  <span className="text-chart-5 font-bold">{extractedData.budget}</span>
-                </Badge>
-              )}
-              {extractedData.email && (
-                <Badge variant="secondary" className="gap-1">
-                  <span className="text-muted-foreground">الإيميل:</span>
-                  <span className="text-chart-3 font-bold" dir="ltr">{extractedData.email}</span>
-                </Badge>
-              )}
-            </div>
-
-            {/* Show missing required fields */}
-            {getMissingRequiredFields(extractedData).length > 0 && !isComplete && (
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4" />
-                  معلومات مطلوبة لم تُستخرج بعد:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {getMissingRequiredFields(extractedData).map((field) => (
-                    <Badge key={field.key} variant="outline" className="text-muted-foreground">
-                      {field.label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
-        )}
 
         {isComplete && (
           <Card className="mt-6 p-6 bg-primary/5 border-primary/20 text-center">
