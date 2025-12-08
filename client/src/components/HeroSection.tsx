@@ -1673,7 +1673,7 @@ export default function HeroSection() {
                   </p>
                 </div>
                 <div 
-                  className="text-center cursor-pointer h-[80px] flex items-center justify-center px-2 overflow-hidden"
+                  className="text-center cursor-pointer h-[120px] flex items-center justify-center px-2 overflow-hidden"
                   onClick={() => addSuggestion(fullExampleText)}
                   data-testid="button-typewriter-example"
                 >
@@ -1687,7 +1687,7 @@ export default function HeroSection() {
 
             {/* Conversation area */}
             {(conversation.length > 0 || pendingConfirmation) && (
-              <div className="min-h-[120px] max-h-[300px] overflow-y-auto p-4 space-y-3 bg-muted/20">
+              <div className="h-[600px] overflow-y-auto p-4 space-y-3 bg-muted/20">
                 {conversation.map((msg, idx) => (
                   <div
                     key={idx}
