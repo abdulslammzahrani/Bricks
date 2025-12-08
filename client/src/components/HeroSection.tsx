@@ -1613,7 +1613,7 @@ export default function HeroSection() {
           </h1>
           
           <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-4" data-testid="text-hero-description">
-            أخبرنا ماذا تريد بكلماتك، وسنفهم ونوصلك بالعقار المناسب
+            أخبرنا ماذا تريد بكلماتك أو صوتك، وسنفهم ونوصلك بالعقار المناسب
           </p>
 
           {/* Mode Toggle - Clean Segmented Control */}
@@ -1673,11 +1673,11 @@ export default function HeroSection() {
                   </p>
                 </div>
                 <div 
-                  className="text-center cursor-pointer min-h-[60px] flex items-center justify-center"
+                  className="text-center cursor-pointer h-[80px] flex items-center justify-center px-2 overflow-hidden"
                   onClick={() => addSuggestion(fullExampleText)}
                   data-testid="button-typewriter-example"
                 >
-                  <p className="text-base leading-relaxed">
+                  <p className="text-base leading-relaxed line-clamp-2">
                     {renderTypedText()}
                     <span className="animate-pulse text-primary font-bold">|</span>
                   </p>
