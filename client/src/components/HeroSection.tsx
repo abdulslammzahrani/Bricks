@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Home, Send, Sparkles, Check, Users, ArrowRight } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { FileUploadButton } from "./FileUploadButton";
 
 type UserMode = "buyer" | "seller";
 
@@ -64,6 +63,7 @@ export default function HeroSection() {
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : sellerExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : fullSellerExampleText;
@@ -127,6 +127,7 @@ export default function HeroSection() {
     setMode(newMode);
     setCharIndex(0);
     setInputText("");
+    setUploadedFiles([]);
     setConversation([]);
     setIsComplete(false);
     setExtractedData({});
@@ -307,6 +308,7 @@ export default function HeroSection() {
             propertyType: newData.propertyType === "شقة" ? "apartment" : newData.propertyType === "فيلا" ? "villa" : newData.propertyType === "أرض" ? "land" : "apartment",
             price: parseInt(newData.price),
             status: newData.status || "ready",
+            images: uploadedFiles,
           });
           setConversation(prev => [
             ...prev,
@@ -435,6 +437,30 @@ export default function HeroSection() {
             {/* Input area */}
             {!isComplete ? (
               <div className="p-4 border-t bg-card">
+                {/* Uploaded files preview */}
+                {mode === "seller" && uploadedFiles.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {uploadedFiles.map((file, idx) => (
+                      <div key={idx} className="relative group">
+                        <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center border overflow-hidden">
+                          <Image className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          data-testid={`button-remove-uploaded-${idx}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <Badge variant="secondary" className="self-center">
+                      {uploadedFiles.length} ملفات مرفوعة
+                    </Badge>
+                  </div>
+                )}
+                
                 <div className="flex items-start gap-3">
                   <Button
                     size="icon"
@@ -445,6 +471,19 @@ export default function HeroSection() {
                   >
                     <Send className="h-5 w-5" />
                   </Button>
+                  
+                  {/* Upload button for sellers */}
+                  {mode === "seller" && (
+                    <FileUploadButton
+                      onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
+                      buttonVariant="outline"
+                      buttonSize="icon"
+                      buttonClassName="flex-shrink-0 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                    >
+                      <Image className="h-5 w-5" />
+                    </FileUploadButton>
+                  )}
+                  
                   <div className="flex-1">
                     <div
                       ref={textareaRef}
