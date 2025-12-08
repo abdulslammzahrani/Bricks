@@ -10,13 +10,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock, BarChart3, Settings } from "lucide-react";
 import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
 import { getCityNames, getNeighborhoodsByCity } from "@shared/saudi-locations";
 import { MessagingPanel } from "@/components/MessagingPanel";
 import { MatchedPropertiesPanel } from "@/components/MatchedPropertiesPanel";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
 
 const cities = getCityNames();
 const propertyTypes = [
@@ -561,61 +575,173 @@ export default function ProfilePage() {
   // Use formMode for dialog form type (decoupled from activeTab)
   const isAddingPreference = formMode === "preference";
 
+  // Calculate stats
+  const preferencesCount = Array.isArray(preferences) ? preferences.length : 0;
+  const propertiesCount = Array.isArray(properties) ? properties.length : 0;
+  
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
+  const navItems = [
+    { id: "preferences", label: "رغباتي", icon: Heart, count: preferencesCount },
+    { id: "properties", label: "عروضي", icon: Building2, count: propertiesCount },
+    { id: "matches", label: "المتطابقة", icon: Zap, count: 0 },
+    { id: "messages", label: "الرسائل", icon: MessageCircle, count: 0 },
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex min-h-screen w-full">
+        {/* Sidebar */}
+        <Sidebar side="right" className="border-l border-r-0">
+          <SidebarHeader className="p-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold truncate">{userData?.name}</h2>
+                <p className="text-xs text-muted-foreground" dir="ltr">{userData?.phone}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold">{userData?.name}</h1>
-              <p className="text-sm text-muted-foreground">{userData?.phone}</p>
+          </SidebarHeader>
+          
+          <SidebarContent className="p-2">
+            <SidebarGroup>
+              <SidebarGroupLabel>القائمة</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          onClick={() => handleTabChange(item.id)}
+                          className={isActive ? "bg-primary/10 text-primary" : ""}
+                          data-testid={`sidebar-${item.id}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="flex-1">{item.label}</span>
+                          {item.count > 0 && (
+                            <Badge variant="secondary" className="text-xs">{item.count}</Badge>
+                          )}
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter className="p-2 border-t mt-auto">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <Link href="/">
+                  <SidebarMenuButton data-testid="sidebar-home">
+                    <Home className="h-4 w-4" />
+                    <span>الرئيسية</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout} data-testid="button-logout">
+                  <LogOut className="h-4 w-4" />
+                  <span>تسجيل الخروج</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+        </Sidebar>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header with Sidebar Trigger */}
+          <header className="border-b bg-card p-3 flex items-center justify-between gap-4 sticky top-0 z-40">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <h1 className="font-bold text-lg">صفحتي الشخصية</h1>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Home className="h-4 w-4" />
-                الرئيسية
+          </header>
+
+          {/* Mini Dashboard */}
+          <div className="p-4 border-b bg-muted/30">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("preferences")} data-testid="stat-card-preferences">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                    <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" data-testid="count-preferences">{preferencesCount}</p>
+                    <p className="text-xs text-muted-foreground">رغباتي</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("properties")} data-testid="stat-card-properties">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" data-testid="count-properties">{propertiesCount}</p>
+                    <p className="text-xs text-muted-foreground">عروضي</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("matches")} data-testid="stat-card-matches">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" data-testid="count-matches">0</p>
+                    <p className="text-xs text-muted-foreground">المتطابقة</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("messages")} data-testid="stat-card-messages">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <MessageCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" data-testid="count-messages">0</p>
+                    <p className="text-xs text-muted-foreground">الرسائل</p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => { setEditingItem(null); resetForm(); setFormMode("preference"); setShowAddDialog(true); }} 
+                className="gap-2"
+                data-testid="button-quick-add-preference"
+              >
+                <Plus className="h-4 w-4" />
+                أضف رغبة جديدة
               </Button>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2" data-testid="button-logout">
-              <LogOut className="h-4 w-4" />
-              خروج
-            </Button>
+              <Button 
+                variant="outline"
+                onClick={() => { setEditingItem(null); resetForm(); setFormMode("property"); setShowAddDialog(true); }}
+                className="gap-2 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
+                data-testid="button-quick-add-property"
+              >
+                <Plus className="h-4 w-4" />
+                أضف عقار للبيع
+              </Button>
+            </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Tabs Navigation */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
-              <TabsTrigger value="preferences" className="gap-2" data-testid="tab-preferences">
-                <Heart className="h-4 w-4" />
-                رغباتي
-              </TabsTrigger>
-              <TabsTrigger value="properties" className="gap-2" data-testid="tab-properties">
-                <Building2 className="h-4 w-4" />
-                عروضي
-              </TabsTrigger>
-              <TabsTrigger value="matches" className="gap-2" data-testid="tab-matches">
-                <Zap className="h-4 w-4" />
-                المتطابقة
-              </TabsTrigger>
-              <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
-                <MessageCircle className="h-4 w-4" />
-                الرسائل
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Preferences Tab */}
-            <TabsContent value="preferences" className="mt-6">
+          {/* Content Area */}
+          <main className="flex-1 overflow-auto p-4">
+            {/* Preferences Section */}
+            {activeTab === "preferences" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-xl font-bold flex items-center gap-2">
@@ -913,10 +1039,10 @@ export default function ProfilePage() {
                 </Card>
               )}
               </div>
-            </TabsContent>
+            )}
 
-            {/* Properties Tab */}
-            <TabsContent value="properties" className="mt-6">
+            {/* Properties Section */}
+            {activeTab === "properties" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-xl font-bold flex items-center gap-2">
@@ -1132,15 +1258,16 @@ export default function ProfilePage() {
                 </Card>
               )}
               </div>
-            </TabsContent>
+            )}
 
-            {/* Matches Tab */}
-            <TabsContent value="matches" className="mt-6">
+            {/* Matches Section */}
+            {activeTab === "matches" && (
               <MatchedPropertiesPanel preferences={Array.isArray(preferences) ? preferences : []} />
-            </TabsContent>
+            )}
 
-            <TabsContent value="messages" className="mt-6">
-              {userData?.id ? (
+            {/* Messages Section */}
+            {activeTab === "messages" && (
+              userData?.id ? (
                 <MessagingPanel 
                   userId={userData.id} 
                   userName={userData.name || ""} 
@@ -1153,11 +1280,10 @@ export default function ProfilePage() {
                     <p className="text-muted-foreground">يجب تسجيل الدخول لعرض الرسائل</p>
                   </CardContent>
                 </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+              )
+            )}
+          </main>
         </div>
-      </main>
 
       {/* Add/Edit Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -1342,6 +1468,7 @@ export default function ProfilePage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
