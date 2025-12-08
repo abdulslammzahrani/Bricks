@@ -371,7 +371,7 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [showMicTooltip, setShowMicTooltip] = useState(false);
+  const [showMicTooltip, setShowMicTooltip] = useState(true);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
   const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
@@ -447,23 +447,22 @@ export default function HeroSection() {
     setCharIndex(0);
   }, [mode]);
   
-  // Show mic tooltip when chat first expands (1 message = first AI greeting)
+  // Hide mic tooltip after user starts chatting
   useEffect(() => {
-    if (conversation.length === 1) {
-      // Delay a bit to let the UI render first
-      const showTimer = setTimeout(() => {
-        setShowMicTooltip(true);
-      }, 500);
-      // Auto-hide after 8 seconds
-      const hideTimer = setTimeout(() => {
-        setShowMicTooltip(false);
-      }, 8000);
-      return () => {
-        clearTimeout(showTimer);
-        clearTimeout(hideTimer);
-      };
+    if (conversation.length > 2) {
+      setShowMicTooltip(false);
     }
   }, [conversation.length]);
+  
+  // Auto-hide mic tooltip after 10 seconds
+  useEffect(() => {
+    if (showMicTooltip) {
+      const timer = setTimeout(() => {
+        setShowMicTooltip(false);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [showMicTooltip]);
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {

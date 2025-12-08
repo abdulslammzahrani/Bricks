@@ -86,8 +86,8 @@ export async function registerRoutes(
     try {
       const { text, context } = req.body;
       
-      if (!text || typeof text !== "string" || text.trim().length < 10) {
-        return res.status(400).json({ error: "النص قصير جداً، يرجى كتابة المزيد من التفاصيل" });
+      if (!text || typeof text !== "string" || text.trim().length < 2) {
+        return res.status(400).json({ error: "يرجى كتابة رسالة" });
       }
 
       const result = await analyzeIntakeWithAI(text, context);
