@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
@@ -43,6 +43,11 @@ export default function ProfilePage() {
     rooms: "",
     images: [] as string[],
   });
+  
+  // State for expandable inline editing
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [inlineEditData, setInlineEditData] = useState<Record<string, any>>({});
+  const [savingField, setSavingField] = useState<string | null>(null);
 
   const loginMutation = useMutation({
     mutationFn: async (data: { phone: string; password: string }) => {
@@ -160,6 +165,95 @@ export default function ProfilePage() {
       refetchProperties();
     },
   });
+
+  // Inline auto-save mutation for preferences
+  const inlineSavePreferenceMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/preferences/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم الحفظ تلقائياً", description: "التغييرات محفوظة" });
+      setSavingField(null);
+      refetchPreferences();
+    },
+    onError: () => {
+      toast({ title: "خطأ في الحفظ", variant: "destructive" });
+      setSavingField(null);
+    },
+  });
+
+  // Inline auto-save mutation for properties
+  const inlineSavePropertyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/properties/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم الحفظ تلقائياً", description: "التغييرات محفوظة" });
+      setSavingField(null);
+      refetchProperties();
+    },
+    onError: () => {
+      toast({ title: "خطأ في الحفظ", variant: "destructive" });
+      setSavingField(null);
+    },
+  });
+
+  // Toggle expand item and initialize inline edit data
+  const toggleExpandItem = (item: any) => {
+    if (expandedItemId === item.id) {
+      setExpandedItemId(null);
+      setInlineEditData({});
+    } else {
+      setExpandedItemId(item.id);
+      setInlineEditData({ ...item });
+    }
+  };
+
+  // Handle inline field change with auto-save
+  const handleInlineFieldChange = (fieldName: string, value: any, itemId: string) => {
+    setInlineEditData(prev => ({ ...prev, [fieldName]: value }));
+  };
+
+  // Auto-save on blur
+  const handleInlineFieldBlur = (fieldName: string, itemId: string) => {
+    const currentItem = userData?.role === "buyer" 
+      ? (preferences as any[])?.find((p: any) => p.id === itemId)
+      : (properties as any[])?.find((p: any) => p.id === itemId);
+    
+    if (!currentItem) return;
+
+    // Check if value actually changed
+    let hasChanged = false;
+    if (fieldName === "districts") {
+      const oldDistricts = currentItem.districts || [];
+      const newDistricts = inlineEditData.districts || [];
+      hasChanged = JSON.stringify(oldDistricts) !== JSON.stringify(newDistricts);
+    } else {
+      hasChanged = currentItem[fieldName] !== inlineEditData[fieldName];
+    }
+
+    if (!hasChanged) return;
+
+    setSavingField(fieldName);
+
+    if (userData?.role === "buyer") {
+      inlineSavePreferenceMutation.mutate({
+        id: itemId,
+        data: {
+          [fieldName]: inlineEditData[fieldName]
+        }
+      });
+    } else {
+      inlineSavePropertyMutation.mutate({
+        id: itemId,
+        data: {
+          [fieldName]: inlineEditData[fieldName]
+        }
+      });
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -447,8 +541,17 @@ export default function ProfilePage() {
                             ))}
                           </div>
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => openEditDialog(pref)} data-testid={`button-edit-pref-${pref.id}`}>
-                              <Pencil className="h-4 w-4" />
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => toggleExpandItem(pref)}
+                              data-testid={`button-expand-pref-${pref.id}`}
+                            >
+                              {expandedItemId === pref.id ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button size="icon" variant="ghost" onClick={() => handleDelete(pref.id)} data-testid={`button-delete-pref-${pref.id}`}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -458,6 +561,128 @@ export default function ProfilePage() {
                         <div className="text-sm text-muted-foreground">
                           الميزانية: {pref.budgetMin?.toLocaleString() || 0} - {pref.budgetMax?.toLocaleString() || "غير محدد"} ريال
                         </div>
+                        
+                        {/* Expandable Inline Edit Section */}
+                        {expandedItemId === pref.id && (
+                          <div className="mt-4 pt-4 border-t space-y-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Pencil className="h-4 w-4" />
+                              <span>عدّل البيانات مباشرة - الحفظ تلقائي</span>
+                              {(inlineSavePreferenceMutation.isPending) && (
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">المدينة</Label>
+                                <Select 
+                                  value={inlineEditData.city || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("city", v, pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("city", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-city-${pref.id}`}>
+                                    <SelectValue placeholder="اختر المدينة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {cities.map(city => (
+                                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الحي</Label>
+                                <Input
+                                  value={inlineEditData.districts?.[0] || ""}
+                                  onChange={(e) => handleInlineFieldChange("districts", [e.target.value], pref.id)}
+                                  onBlur={() => handleInlineFieldBlur("districts", pref.id)}
+                                  placeholder="اسم الحي"
+                                  data-testid={`inline-input-district-${pref.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">نوع العقار</Label>
+                              <Select 
+                                value={inlineEditData.propertyType || ""} 
+                                onValueChange={(v) => {
+                                  handleInlineFieldChange("propertyType", v, pref.id);
+                                  setTimeout(() => handleInlineFieldBlur("propertyType", pref.id), 100);
+                                }}
+                              >
+                                <SelectTrigger data-testid={`inline-select-property-type-${pref.id}`}>
+                                  <SelectValue placeholder="اختر النوع" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {propertyTypes.map(type => (
+                                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الحد الأدنى للميزانية</Label>
+                                <Input
+                                  type="number"
+                                  value={inlineEditData.budgetMin || ""}
+                                  onChange={(e) => handleInlineFieldChange("budgetMin", parseInt(e.target.value) || null, pref.id)}
+                                  onBlur={() => handleInlineFieldBlur("budgetMin", pref.id)}
+                                  placeholder="مثال: 500000"
+                                  dir="ltr"
+                                  data-testid={`inline-input-budget-min-${pref.id}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الحد الأقصى للميزانية</Label>
+                                <Input
+                                  type="number"
+                                  value={inlineEditData.budgetMax || ""}
+                                  onChange={(e) => handleInlineFieldChange("budgetMax", parseInt(e.target.value) || null, pref.id)}
+                                  onBlur={() => handleInlineFieldBlur("budgetMax", pref.id)}
+                                  placeholder="مثال: 1000000"
+                                  dir="ltr"
+                                  data-testid={`inline-input-budget-max-${pref.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">المساحة (م²)</Label>
+                                <Input
+                                  value={inlineEditData.area || ""}
+                                  onChange={(e) => handleInlineFieldChange("area", e.target.value, pref.id)}
+                                  onBlur={() => handleInlineFieldBlur("area", pref.id)}
+                                  placeholder="مثال: 200"
+                                  dir="ltr"
+                                  data-testid={`inline-input-area-${pref.id}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">عدد الغرف</Label>
+                                <Input
+                                  value={inlineEditData.rooms || ""}
+                                  onChange={(e) => handleInlineFieldChange("rooms", e.target.value, pref.id)}
+                                  onBlur={() => handleInlineFieldBlur("rooms", pref.id)}
+                                  placeholder="مثال: 4"
+                                  dir="ltr"
+                                  data-testid={`inline-input-rooms-${pref.id}`}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-xs text-green-600">
+                              <Check className="h-3 w-3" />
+                              <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -507,8 +732,17 @@ export default function ProfilePage() {
                             </Badge>
                           </div>
                           <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => openEditDialog(prop)} data-testid={`button-edit-prop-${prop.id}`}>
-                              <Pencil className="h-4 w-4" />
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => toggleExpandItem(prop)}
+                              data-testid={`button-expand-prop-${prop.id}`}
+                            >
+                              {expandedItemId === prop.id ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button size="icon" variant="ghost" onClick={() => handleDelete(prop.id)} data-testid={`button-delete-prop-${prop.id}`}>
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -524,6 +758,132 @@ export default function ProfilePage() {
                             {prop.viewsCount || 0} مشاهدة
                           </div>
                         </div>
+                        
+                        {/* Expandable Inline Edit Section for Properties */}
+                        {expandedItemId === prop.id && (
+                          <div className="mt-4 pt-4 border-t space-y-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Pencil className="h-4 w-4" />
+                              <span>عدّل البيانات مباشرة - الحفظ تلقائي</span>
+                              {(inlineSavePropertyMutation.isPending) && (
+                                <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">المدينة</Label>
+                                <Select 
+                                  value={inlineEditData.city || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("city", v, prop.id);
+                                    setTimeout(() => handleInlineFieldBlur("city", prop.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-city-${prop.id}`}>
+                                    <SelectValue placeholder="اختر المدينة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {cities.map(city => (
+                                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">الحي</Label>
+                                <Input
+                                  value={inlineEditData.district || ""}
+                                  onChange={(e) => handleInlineFieldChange("district", e.target.value, prop.id)}
+                                  onBlur={() => handleInlineFieldBlur("district", prop.id)}
+                                  placeholder="اسم الحي"
+                                  data-testid={`inline-input-district-${prop.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">نوع العقار</Label>
+                              <Select 
+                                value={inlineEditData.propertyType || ""} 
+                                onValueChange={(v) => {
+                                  handleInlineFieldChange("propertyType", v, prop.id);
+                                  setTimeout(() => handleInlineFieldBlur("propertyType", prop.id), 100);
+                                }}
+                              >
+                                <SelectTrigger data-testid={`inline-select-property-type-${prop.id}`}>
+                                  <SelectValue placeholder="اختر النوع" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {propertyTypes.map(type => (
+                                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">السعر (ريال)</Label>
+                              <Input
+                                type="number"
+                                value={inlineEditData.price || ""}
+                                onChange={(e) => handleInlineFieldChange("price", parseInt(e.target.value) || null, prop.id)}
+                                onBlur={() => handleInlineFieldBlur("price", prop.id)}
+                                placeholder="مثال: 1500000"
+                                dir="ltr"
+                                data-testid={`inline-input-price-${prop.id}`}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">المساحة (م²)</Label>
+                                <Input
+                                  value={inlineEditData.area || ""}
+                                  onChange={(e) => handleInlineFieldChange("area", e.target.value, prop.id)}
+                                  onBlur={() => handleInlineFieldBlur("area", prop.id)}
+                                  placeholder="مثال: 300"
+                                  dir="ltr"
+                                  data-testid={`inline-input-area-${prop.id}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">عدد الغرف</Label>
+                                <Input
+                                  value={inlineEditData.rooms || ""}
+                                  onChange={(e) => handleInlineFieldChange("rooms", e.target.value, prop.id)}
+                                  onBlur={() => handleInlineFieldBlur("rooms", prop.id)}
+                                  placeholder="مثال: 5"
+                                  dir="ltr"
+                                  data-testid={`inline-input-rooms-${prop.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Property Images Preview */}
+                            {inlineEditData.images && inlineEditData.images.length > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">صور العقار</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {inlineEditData.images.map((img: string, idx: number) => (
+                                    <div key={idx} className="relative">
+                                      <img 
+                                        src={img} 
+                                        alt={`صورة ${idx + 1}`} 
+                                        className="h-16 w-16 object-cover rounded-md border"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center gap-2 text-xs text-green-600">
+                              <Check className="h-3 w-3" />
+                              <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
