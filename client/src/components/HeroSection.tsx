@@ -133,6 +133,8 @@ export default function HeroSection() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const savedScrollY = useRef(0);
   
   // Live viewer counter for social proof (herd effect)
   const [liveViewers, setLiveViewers] = useState(0);
@@ -199,11 +201,14 @@ export default function HeroSection() {
     }
   }, [conversation, isTyping, pendingConfirmation]);
 
-  // Lock body scroll when fullscreen chat is active
+  // Lock body scroll when fullscreen chat is active or input is focused on mobile
   useEffect(() => {
-    if (isFullScreenChat) {
+    if (isFullScreenChat || isInputFocused) {
       // Save current scroll position
-      const scrollY = window.scrollY;
+      if (!isFullScreenChat) {
+        savedScrollY.current = window.scrollY;
+      }
+      const scrollY = isFullScreenChat ? window.scrollY : savedScrollY.current;
       // Lock body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
@@ -212,16 +217,18 @@ export default function HeroSection() {
       document.body.style.overflow = 'hidden';
       
       return () => {
-        // Restore scroll when closing
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        document.body.style.overflow = '';
-        window.scrollTo(0, scrollY);
+        // Restore scroll when closing (only if not switching to fullscreen)
+        if (!isFullScreenChat) {
+          document.body.style.position = '';
+          document.body.style.top = '';
+          document.body.style.left = '';
+          document.body.style.right = '';
+          document.body.style.overflow = '';
+          window.scrollTo(0, savedScrollY.current);
+        }
       };
     }
-  }, [isFullScreenChat]);
+  }, [isFullScreenChat, isInputFocused]);
 
   // Get current example based on index from shuffled examples
   const currentExample = shuffledExamples[exampleIndex % shuffledExamples.length];
@@ -1668,11 +1675,13 @@ export default function HeroSection() {
                       className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      onFocus={(e) => {
-                        // Prevent page scroll when keyboard opens on mobile
-                        e.preventDefault();
-                        const scrollY = window.scrollY;
-                        setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      onFocus={() => {
+                        // Lock scroll when input is focused on mobile
+                        setIsInputFocused(true);
+                      }}
+                      onBlur={() => {
+                        // Unlock scroll when input loses focus
+                        setIsInputFocused(false);
                       }}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       data-testid="input-interactive"
