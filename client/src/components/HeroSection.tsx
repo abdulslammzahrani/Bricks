@@ -12,6 +12,8 @@ import { LocationPicker } from "./LocationPicker";
 interface AIAnalysisResult {
   success: boolean;
   role: "buyer" | "seller" | "investor" | null;
+  intent: "question" | "data" | "greeting" | "other";
+  assistantReply: string | null;
   data: {
     name: string | null;
     phone: string | null;
@@ -671,6 +673,30 @@ export default function HeroSection() {
       
       // Convert AI result to merged data format
       let mergedData = { ...extractedData };
+      
+      // Handle questions and greetings first
+      if (aiResult && aiResult.success && (aiResult.intent === "question" || aiResult.intent === "greeting")) {
+        if (aiResult.assistantReply) {
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: aiResult.assistantReply! }
+          ]);
+        }
+        // Still extract any data that might be in the message
+        if (aiResult.data) {
+          if (aiResult.data.name) mergedData.name = aiResult.data.name;
+          if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
+          if (aiResult.data.city) mergedData.city = aiResult.data.city;
+          if (aiResult.data.districts && aiResult.data.districts.length > 0) {
+            mergedData.district = aiResult.data.districts[0];
+          }
+          if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
+          setExtractedData(mergedData);
+        }
+        setIsAnalyzing(false);
+        setIsTyping(false);
+        return; // Don't ask for missing fields after answering a question
+      }
       
       // Handle case when AI analysis didn't succeed - fall back to regex
       if (!aiResult || !aiResult.success) {

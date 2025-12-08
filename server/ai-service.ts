@@ -10,6 +10,8 @@ const openai = new OpenAI({
 export interface IntakeAnalysisResult {
   success: boolean;
   role: "buyer" | "seller" | "investor" | null;
+  intent: "question" | "data" | "greeting" | "other";
+  assistantReply: string | null;
   data: {
     name: string | null;
     phone: string | null;
@@ -30,33 +32,44 @@ export interface IntakeAnalysisResult {
   missingFields: string[];
 }
 
-const SYSTEM_PROMPT = `أنت مساعد ذكي لمنصة عقارية سعودية متخصصة في تحليل طلبات العملاء.
+const SYSTEM_PROMPT = `أنت مساعد ذكي ودود لمنصة عقارية سعودية. تتحدث بأسلوب سعودي شبابي ودي.
 
-مهمتك:
-1. تحليل النص المدخل واستخراج المعلومات العقارية
-2. تحديد نوع العميل (مشتري، بائع، أو مستثمر)
-3. استخراج جميع التفاصيل المتاحة
+مهمتك الرئيسية:
+1. فهم نية المستخدم: هل يسأل سؤال أم يقدم معلومات؟
+2. إذا كان سؤال، جاوب عليه بأسلوب ودي ثم استمر
+3. استخراج المعلومات العقارية من النص
+
+تحديد النية (intent):
+- "question": إذا المستخدم يسأل سؤال (وش، ايش، كيف، ليش، متى، هل، شنو، ممكن توضح، ماهو، يعني ايه)
+- "data": إذا المستخدم يقدم معلومات عن نفسه أو عقار
+- "greeting": إذا المستخدم يحيي فقط (هلا، السلام، مرحبا)
+- "other": أي شي ثاني
+
+إذا intent = "question":
+- اكتب رد ودي بالسعودي في assistantReply
+- مثال: لو سأل "وش يعني نوع العقار؟" رد: "نوع العقار يعني تبي شقة، فيلا، أرض، دبلكس، أو عمارة؟ أي واحد يناسبك؟"
+- لو سأل عن الميزانية: "الميزانية يعني كم تقدر تدفع للعقار، مثلاً من 500 ألف لمليون ريال"
+- لو سأل عن طريقة الدفع: "طريقة الدفع يعني تبي تدفع كاش ولا عن طريق تمويل بنكي؟"
 
 قواعد الاستخراج:
 - الاسم: استخرج الاسم الكامل إذا ذُكر
-- الجوال: ابحث عن أرقام تبدأ بـ 05 (10 أرقام)، أزل الفراغات والشرطات
-- المدينة: حدد المدينة السعودية (الرياض، جدة، مكة، الدمام، الخبر، المدينة، الطائف، تبوك، أبها، القصيم، الأحساء، نجران، جازان، ينبع، حائل، الجبيل)
+- الجوال: ابحث عن أرقام تبدأ بـ 05 (10 أرقام)
+- المدينة: (الرياض، جدة، مكة، الدمام، الخبر، المدينة، الطائف، تبوك، أبها، القصيم، الأحساء)
 - الأحياء: استخرج أسماء الأحياء كمصفوفة
-- نوع العقار: شقة، فيلا، أرض، دور، دبلكس، عمارة، محل تجاري، مكتب
-- الميزانية: حوّل القيم إلى أرقام (مثال: "500 ألف" = 500000، "مليون" = 1000000)
-- طريقة الدفع: كاش، تمويل، نقداً، بنكي
+- نوع العقار: شقة، فيلا، أرض، دور، دبلكس، عمارة، محل، مكتب
+- الميزانية: حوّل للأرقام ("500 ألف" = 500000، "مليون" = 1000000)
+- طريقة الدفع: كاش، تمويل، نقد، بنكي
 - غرض الشراء: سكن، استثمار، تجاري
-- المساحة: بالمتر المربع
-- الغرف: عدد الغرف
-- الدور: رقم الدور أو "أرضي"
 
 تصنيف العميل:
-- مشتري: يبحث عن عقار للشراء أو الإيجار
-- بائع: يعرض عقاراً للبيع
-- مستثمر: يبحث عن فرص استثمارية أو عائد
+- مشتري: يبحث عن عقار
+- بائع: يعرض عقار للبيع
+- مستثمر: يبحث عن فرص استثمارية
 
-أعد النتيجة بصيغة JSON فقط بدون أي نص إضافي:
+أعد JSON فقط:
 {
+  "intent": "question" | "data" | "greeting" | "other",
+  "assistantReply": string | null,
   "role": "buyer" | "seller" | "investor" | null,
   "name": string | null,
   "phone": string | null,
@@ -115,6 +128,8 @@ export async function analyzeIntakeWithAI(text: string): Promise<IntakeAnalysisR
     return {
       success: true,
       role: parsed.role,
+      intent: parsed.intent || "data",
+      assistantReply: parsed.assistantReply || null,
       data: {
         name: parsed.name,
         phone: parsed.phone,
@@ -158,6 +173,37 @@ function fallbackExtraction(text: string): IntakeAnalysisResult {
     floor: null,
     additionalNotes: null,
   };
+
+  // Detect if this is a question
+  const questionWords = ["وش", "ايش", "إيش", "كيف", "ليش", "ليه", "متى", "هل", "شنو", "ماهو", "ما هو", "يعني", "توضح", "اشرح", "؟"];
+  let intent: "question" | "data" | "greeting" | "other" = "data";
+  let assistantReply: string | null = null;
+
+  const isQuestion = questionWords.some(word => text.includes(word));
+  if (isQuestion) {
+    intent = "question";
+    // Generate helpful answers for common questions
+    if (text.includes("نوع العقار") || text.includes("نوع عقار")) {
+      assistantReply = "نوع العقار يعني تبي شقة، فيلا، أرض، دبلكس، أو عمارة؟ قولي أي واحد يناسبك";
+    } else if (text.includes("الميزانية") || text.includes("ميزانية")) {
+      assistantReply = "الميزانية يعني كم تقدر تدفع للعقار، مثلاً من 500 ألف لمليون ريال";
+    } else if (text.includes("طريقة الدفع") || text.includes("الدفع")) {
+      assistantReply = "طريقة الدفع يعني تبي تدفع كاش (نقد) ولا عن طريق تمويل بنكي؟";
+    } else if (text.includes("الحي") || text.includes("حي")) {
+      assistantReply = "الحي يعني المنطقة اللي تبي تسكن فيها، مثلاً حي النرجس أو حي الياسمين في الرياض";
+    } else if (text.includes("المدينة") || text.includes("مدينة")) {
+      assistantReply = "قولي اسم المدينة اللي تبي تشتري فيها، مثلاً الرياض، جدة، الدمام، أو أي مدينة ثانية";
+    } else {
+      assistantReply = "تقدر توضح لي أكثر وش تقصد؟ أنا هنا أساعدك";
+    }
+  }
+
+  // Check for greetings
+  const greetings = ["هلا", "السلام", "مرحبا", "مساء", "صباح"];
+  if (greetings.some(g => text.includes(g)) && text.length < 30) {
+    intent = "greeting";
+    assistantReply = "هلا والله! كيف أقدر أساعدك اليوم؟";
+  }
 
   // Extract name
   const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
@@ -230,6 +276,8 @@ function fallbackExtraction(text: string): IntakeAnalysisResult {
   return {
     success: true,
     role,
+    intent,
+    assistantReply,
     data,
     confidence: 50,
     classificationTags: ["fallback"],
