@@ -15,6 +15,7 @@
 /* Also apply to contenteditable elements */
 [contenteditable]:focus {
   animation: prevent-ios-scroll 0.01s;
+  outline: none !important;
 }
 
 /* LIGHT MODE */
