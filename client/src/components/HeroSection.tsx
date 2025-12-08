@@ -2,11 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Home, Send, Sparkles, ArrowLeft, Check } from "lucide-react";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Home, Send, Sparkles, Check, Users, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+
+type UserMode = "buyer" | "seller";
 
 interface ExampleSegment {
   text: string;
@@ -14,7 +17,7 @@ interface ExampleSegment {
   underline?: boolean;
 }
 
-const exampleSegments: ExampleSegment[] = [
+const buyerExampleSegments: ExampleSegment[] = [
   { text: "اسمي " },
   { text: "عبدالسلام محمد", color: "#f97316", underline: true },
   { text: " ، رقم جوالي " },
@@ -31,11 +34,30 @@ const exampleSegments: ExampleSegment[] = [
   { text: "كاش", color: "#3b82f6", underline: true },
 ];
 
-const fullExampleText = "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش";
+const sellerExampleSegments: ExampleSegment[] = [
+  { text: "اسمي " },
+  { text: "محمد العلي", color: "#f97316", underline: true },
+  { text: " ، جوالي " },
+  { text: "0551234567", color: "#f97316", underline: true },
+  { text: " ، أعرض " },
+  { text: "فيلا", color: "#3b82f6", underline: true },
+  { text: " في " },
+  { text: "الرياض", color: "#22c55e", underline: true },
+  { text: " حي " },
+  { text: "النرجس", color: "#22c55e", underline: true },
+  { text: " ، المساحة 400 متر ، السعر " },
+  { text: "2.5 مليون", color: "#22c55e", underline: true },
+  { text: " ، " },
+  { text: "جاهزة للسكن", color: "#3b82f6", underline: true },
+];
+
+const fullBuyerExampleText = "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش";
+const fullSellerExampleText = "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن";
 
 export default function HeroSection() {
   const { toast } = useToast();
   const textareaRef = useRef<HTMLDivElement>(null);
+  const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
   const [conversation, setConversation] = useState<Array<{type: "user" | "system", text: string}>>([]);
@@ -43,7 +65,10 @@ export default function HeroSection() {
   const [isComplete, setIsComplete] = useState(false);
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
 
-  const registerMutation = useMutation({
+  const exampleSegments = mode === "buyer" ? buyerExampleSegments : sellerExampleSegments;
+  const fullExampleText = mode === "buyer" ? fullBuyerExampleText : fullSellerExampleText;
+
+  const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest("POST", "/api/buyers/register", data);
     },
@@ -52,6 +77,26 @@ export default function HeroSection() {
       toast({
         title: "تم تسجيل رغبتك بنجاح!",
         description: "سنتواصل معك عند توفر عقار مناسب",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "حدث خطأ",
+        description: "يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sellerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/sellers/register", data);
+    },
+    onSuccess: () => {
+      setIsComplete(true);
+      toast({
+        title: "تم تسجيل عقارك بنجاح!",
+        description: "سنتواصل معك عند وجود مشترين مهتمين",
       });
     },
     onError: () => {
@@ -76,7 +121,19 @@ export default function HeroSection() {
       }, 3000);
       return () => clearTimeout(resetTimer);
     }
-  }, [charIndex]);
+  }, [charIndex, exampleSegments]);
+
+  const handleModeSwitch = (newMode: UserMode) => {
+    setMode(newMode);
+    setCharIndex(0);
+    setInputText("");
+    setConversation([]);
+    setIsComplete(false);
+    setExtractedData({});
+    if (textareaRef.current) {
+      textareaRef.current.textContent = "";
+    }
+  };
 
   const renderTypedText = () => {
     let currentPos = 0;
@@ -112,7 +169,7 @@ export default function HeroSection() {
     return elements;
   };
 
-  const extractInfo = (text: string) => {
+  const extractBuyerInfo = (text: string) => {
     const data: Record<string, string> = { ...extractedData };
     
     const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
@@ -146,6 +203,40 @@ export default function HeroSection() {
     return data;
   };
 
+  const extractSellerInfo = (text: string) => {
+    const data: Record<string, string> = { ...extractedData };
+    
+    const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
+    if (nameMatch) data.name = nameMatch[1];
+    
+    const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
+    if (phoneMatch) data.phone = phoneMatch[1];
+    
+    const cityMatch = text.match(/(?:في|مدينة)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
+    if (cityMatch) data.city = cityMatch[1];
+    
+    const districtMatch = text.match(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
+    if (districtMatch) data.district = districtMatch[1];
+    
+    const typeMatch = text.match(/(?:أعرض|اعرض|لدي|عندي)?\s*(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
+    if (typeMatch) data.propertyType = typeMatch[1];
+    
+    const priceMatch = text.match(/(?:السعر|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
+    if (priceMatch) {
+      let amount = parseFloat(priceMatch[1]);
+      if (priceMatch[2]?.includes("مليون")) amount *= 1000000;
+      else if (priceMatch[2]) amount *= 1000;
+      data.price = amount.toString();
+    }
+    
+    const statusMatch = text.match(/(جاهز|جاهزة|تحت الإنشاء|قيد الإنشاء)/i);
+    if (statusMatch) {
+      data.status = statusMatch[1].includes("جاهز") ? "ready" : "under_construction";
+    }
+    
+    return data;
+  };
+
   const addSuggestion = (suggestion: string) => {
     const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
     setInputText(newText);
@@ -160,7 +251,7 @@ export default function HeroSection() {
   const handleSubmit = () => {
     if (!inputText.trim()) return;
     
-    const newData = extractInfo(inputText);
+    const newData = mode === "buyer" ? extractBuyerInfo(inputText) : extractSellerInfo(inputText);
     setExtractedData(newData);
     
     setConversation(prev => [
@@ -175,32 +266,65 @@ export default function HeroSection() {
     setIsTyping(true);
     
     setTimeout(() => {
-      const hasRequired = newData.name && newData.phone && newData.city && newData.propertyType;
-      if (hasRequired) {
-        registerMutation.mutate({
-          name: newData.name,
-          phone: newData.phone,
-          city: newData.city,
-          districts: newData.district ? [newData.district] : [],
-          propertyType: newData.propertyType,
-          minBudget: 0,
-          maxBudget: parseInt(newData.budget || "0"),
-          paymentMethod: newData.paymentMethod || "cash",
-        });
-        setConversation(prev => [
-          ...prev,
-          { type: "system", text: "تم تسجيل رغبتك بنجاح! سنتواصل معك عند توفر عقار مناسب." }
-        ]);
+      if (mode === "buyer") {
+        const hasRequired = newData.name && newData.phone && newData.city && newData.propertyType;
+        if (hasRequired) {
+          buyerMutation.mutate({
+            name: newData.name,
+            email: `${newData.phone}@temp.com`,
+            phone: newData.phone,
+            city: newData.city,
+            districts: newData.district ? [newData.district] : [],
+            propertyType: newData.propertyType === "شقة" ? "apartment" : newData.propertyType === "فيلا" ? "villa" : newData.propertyType === "أرض" ? "land" : "apartment",
+            budgetMin: 0,
+            budgetMax: parseInt(newData.budget || "0"),
+            paymentMethod: newData.paymentMethod || "cash",
+          });
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: "تم تسجيل رغبتك بنجاح! سنتواصل معك عند توفر عقار مناسب." }
+          ]);
+        } else {
+          const missing: string[] = [];
+          if (!newData.name) missing.push("الاسم");
+          if (!newData.phone) missing.push("رقم الجوال");
+          if (!newData.city) missing.push("المدينة");
+          if (!newData.propertyType) missing.push("نوع العقار");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
       } else {
-        const missing: string[] = [];
-        if (!newData.name) missing.push("الاسم");
-        if (!newData.phone) missing.push("رقم الجوال");
-        if (!newData.city) missing.push("المدينة");
-        if (!newData.propertyType) missing.push("نوع العقار");
-        setConversation(prev => [
-          ...prev,
-          { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
-        ]);
+        const hasRequired = newData.name && newData.phone && newData.city && newData.district && newData.propertyType && newData.price;
+        if (hasRequired) {
+          sellerMutation.mutate({
+            name: newData.name,
+            email: `${newData.phone}@temp.com`,
+            phone: newData.phone,
+            city: newData.city,
+            district: newData.district,
+            propertyType: newData.propertyType === "شقة" ? "apartment" : newData.propertyType === "فيلا" ? "villa" : newData.propertyType === "أرض" ? "land" : "apartment",
+            price: parseInt(newData.price),
+            status: newData.status || "ready",
+          });
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: "تم تسجيل عقارك بنجاح! سنتواصل معك عند وجود مشترين مهتمين." }
+          ]);
+        } else {
+          const missing: string[] = [];
+          if (!newData.name) missing.push("الاسم");
+          if (!newData.phone) missing.push("رقم الجوال");
+          if (!newData.city) missing.push("المدينة");
+          if (!newData.district) missing.push("الحي");
+          if (!newData.propertyType) missing.push("نوع العقار");
+          if (!newData.price) missing.push("السعر");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
       }
       setIsTyping(false);
     }, 800);
@@ -227,15 +351,41 @@ export default function HeroSection() {
             <span className="text-primary block mt-2">سجل رغبتك ودعنا نرشّح لك الأفضل</span>
           </h1>
           
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10" data-testid="text-hero-description">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8" data-testid="text-hero-description">
             فقط أخبرنا ماذا تريد بكلماتك الخاصة، وسنفهم ونجد لك العقار المناسب
           </p>
+
+          {/* Mode Toggle */}
+          <div className="flex justify-center gap-2 mb-6">
+            <Button
+              size="lg"
+              variant={mode === "buyer" ? "default" : "outline"}
+              onClick={() => handleModeSwitch("buyer")}
+              className="gap-2"
+              data-testid="button-mode-buyer"
+            >
+              <Users className="h-5 w-5" />
+              أبحث عن عقار
+            </Button>
+            <Button
+              size="lg"
+              variant={mode === "seller" ? "default" : "outline"}
+              onClick={() => handleModeSwitch("seller")}
+              className={`gap-2 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"}`}
+              data-testid="button-mode-seller"
+            >
+              <Building2 className="h-5 w-5" />
+              اعرض عقارك
+            </Button>
+          </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-2xl mb-8">
             {/* Typewriter Example - Always visible */}
             {!isComplete && (
-              <div className="p-4 border-b bg-muted/10">
-                <p className="text-sm text-muted-foreground mb-2 text-center">مثال على طريقة الكتابة:</p>
+              <div className={`p-4 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : "bg-muted/10"}`}>
+                <p className="text-sm text-muted-foreground mb-2 text-center">
+                  {mode === "buyer" ? "مثال على طلب شراء:" : "مثال على عرض عقار:"}
+                </p>
                 <div 
                   className="text-center cursor-pointer min-h-[100px] flex items-center justify-center"
                   onClick={() => addSuggestion(fullExampleText)}
@@ -260,7 +410,7 @@ export default function HeroSection() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         msg.type === "user"
-                          ? "bg-primary text-primary-foreground rounded-tr-none"
+                          ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
                           : "bg-card border rounded-tl-none"
                       }`}
                     >
@@ -289,9 +439,9 @@ export default function HeroSection() {
                   <Button
                     size="icon"
                     onClick={handleSubmit}
-                    disabled={!inputText.trim() || registerMutation.isPending}
+                    disabled={!inputText.trim() || buyerMutation.isPending || sellerMutation.isPending}
                     data-testid="button-send"
-                    className="flex-shrink-0"
+                    className={`flex-shrink-0 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                   >
                     <Send className="h-5 w-5" />
                   </Button>
@@ -299,44 +449,50 @@ export default function HeroSection() {
                     <div
                       ref={textareaRef}
                       contentEditable
-                      className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className={`min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 ${mode === "seller" ? "focus:ring-green-500/50" : "focus:ring-primary/50"}`}
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      data-placeholder="اكتب هنا بطريقتك..."
+                      data-placeholder={mode === "buyer" ? "اكتب رغبتك هنا..." : "اكتب تفاصيل عقارك هنا..."}
                       data-testid="input-interactive"
                     />
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="p-6 bg-primary/5 text-center">
-                <Check className="h-12 w-12 text-primary mx-auto mb-3" />
-                <h3 className="text-xl font-bold mb-2">تم تسجيل رغبتك بنجاح!</h3>
-                <p className="text-muted-foreground">سنتواصل معك عند توفر عقار مناسب</p>
+              <div className={`p-6 text-center ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : "bg-primary/5"}`}>
+                <Check className={`h-12 w-12 mx-auto mb-3 ${mode === "seller" ? "text-green-600" : "text-primary"}`} />
+                <h3 className="text-xl font-bold mb-2">
+                  {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {mode === "buyer" ? "سنتواصل معك عند توفر عقار مناسب" : "سنتواصل معك عند وجود مشترين مهتمين"}
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsComplete(false);
+                    setConversation([]);
+                    setExtractedData({});
+                  }}
+                  data-testid="button-add-another"
+                >
+                  {mode === "buyer" ? "إضافة رغبة أخرى" : "إضافة عقار آخر"}
+                </Button>
               </div>
             )}
           </Card>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/seller-form">
-              <Button size="lg" className="w-full sm:w-auto gap-2 bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30 px-8" data-testid="button-list-property">
-                <Building2 className="h-5 w-5" />
-                اعرض عقارك
-              </Button>
-            </Link>
-          </div>
-
-          <div className="flex items-center justify-center gap-8 mt-10 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-8 mt-10 text-sm text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-primary" />
               <span>+500 مشتري مسجل</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+              <div className="h-2 w-2 rounded-full bg-green-500" />
               <span>+200 عقار متاح</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+              <div className="h-2 w-2 rounded-full bg-orange-500" />
               <span>+50 مطابقة ناجحة</span>
             </div>
           </div>
