@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
+import { InvestorModal } from "./InvestorModal";
 
 type UserMode = "buyer" | "seller";
 
@@ -66,6 +67,7 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showInvestorModal, setShowInvestorModal] = useState(false);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : sellerExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : fullSellerExampleText;
@@ -388,7 +390,7 @@ export default function HeroSection() {
           </p>
 
           {/* Mode Toggle */}
-          <div className="flex justify-center gap-2 mb-6">
+          <div className="flex justify-center gap-2 mb-6 flex-wrap">
             <Button
               size="lg"
               variant={mode === "buyer" ? "default" : "outline"}
@@ -408,6 +410,16 @@ export default function HeroSection() {
             >
               <Building2 className="h-5 w-5" />
               اعرض عقارك
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setShowInvestorModal(true)}
+              className="gap-2 border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"
+              data-testid="button-investor"
+            >
+              <TrendingUp className="h-5 w-5" />
+              فرص للمستثمرين
             </Button>
           </div>
 
@@ -635,6 +647,12 @@ export default function HeroSection() {
             { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
           ]);
         }}
+      />
+      
+      {/* Investor Modal */}
+      <InvestorModal
+        open={showInvestorModal}
+        onOpenChange={setShowInvestorModal}
       />
     </section>
   );

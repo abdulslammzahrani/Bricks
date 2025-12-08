@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import { Icon, LatLng } from "leaflet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MapPin, Check } from "lucide-react";
 import "leaflet/dist/leaflet.css";
@@ -70,6 +70,9 @@ export function LocationPicker({
             <MapPin className="h-5 w-5 text-primary" />
             حدد موقع العقار على الخريطة
           </DialogTitle>
+          <DialogDescription>
+            انقر على الخريطة لتحديد الموقع الدقيق للعقار
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex-1 px-4">
