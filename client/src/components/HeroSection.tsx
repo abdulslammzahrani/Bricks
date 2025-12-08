@@ -235,6 +235,20 @@ export default function HeroSection() {
       data.status = statusMatch[1].includes("جاهز") ? "ready" : "under_construction";
     }
     
+    // Extract coordinates from Google Maps link
+    const mapsLinkMatch = text.match(/(?:maps\.google\.com|google\.com\/maps|goo\.gl\/maps)[^\s]*[?&@](-?\d+\.?\d*)[,/](-?\d+\.?\d*)/i);
+    if (mapsLinkMatch) {
+      data.latitude = mapsLinkMatch[1];
+      data.longitude = mapsLinkMatch[2];
+    }
+    
+    // Extract coordinates from direct input (e.g., "24.7136, 46.6753" or "24.7136 46.6753")
+    const coordMatch = text.match(/(-?\d{1,3}\.\d{4,})[,\s]+(-?\d{1,3}\.\d{4,})/);
+    if (coordMatch && !mapsLinkMatch) {
+      data.latitude = coordMatch[1];
+      data.longitude = coordMatch[2];
+    }
+    
     return data;
   };
 
@@ -307,7 +321,7 @@ export default function HeroSection() {
           ]);
         }
       } else {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0;
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
         if (hasRequired) {
           sellerMutation.mutate({
             name: mergedData.name,
@@ -319,6 +333,8 @@ export default function HeroSection() {
             price: parseInt(mergedData.price),
             status: mergedData.status || "ready",
             images: uploadedFiles,
+            latitude: parseFloat(mergedData.latitude),
+            longitude: parseFloat(mergedData.longitude),
           });
           setConversation(prev => [
             ...prev,
@@ -333,6 +349,7 @@ export default function HeroSection() {
           if (!mergedData.propertyType) missing.push("نوع العقار");
           if (!mergedData.price) missing.push("السعر");
           if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
+          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق (أرسل رابط خرائط جوجل أو الإحداثيات)");
           setConversation(prev => [
             ...prev,
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }

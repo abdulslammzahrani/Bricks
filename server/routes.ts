@@ -269,7 +269,7 @@ export async function registerRoutes(
   // Register seller and add property
   app.post("/api/sellers/register", async (req, res) => {
     try {
-      const { name, email, phone, accountType, entityName, propertyType, city, district, price, area, rooms, description, status, images } = req.body;
+      const { name, email, phone, accountType, entityName, propertyType, city, district, price, area, rooms, description, status, images, latitude, longitude } = req.body;
 
       // Validate required fields
       if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -326,6 +326,8 @@ export async function registerRoutes(
         status: status || "ready",
         images: Array.isArray(images) ? images : [],
         isActive: true,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
       });
 
       // Find matches for this property
@@ -397,7 +399,7 @@ export async function registerRoutes(
   // Create property
   app.post("/api/properties", async (req, res) => {
     try {
-      const { sellerId, propertyType, city, district, price, area, rooms, description, status, images, isActive } = req.body;
+      const { sellerId, propertyType, city, district, price, area, rooms, description, status, images, isActive, latitude, longitude } = req.body;
       
       if (!sellerId || !propertyType || !city || !district || !price) {
         return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
@@ -415,6 +417,8 @@ export async function registerRoutes(
         status: status || "ready",
         images: Array.isArray(images) ? images : [],
         isActive: isActive !== false,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
       });
 
       await storage.findMatchesForProperty(property.id);
