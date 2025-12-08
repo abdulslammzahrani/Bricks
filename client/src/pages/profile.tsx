@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X } from "lucide-react";
 import { Link } from "wouter";
+import { FileUploadButton } from "@/components/FileUploadButton";
 
 const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم"];
 const propertyTypes = [
@@ -39,6 +40,7 @@ export default function ProfilePage() {
     price: "",
     area: "",
     rooms: "",
+    images: [] as string[],
   });
 
   const loginMutation = useMutation({
@@ -168,6 +170,7 @@ export default function ProfilePage() {
       price: "",
       area: "",
       rooms: "",
+      images: [],
     });
   };
 
@@ -205,6 +208,7 @@ export default function ProfilePage() {
         price: "",
         area: item.area || "",
         rooms: item.rooms || "",
+        images: [],
       });
     } else {
       setFormData({
@@ -216,6 +220,7 @@ export default function ProfilePage() {
         price: item.price?.toString() || "",
         area: item.area || "",
         rooms: item.rooms || "",
+        images: item.images || [],
       });
     }
     setShowAddDialog(true);
@@ -243,6 +248,11 @@ export default function ProfilePage() {
         addPreferenceMutation.mutate(data);
       }
     } else {
+      if (formData.images.length === 0) {
+        toast({ title: "يجب رفع صور أو فيديوهات للعقار", variant: "destructive" });
+        return;
+      }
+      
       const data = {
         sellerId: userData.id,
         city: formData.city,
@@ -251,6 +261,7 @@ export default function ProfilePage() {
         price: formData.price ? parseInt(formData.price) : 0,
         area: formData.area || null,
         rooms: formData.rooms || null,
+        images: formData.images,
         isActive: true,
       };
       
@@ -260,6 +271,17 @@ export default function ProfilePage() {
         addPropertyMutation.mutate(data);
       }
     }
+  };
+
+  const handleFilesUploaded = (urls: string[]) => {
+    setFormData(prev => ({ ...prev, images: [...prev.images, ...urls] }));
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   const handleDelete = (id: string) => {
@@ -615,6 +637,58 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
+
+            {!isBuyer && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-destructive">* الصور والفيديوهات (مطلوب)</Label>
+                  <FileUploadButton
+                    maxFiles={5}
+                    maxFileSize={52428800}
+                    onFilesUploaded={handleFilesUploaded}
+                    buttonVariant="outline"
+                    buttonSize="sm"
+                  >
+                    <Upload className="h-4 w-4 ml-2" />
+                    رفع الملفات
+                  </FileUploadButton>
+                </div>
+                
+                {formData.images.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.images.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <div className="w-16 h-16 rounded-md border overflow-hidden bg-muted flex items-center justify-center">
+                          {url.includes(".mp4") || url.includes(".mov") || url.includes(".webm") ? (
+                            <span className="text-xs text-muted-foreground">فيديو</span>
+                          ) : (
+                            <img 
+                              src={url} 
+                              alt={`صورة ${index + 1}`} 
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImage(index)}
+                          data-testid={`button-remove-image-${index}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-md">
+                    لم يتم رفع أي ملفات بعد
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-2 justify-end pt-4">
               <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
