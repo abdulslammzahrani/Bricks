@@ -388,13 +388,39 @@ export default function HeroSection() {
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
   
+  // Calculate requests based on time of day (0 at midnight, max at 11:59 PM)
+  const calculateDailyRequests = () => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    // Total minutes since midnight
+    const minutesSinceMidnight = hours * 60 + minutes;
+    // Max requests at end of day ~500, start at 0
+    // Growth rate varies - slower at night, faster during day
+    let baseRequests = 0;
+    if (hours >= 0 && hours < 6) {
+      // Night: very slow growth (0-30)
+      baseRequests = Math.floor(minutesSinceMidnight * 0.08);
+    } else if (hours >= 6 && hours < 12) {
+      // Morning: moderate growth (30-180)
+      baseRequests = 30 + Math.floor((minutesSinceMidnight - 360) * 0.4);
+    } else if (hours >= 12 && hours < 18) {
+      // Afternoon: peak growth (180-380)
+      baseRequests = 180 + Math.floor((minutesSinceMidnight - 720) * 0.55);
+    } else {
+      // Evening: moderate growth (380-500)
+      baseRequests = 380 + Math.floor((minutesSinceMidnight - 1080) * 0.33);
+    }
+    // Add small random variation
+    return baseRequests + Math.floor(Math.random() * 10);
+  };
+  
   // Initialize and animate live viewer count
   useEffect(() => {
     // Initial values
     const baseViewers = 45 + Math.floor(Math.random() * 30);
-    const baseRequests = 127 + Math.floor(Math.random() * 50);
     setLiveViewers(baseViewers);
-    setRequestsToday(baseRequests);
+    setRequestsToday(calculateDailyRequests());
     
     // Fluctuate viewer count every 3-7 seconds
     const viewerInterval = setInterval(() => {
@@ -405,10 +431,10 @@ export default function HeroSection() {
       });
     }, 3000 + Math.random() * 4000);
     
-    // Occasionally increment requests (every 15-30 seconds)
+    // Update requests based on time every 30 seconds
     const requestInterval = setInterval(() => {
-      setRequestsToday(prev => prev + 1);
-    }, 15000 + Math.random() * 15000);
+      setRequestsToday(calculateDailyRequests());
+    }, 30000);
     
     return () => {
       clearInterval(viewerInterval);
@@ -1576,65 +1602,41 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
-      <div className="container mx-auto px-4 py-16 md:py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="secondary" className="mb-6" data-testid="badge-hero">
-            <Sparkles className="h-3 w-3 ml-1" />
-            تجربة عقارية ذكية
-          </Badge>
+    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
+      <div className="container mx-auto px-4 py-8 md:py-16">
+        <div className="max-w-3xl mx-auto text-center">
           
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6" data-testid="text-hero-title">
-            لا تشتري عقارك من إعلان…
-            <span className="text-primary block mt-2">سجل رغبتك ودعنا نرشّح لك الأفضل</span>
+          {/* Main Headline - Compact */}
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-4" data-testid="text-hero-title">
+            سجّل رغبتك العقارية
+            <span className="text-primary block mt-1">ودعنا نجد لك الأفضل</span>
           </h1>
           
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8" data-testid="text-hero-description">
-            فقط أخبرنا ماذا تريد بكلماتك الخاصة، وسنفهم ونجد لك العقار المناسب
+          <p className="text-base text-muted-foreground max-w-xl mx-auto mb-6" data-testid="text-hero-description">
+            أخبرنا ماذا تريد بكلماتك، وسنفهم ونوصلك بالعقار المناسب
           </p>
 
-          {/* Mode Toggle - Segmented Control for Buyer/Seller */}
-          <div className="flex flex-col items-center gap-3 mb-6">
-            <div className="inline-flex rounded-lg border p-1 bg-muted/50">
+          {/* Mode Toggle - Clean Segmented Control */}
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <div className="inline-flex rounded-xl border p-1.5 bg-muted/30 shadow-sm">
               <Button
-                size="lg"
                 variant={mode === "buyer" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-md"
+                className="gap-2 rounded-lg px-6"
                 data-testid="button-mode-buyer"
               >
-                <Users className="h-5 w-5" />
+                <Users className="h-4 w-4" />
                 أبحث عن عقار
               </Button>
               <Button
-                size="lg"
                 variant={mode === "seller" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("seller")}
-                className={`gap-2 rounded-md ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                className={`gap-2 rounded-lg px-6 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                 data-testid="button-mode-seller"
               >
-                <Building2 className="h-5 w-5" />
+                <Building2 className="h-4 w-4" />
                 اعرض عقارك
               </Button>
-            </div>
-            
-            {/* Live Viewer Counter - Social Proof */}
-            <div className="flex items-center justify-center gap-4" data-testid="live-stats">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <Eye className="h-4 w-4" />
-                <span className="font-medium text-foreground">{liveViewers}</span>
-                <span>يتصفحون الآن</span>
-              </div>
-              <div className="w-px h-4 bg-border"></div>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <span className="font-medium text-foreground">{requestsToday}</span>
-                <span>طلب اليوم</span>
-              </div>
             </div>
           </div>
 
@@ -1895,18 +1897,22 @@ export default function HeroSection() {
             )}
           </Card>
 
-          <div className="flex items-center justify-center gap-8 mt-10 text-sm text-muted-foreground flex-wrap">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary" />
-              <span>+500 مشتري مسجل</span>
+          {/* Live Stats - Below Chat Box */}
+          <div className="flex items-center justify-center gap-6 mt-4" data-testid="live-stats">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <span className="font-bold text-foreground">{liveViewers}</span>
+              <span className="text-muted-foreground">يتصفحون الآن</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
-              <span>+200 عقار متاح</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-orange-500" />
-              <span>+50 مطابقة ناجحة</span>
+            <div className="w-px h-4 bg-border"></div>
+            <div className="flex items-center gap-2 text-sm">
+              <Zap className="h-4 w-4 text-amber-500" />
+              <span className="font-bold text-foreground">{requestsToday}</span>
+              <span className="text-muted-foreground">طلب اليوم</span>
             </div>
           </div>
         </div>
