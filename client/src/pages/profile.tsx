@@ -37,6 +37,7 @@ export default function ProfilePage() {
   
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [loginType, setLoginType] = useState<"user" | "admin">("user");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -456,6 +457,34 @@ export default function ProfilePage() {
             <p className="text-sm text-muted-foreground">أدخل بياناتك للوصول لصفحتك الشخصية</p>
           </CardHeader>
           <CardContent className="pt-4">
+            {/* Login Type Toggle */}
+            <div className="flex items-center justify-center gap-2 mb-6 p-1 bg-muted rounded-lg" data-testid="login-type-toggle">
+              <button
+                type="button"
+                onClick={() => setLoginType("admin")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginType === "admin"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-login-type-admin"
+              >
+                مسؤول النظام
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginType("user")}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginType === "user"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-login-type-user"
+              >
+                مستخدم
+              </button>
+            </div>
+            
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium">رقم الجوال</Label>
