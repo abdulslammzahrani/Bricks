@@ -1683,6 +1683,7 @@ export default function HeroSection() {
                 >
                   <p className="text-base leading-relaxed line-clamp-2">
                     {renderTypedText()}
+                    <span className="text-muted-foreground">...</span>
                     <span className="animate-pulse text-primary font-bold">|</span>
                   </p>
                 </div>
