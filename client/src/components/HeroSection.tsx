@@ -447,15 +447,16 @@ export default function HeroSection() {
     setCharIndex(0);
   }, [mode]);
   
-  // Show mic tooltip when chat first expands (when there's 1 message from AI)
+  // Show mic tooltip when chat first expands (after first exchange)
   useEffect(() => {
-    if (conversation.length === 1) {
-      // Delay slightly to let UI render
+    // Show after first AI response (conversation has user msg + AI response = 2)
+    if (conversation.length === 2) {
       const timer = setTimeout(() => {
         setShowMicTooltip(true);
-      }, 800);
+      }, 1000);
       return () => clearTimeout(timer);
-    } else if (conversation.length > 2) {
+    } else if (conversation.length > 4) {
+      // Hide after more conversation
       setShowMicTooltip(false);
     }
   }, [conversation.length]);
