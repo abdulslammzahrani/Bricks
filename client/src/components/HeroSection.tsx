@@ -1574,6 +1574,32 @@ export default function HeroSection() {
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
               
+              {/* Upload button for sellers */}
+              {mode === "seller" && (
+                <FileUploadButton
+                  onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
+                  buttonVariant="ghost"
+                  buttonSize="icon"
+                  buttonClassName="rounded-full h-10 w-10 flex-shrink-0"
+                >
+                  <Image className="h-4 w-4" />
+                </FileUploadButton>
+              )}
+              
+              {/* Location picker button for sellers */}
+              {mode === "seller" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowLocationPicker(true)}
+                  className={`rounded-full h-10 w-10 flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
+                  data-testid="button-open-map-fullscreen"
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              )}
+              
               {/* Input field */}
               <div
                 ref={textareaRef}
@@ -1826,66 +1852,40 @@ export default function HeroSection() {
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
-                  {/* Send button */}
+                <div className="flex items-start gap-3">
                   <Button
                     size="icon"
                     onClick={handleSubmit}
                     disabled={buyerMutation.isPending || sellerMutation.isPending}
                     data-testid="button-send"
-                    className="rounded-full h-10 w-10 flex-shrink-0"
+                    className="flex-shrink-0"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-5 w-5" />
                   </Button>
                   
                   {/* Voice recording button */}
                   <Button
                     size="icon"
-                    variant={isRecording ? "destructive" : "ghost"}
+                    variant={isRecording ? "destructive" : "outline"}
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isTranscribing}
-                    className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
                     data-testid="button-voice-record-landing"
                   >
-                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </Button>
                   
-                  {/* Upload button for sellers */}
-                  {mode === "seller" && (
-                    <FileUploadButton
-                      onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
-                      buttonVariant="ghost"
-                      buttonSize="icon"
-                      buttonClassName="rounded-full h-10 w-10 flex-shrink-0"
-                    >
-                      <Image className="h-4 w-4" />
-                    </FileUploadButton>
-                  )}
-                  
-                  {/* Location picker button for sellers */}
-                  {mode === "seller" && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowLocationPicker(true)}
-                      className={`rounded-full h-10 w-10 flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
-                      data-testid="button-open-map"
-                    >
-                      <MapPin className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  {/* Input field */}
-                  <div
-                    ref={textareaRef}
-                    contentEditable
-                    className="flex-1 min-h-[40px] py-2 px-3 text-base focus:outline-none bg-transparent"
-                    onInput={(e) => setInputText(e.currentTarget.textContent || "")}
-                    onKeyDown={handleKeyDown}
-                    data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب أو سجل صوتك..."}
-                    data-testid="input-interactive"
-                  />
+                  <div className="flex-1">
+                    <div
+                      ref={textareaRef}
+                      contentEditable
+                      className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                      onKeyDown={handleKeyDown}
+                      data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب أو سجل صوتك..."}
+                      data-testid="input-interactive"
+                    />
+                  </div>
                 </div>
                 
                 {isRecording && (
