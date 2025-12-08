@@ -189,6 +189,81 @@ export async function registerRoutes(
     }
   });
 
+  // ============ PREFERENCE CRUD ROUTES ============
+
+  // Create new preference
+  app.post("/api/preferences", async (req, res) => {
+    try {
+      const { userId, city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose, isActive } = req.body;
+      
+      if (!userId || !city || !propertyType) {
+        return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
+      }
+
+      const preference = await storage.createBuyerPreference({
+        userId,
+        city,
+        districts: Array.isArray(districts) ? districts : [],
+        propertyType,
+        rooms: rooms || null,
+        area: area || null,
+        budgetMin: budgetMin || null,
+        budgetMax: budgetMax || null,
+        paymentMethod: paymentMethod || null,
+        purpose: purpose || null,
+        isActive: isActive !== false,
+      });
+
+      await storage.findMatchesForPreference(preference.id);
+      res.json(preference);
+    } catch (error: any) {
+      console.error("Error creating preference:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update preference
+  app.patch("/api/preferences/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose, isActive } = req.body;
+
+      const preference = await storage.updateBuyerPreference(id, {
+        city,
+        districts,
+        propertyType,
+        rooms,
+        area,
+        budgetMin,
+        budgetMax,
+        paymentMethod,
+        purpose,
+        isActive,
+      });
+
+      if (!preference) {
+        return res.status(404).json({ error: "الرغبة غير موجودة" });
+      }
+
+      res.json(preference);
+    } catch (error: any) {
+      console.error("Error updating preference:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete preference
+  app.delete("/api/preferences/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBuyerPreference(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting preference:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ SELLER ROUTES ============
 
   // Register seller and add property
@@ -315,6 +390,49 @@ export async function registerRoutes(
       const property = await storage.updateProperty(req.params.id, req.body);
       res.json(property);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create property
+  app.post("/api/properties", async (req, res) => {
+    try {
+      const { sellerId, propertyType, city, district, price, area, rooms, description, status, images, isActive } = req.body;
+      
+      if (!sellerId || !propertyType || !city || !district || !price) {
+        return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
+      }
+
+      const property = await storage.createProperty({
+        sellerId,
+        propertyType,
+        city,
+        district,
+        price: parseInt(String(price), 10),
+        area: area || null,
+        rooms: rooms || null,
+        description: description || null,
+        status: status || "ready",
+        images: Array.isArray(images) ? images : [],
+        isActive: isActive !== false,
+      });
+
+      await storage.findMatchesForProperty(property.id);
+      res.json(property);
+    } catch (error: any) {
+      console.error("Error creating property:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete property
+  app.delete("/api/properties/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteProperty(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting property:", error);
       res.status(500).json({ error: error.message });
     }
   });

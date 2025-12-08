@@ -21,6 +21,7 @@ export interface IStorage {
   getBuyerPreferencesByUser(userId: string): Promise<BuyerPreference[]>;
   createBuyerPreference(pref: InsertBuyerPreference): Promise<BuyerPreference>;
   updateBuyerPreference(id: string, pref: Partial<InsertBuyerPreference>): Promise<BuyerPreference | undefined>;
+  deleteBuyerPreference(id: string): Promise<void>;
   getAllBuyerPreferences(): Promise<BuyerPreference[]>;
 
   // Properties
@@ -28,6 +29,7 @@ export interface IStorage {
   getPropertiesBySeller(sellerId: string): Promise<Property[]>;
   createProperty(prop: InsertProperty): Promise<Property>;
   updateProperty(id: string, prop: Partial<InsertProperty>): Promise<Property | undefined>;
+  deleteProperty(id: string): Promise<void>;
   getAllProperties(): Promise<Property[]>;
   incrementPropertyViews(id: string): Promise<void>;
 
@@ -104,6 +106,10 @@ export class DatabaseStorage implements IStorage {
     return result || undefined;
   }
 
+  async deleteBuyerPreference(id: string): Promise<void> {
+    await db.delete(buyerPreferences).where(eq(buyerPreferences.id, id));
+  }
+
   async getAllBuyerPreferences(): Promise<BuyerPreference[]> {
     return db.select().from(buyerPreferences).where(eq(buyerPreferences.isActive, true));
   }
@@ -126,6 +132,10 @@ export class DatabaseStorage implements IStorage {
   async updateProperty(id: string, prop: Partial<InsertProperty>): Promise<Property | undefined> {
     const [result] = await db.update(properties).set(prop).where(eq(properties.id, id)).returning();
     return result || undefined;
+  }
+
+  async deleteProperty(id: string): Promise<void> {
+    await db.delete(properties).where(eq(properties.id, id));
   }
 
   async getAllProperties(): Promise<Property[]> {

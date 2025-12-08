@@ -4,12 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
+
+const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم"];
+const propertyTypes = [
+  { value: "apartment", label: "شقة" },
+  { value: "villa", label: "فيلا" },
+  { value: "land", label: "أرض" },
+  { value: "duplex", label: "دوبلكس" },
+  { value: "building", label: "عمارة" },
+];
 
 export default function ProfilePage() {
   const { toast } = useToast();
@@ -17,6 +27,19 @@ export default function ProfilePage() {
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  
+  const [formData, setFormData] = useState({
+    city: "",
+    district: "",
+    propertyType: "",
+    budgetMin: "",
+    budgetMax: "",
+    price: "",
+    area: "",
+    rooms: "",
+  });
 
   const loginMutation = useMutation({
     mutationFn: async (data: { phone: string; password: string }) => {
@@ -37,15 +60,116 @@ export default function ProfilePage() {
     },
   });
 
-  const { data: preferences } = useQuery({
+  const { data: preferences, refetch: refetchPreferences } = useQuery({
     queryKey: ["/api/buyers", userData?.id, "preferences"],
     enabled: isLoggedIn && userData?.role === "buyer",
   });
 
-  const { data: properties } = useQuery({
+  const { data: properties, refetch: refetchProperties } = useQuery({
     queryKey: ["/api/sellers", userData?.id, "properties"],
     enabled: isLoggedIn && userData?.role === "seller",
   });
+
+  const addPreferenceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/preferences", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تمت إضافة الرغبة بنجاح" });
+      setShowAddDialog(false);
+      resetForm();
+      refetchPreferences();
+    },
+    onError: () => {
+      toast({ title: "حدث خطأ", variant: "destructive" });
+    },
+  });
+
+  const updatePreferenceMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/preferences/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم تحديث الرغبة بنجاح" });
+      setShowAddDialog(false);
+      setEditingItem(null);
+      resetForm();
+      refetchPreferences();
+    },
+    onError: () => {
+      toast({ title: "حدث خطأ", variant: "destructive" });
+    },
+  });
+
+  const deletePreferenceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/preferences/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم حذف الرغبة" });
+      refetchPreferences();
+    },
+  });
+
+  const addPropertyMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/properties", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تمت إضافة العقار بنجاح" });
+      setShowAddDialog(false);
+      resetForm();
+      refetchProperties();
+    },
+    onError: () => {
+      toast({ title: "حدث خطأ", variant: "destructive" });
+    },
+  });
+
+  const updatePropertyMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/properties/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم تحديث العقار بنجاح" });
+      setShowAddDialog(false);
+      setEditingItem(null);
+      resetForm();
+      refetchProperties();
+    },
+    onError: () => {
+      toast({ title: "حدث خطأ", variant: "destructive" });
+    },
+  });
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/properties/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "تم حذف العقار" });
+      refetchProperties();
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      city: "",
+      district: "",
+      propertyType: "",
+      budgetMin: "",
+      budgetMax: "",
+      price: "",
+      area: "",
+      rooms: "",
+    });
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +185,91 @@ export default function ProfilePage() {
     setUserData(null);
     setPhone("");
     setPassword("");
+  };
+
+  const openAddDialog = () => {
+    resetForm();
+    setEditingItem(null);
+    setShowAddDialog(true);
+  };
+
+  const openEditDialog = (item: any) => {
+    setEditingItem(item);
+    if (userData?.role === "buyer") {
+      setFormData({
+        city: item.city || "",
+        district: item.districts?.[0] || "",
+        propertyType: item.propertyType || "",
+        budgetMin: item.budgetMin?.toString() || "",
+        budgetMax: item.budgetMax?.toString() || "",
+        price: "",
+        area: item.area || "",
+        rooms: item.rooms || "",
+      });
+    } else {
+      setFormData({
+        city: item.city || "",
+        district: item.district || "",
+        propertyType: item.propertyType || "",
+        budgetMin: "",
+        budgetMax: "",
+        price: item.price?.toString() || "",
+        area: item.area || "",
+        rooms: item.rooms || "",
+      });
+    }
+    setShowAddDialog(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (userData?.role === "buyer") {
+      const data = {
+        userId: userData.id,
+        city: formData.city,
+        districts: formData.district ? [formData.district] : [],
+        propertyType: formData.propertyType,
+        budgetMin: formData.budgetMin ? parseInt(formData.budgetMin) : null,
+        budgetMax: formData.budgetMax ? parseInt(formData.budgetMax) : null,
+        area: formData.area || null,
+        rooms: formData.rooms || null,
+        isActive: true,
+      };
+      
+      if (editingItem) {
+        updatePreferenceMutation.mutate({ id: editingItem.id, data });
+      } else {
+        addPreferenceMutation.mutate(data);
+      }
+    } else {
+      const data = {
+        sellerId: userData.id,
+        city: formData.city,
+        district: formData.district,
+        propertyType: formData.propertyType,
+        price: formData.price ? parseInt(formData.price) : 0,
+        area: formData.area || null,
+        rooms: formData.rooms || null,
+        isActive: true,
+      };
+      
+      if (editingItem) {
+        updatePropertyMutation.mutate({ id: editingItem.id, data });
+      } else {
+        addPropertyMutation.mutate(data);
+      }
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("هل أنت متأكد من الحذف؟")) {
+      if (userData?.role === "buyer") {
+        deletePreferenceMutation.mutate(id);
+      } else {
+        deletePropertyMutation.mutate(id);
+      }
+    }
   };
 
   if (!isLoggedIn) {
@@ -123,11 +332,13 @@ export default function ProfilePage() {
     );
   }
 
+  const isBuyer = userData?.role === "buyer";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-5 w-5 text-primary" />
@@ -158,36 +369,36 @@ export default function ProfilePage() {
           {/* User Info Card */}
           <Card className="mb-6">
             <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-center">
-                <Badge variant={userData?.role === "buyer" ? "default" : "secondary"} className="gap-1">
-                  {userData?.role === "buyer" ? (
-                    <>
-                      <Heart className="h-3 w-3" />
-                      مشتري
-                    </>
-                  ) : (
-                    <>
-                      <Building2 className="h-3 w-3" />
-                      بائع
-                    </>
-                  )}
-                </Badge>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span dir="ltr">{userData?.phone}</span>
-                </div>
-                {userData?.email && (
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex flex-wrap gap-4 items-center">
+                  <Badge variant={isBuyer ? "default" : "secondary"} className="gap-1">
+                    {isBuyer ? (
+                      <>
+                        <Heart className="h-3 w-3" />
+                        مشتري
+                      </>
+                    ) : (
+                      <>
+                        <Building2 className="h-3 w-3" />
+                        بائع
+                      </>
+                    )}
+                  </Badge>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span>{userData?.email}</span>
+                    <Phone className="h-4 w-4" />
+                    <span dir="ltr">{userData?.phone}</span>
                   </div>
-                )}
+                </div>
+                <Button onClick={openAddDialog} className={`gap-2 ${!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}`} data-testid="button-add-new">
+                  <Plus className="h-4 w-4" />
+                  {isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد"}
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Content based on role */}
-          {userData?.role === "buyer" ? (
+          {isBuyer ? (
             <div className="space-y-4">
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Heart className="h-5 w-5 text-primary" />
@@ -199,18 +410,30 @@ export default function ProfilePage() {
                   {preferences.map((pref: any) => (
                     <Card key={pref.id}>
                       <CardContent className="p-4">
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="outline">{pref.propertyType === "apartment" ? "شقة" : pref.propertyType === "villa" ? "فيلا" : pref.propertyType}</Badge>
-                          <Badge variant="secondary" className="gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {pref.city}
-                          </Badge>
-                          {pref.districts?.map((d: string, i: number) => (
-                            <Badge key={i} variant="outline">{d}</Badge>
-                          ))}
+                        <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">
+                              {propertyTypes.find(t => t.value === pref.propertyType)?.label || pref.propertyType}
+                            </Badge>
+                            <Badge variant="secondary" className="gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {pref.city}
+                            </Badge>
+                            {pref.districts?.map((d: string, i: number) => (
+                              <Badge key={i} variant="outline">{d}</Badge>
+                            ))}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => openEditDialog(pref)} data-testid={`button-edit-pref-${pref.id}`}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(pref.id)} data-testid={`button-delete-pref-${pref.id}`}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          الميزانية: {pref.budgetMin?.toLocaleString()} - {pref.budgetMax?.toLocaleString()} ريال
+                          الميزانية: {pref.budgetMin?.toLocaleString() || 0} - {pref.budgetMax?.toLocaleString() || "غير محدد"} ريال
                         </div>
                       </CardContent>
                     </Card>
@@ -220,9 +443,7 @@ export default function ProfilePage() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground">لا توجد رغبات مسجلة</p>
-                    <Link href="/">
-                      <Button className="mt-4">سجل رغبتك الآن</Button>
-                    </Link>
+                    <Button className="mt-4" onClick={openAddDialog}>سجل رغبتك الآن</Button>
                   </CardContent>
                 </Card>
               )}
@@ -239,15 +460,27 @@ export default function ProfilePage() {
                   {properties.map((prop: any) => (
                     <Card key={prop.id}>
                       <CardContent className="p-4">
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="outline">{prop.propertyType === "apartment" ? "شقة" : prop.propertyType === "villa" ? "فيلا" : prop.propertyType}</Badge>
-                          <Badge variant="secondary" className="gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {prop.city} - {prop.district}
-                          </Badge>
-                          <Badge variant={prop.isActive ? "default" : "secondary"}>
-                            {prop.isActive ? "نشط" : "غير نشط"}
-                          </Badge>
+                        <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline">
+                              {propertyTypes.find(t => t.value === prop.propertyType)?.label || prop.propertyType}
+                            </Badge>
+                            <Badge variant="secondary" className="gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {prop.city} - {prop.district}
+                            </Badge>
+                            <Badge variant={prop.isActive ? "default" : "secondary"}>
+                              {prop.isActive ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => openEditDialog(prop)} data-testid={`button-edit-prop-${prop.id}`}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(prop.id)} data-testid={`button-delete-prop-${prop.id}`}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="text-lg font-bold text-green-600">
@@ -266,9 +499,7 @@ export default function ProfilePage() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <p className="text-muted-foreground">لا توجد عقارات مسجلة</p>
-                    <Link href="/">
-                      <Button className="mt-4 bg-green-600 hover:bg-green-700">أضف عقارك الآن</Button>
-                    </Link>
+                    <Button className="mt-4 bg-green-600 hover:bg-green-700" onClick={openAddDialog}>أضف عقارك الآن</Button>
                   </CardContent>
                 </Card>
               )}
@@ -276,6 +507,131 @@ export default function ProfilePage() {
           )}
         </div>
       </main>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">
+              {editingItem 
+                ? (isBuyer ? "تعديل الرغبة" : "تعديل العقار")
+                : (isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد")
+              }
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>المدينة</Label>
+                <Select value={formData.city} onValueChange={(v) => setFormData(prev => ({ ...prev, city: v }))}>
+                  <SelectTrigger data-testid="select-city">
+                    <SelectValue placeholder="اختر المدينة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map(city => (
+                      <SelectItem key={city} value={city}>{city}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>الحي</Label>
+                <Input
+                  value={formData.district}
+                  onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
+                  placeholder="اسم الحي"
+                  data-testid="input-district"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>نوع العقار</Label>
+              <Select value={formData.propertyType} onValueChange={(v) => setFormData(prev => ({ ...prev, propertyType: v }))}>
+                <SelectTrigger data-testid="select-property-type">
+                  <SelectValue placeholder="اختر النوع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propertyTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isBuyer ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>الميزانية من</Label>
+                  <Input
+                    type="number"
+                    value={formData.budgetMin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, budgetMin: e.target.value }))}
+                    placeholder="0"
+                    data-testid="input-budget-min"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الميزانية إلى</Label>
+                  <Input
+                    type="number"
+                    value={formData.budgetMax}
+                    onChange={(e) => setFormData(prev => ({ ...prev, budgetMax: e.target.value }))}
+                    placeholder="1000000"
+                    data-testid="input-budget-max"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>السعر (ريال)</Label>
+                <Input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="500000"
+                  data-testid="input-price"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>المساحة (م²)</Label>
+                <Input
+                  value={formData.area}
+                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                  placeholder="150"
+                  data-testid="input-area"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>عدد الغرف</Label>
+                <Input
+                  value={formData.rooms}
+                  onChange={(e) => setFormData(prev => ({ ...prev, rooms: e.target.value }))}
+                  placeholder="3"
+                  data-testid="input-rooms"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                إلغاء
+              </Button>
+              <Button 
+                type="submit" 
+                className={!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}
+                disabled={addPreferenceMutation.isPending || updatePreferenceMutation.isPending || addPropertyMutation.isPending || updatePropertyMutation.isPending}
+                data-testid="button-submit-form"
+              >
+                {editingItem ? "حفظ التعديلات" : "إضافة"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
