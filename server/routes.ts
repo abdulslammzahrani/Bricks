@@ -316,13 +316,37 @@ export async function registerRoutes(
       const sellers = await storage.getUsers("seller");
       const properties = await storage.getAllProperties();
       const preferences = await storage.getAllBuyerPreferences();
+      const matches = await storage.getAllMatches();
+      const contacts = await storage.getAllContactRequests();
 
       res.json({
         totalBuyers: buyers.length,
         totalSellers: sellers.length,
         totalProperties: properties.length,
         totalPreferences: preferences.length,
+        totalMatches: matches.length,
+        totalContacts: contacts.length,
       });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all matches
+  app.get("/api/admin/matches", async (req, res) => {
+    try {
+      const matches = await storage.getAllMatches();
+      res.json(matches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all contact requests
+  app.get("/api/admin/contact-requests", async (req, res) => {
+    try {
+      const requests = await storage.getAllContactRequests();
+      res.json(requests);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

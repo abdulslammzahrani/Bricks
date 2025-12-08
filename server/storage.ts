@@ -39,10 +39,14 @@ export interface IStorage {
   findMatchesForProperty(propertyId: string): Promise<void>;
   findMatchesForPreference(preferenceId: string): Promise<void>;
 
+  // Matches - additional
+  getAllMatches(): Promise<Match[]>;
+
   // Contact Requests
   createContactRequest(req: InsertContactRequest): Promise<ContactRequest>;
   getContactRequestsByBuyer(buyerId: string): Promise<ContactRequest[]>;
   getContactRequestsByProperty(propertyId: string): Promise<ContactRequest[]>;
+  getAllContactRequests(): Promise<ContactRequest[]>;
 
   // Analytics
   getTopDistricts(city: string, limit?: number): Promise<{ district: string; count: number }[]>;
@@ -271,6 +275,14 @@ export class DatabaseStorage implements IStorage {
 
   async getContactRequestsByProperty(propertyId: string): Promise<ContactRequest[]> {
     return db.select().from(contactRequests).where(eq(contactRequests.propertyId, propertyId));
+  }
+
+  async getAllContactRequests(): Promise<ContactRequest[]> {
+    return db.select().from(contactRequests);
+  }
+
+  async getAllMatches(): Promise<Match[]> {
+    return db.select().from(matches).orderBy(desc(matches.matchScore));
   }
 
   // Analytics
