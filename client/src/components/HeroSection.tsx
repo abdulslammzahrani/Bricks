@@ -211,23 +211,51 @@ export default function HeroSection() {
     return elements;
   };
 
+  const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
+    let remaining = text;
+    matchedPatterns.forEach(pattern => {
+      remaining = remaining.replace(pattern, "");
+    });
+    remaining = remaining.replace(/[،,\s]+/g, " ").trim();
+    if (remaining.length > 3) {
+      return remaining;
+    }
+    return "";
+  };
+
   const extractBuyerInfo = (text: string) => {
     const data: Record<string, string> = { ...extractedData };
+    const matchedPatterns: RegExp[] = [];
     
     const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) data.name = nameMatch[1];
+    if (nameMatch) {
+      data.name = nameMatch[1];
+      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
+    }
     
     const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) data.phone = phoneMatch[1];
+    if (phoneMatch) {
+      data.phone = phoneMatch[1];
+      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
+    }
     
     const cityMatch = text.match(/(?:من|مدينة|في)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    if (cityMatch) data.city = cityMatch[1];
+    if (cityMatch) {
+      data.city = cityMatch[1];
+      matchedPatterns.push(/(?:من|مدينة|في)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
+    }
     
     const districtMatch = text.match(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    if (districtMatch) data.district = districtMatch[1];
+    if (districtMatch) {
+      data.district = districtMatch[1];
+      matchedPatterns.push(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
+    }
     
     const typeMatch = text.match(/(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    if (typeMatch) data.propertyType = typeMatch[1];
+    if (typeMatch) {
+      data.propertyType = typeMatch[1];
+      matchedPatterns.push(/(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
+    }
     
     const budgetMatch = text.match(/(?:الميزانية|ميزانيتي|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
     if (budgetMatch) {
@@ -235,11 +263,18 @@ export default function HeroSection() {
       if (budgetMatch[2]?.includes("مليون")) amount *= 1000000;
       else if (budgetMatch[2]) amount *= 1000;
       data.budget = amount.toString();
+      matchedPatterns.push(/(?:الميزانية|ميزانيتي|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
     }
     
     const paymentMatch = text.match(/(كاش|نقد|نقدي|بنك|تمويل|قرض)/i);
     if (paymentMatch) {
       data.paymentMethod = paymentMatch[1].match(/كاش|نقد|نقدي/i) ? "cash" : "bank";
+      matchedPatterns.push(/(كاش|نقد|نقدي|بنك|تمويل|قرض)/i);
+    }
+    
+    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
+    if (additionalNotes) {
+      data.additionalNotes = additionalNotes;
     }
     
     return data;
@@ -247,21 +282,37 @@ export default function HeroSection() {
 
   const extractSellerInfo = (text: string) => {
     const data: Record<string, string> = { ...extractedData };
+    const matchedPatterns: RegExp[] = [];
     
     const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) data.name = nameMatch[1];
+    if (nameMatch) {
+      data.name = nameMatch[1];
+      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
+    }
     
     const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) data.phone = phoneMatch[1];
+    if (phoneMatch) {
+      data.phone = phoneMatch[1];
+      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
+    }
     
     const cityMatch = text.match(/(?:في|مدينة)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    if (cityMatch) data.city = cityMatch[1];
+    if (cityMatch) {
+      data.city = cityMatch[1];
+      matchedPatterns.push(/(?:في|مدينة)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
+    }
     
     const districtMatch = text.match(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    if (districtMatch) data.district = districtMatch[1];
+    if (districtMatch) {
+      data.district = districtMatch[1];
+      matchedPatterns.push(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
+    }
     
     const typeMatch = text.match(/(?:أعرض|اعرض|لدي|عندي)?\s*(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    if (typeMatch) data.propertyType = typeMatch[1];
+    if (typeMatch) {
+      data.propertyType = typeMatch[1];
+      matchedPatterns.push(/(?:أعرض|اعرض|لدي|عندي)?\s*(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
+    }
     
     const priceMatch = text.match(/(?:السعر|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
     if (priceMatch) {
@@ -269,11 +320,13 @@ export default function HeroSection() {
       if (priceMatch[2]?.includes("مليون")) amount *= 1000000;
       else if (priceMatch[2]) amount *= 1000;
       data.price = amount.toString();
+      matchedPatterns.push(/(?:السعر|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
     }
     
     const statusMatch = text.match(/(جاهز|جاهزة|تحت الإنشاء|قيد الإنشاء)/i);
     if (statusMatch) {
       data.status = statusMatch[1].includes("جاهز") ? "ready" : "under_construction";
+      matchedPatterns.push(/(جاهز|جاهزة|تحت الإنشاء|قيد الإنشاء)/i);
     }
     
     // Extract coordinates from Google Maps link
@@ -281,6 +334,7 @@ export default function HeroSection() {
     if (mapsLinkMatch) {
       data.latitude = mapsLinkMatch[1];
       data.longitude = mapsLinkMatch[2];
+      matchedPatterns.push(/(?:maps\.google\.com|google\.com\/maps|goo\.gl\/maps)[^\s]*[?&@](-?\d+\.?\d*)[,/](-?\d+\.?\d*)/i);
     }
     
     // Extract coordinates from direct input (e.g., "24.7136, 46.6753" or "24.7136 46.6753")
@@ -288,6 +342,12 @@ export default function HeroSection() {
     if (coordMatch && !mapsLinkMatch) {
       data.latitude = coordMatch[1];
       data.longitude = coordMatch[2];
+      matchedPatterns.push(/(-?\d{1,3}\.\d{4,})[,\s]+(-?\d{1,3}\.\d{4,})/);
+    }
+    
+    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
+    if (additionalNotes) {
+      data.additionalNotes = additionalNotes;
     }
     
     return data;
@@ -295,20 +355,33 @@ export default function HeroSection() {
 
   const extractInvestorInfo = (text: string) => {
     const data: Record<string, string> = { ...extractedData };
+    const matchedPatterns: RegExp[] = [];
     
     const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) data.name = nameMatch[1];
+    if (nameMatch) {
+      data.name = nameMatch[1];
+      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
+    }
     
     const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) data.phone = phoneMatch[1];
+    if (phoneMatch) {
+      data.phone = phoneMatch[1];
+      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
+    }
     
     // Extract multiple cities
     const citiesMatch = text.match(/(?:في|مدينة|مدن)\s+((?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)(?:\s*(?:و|،|,)\s*(?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل))*)/i);
-    if (citiesMatch) data.cities = citiesMatch[1];
+    if (citiesMatch) {
+      data.cities = citiesMatch[1];
+      matchedPatterns.push(/(?:في|مدينة|مدن)\s+((?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)(?:\s*(?:و|،|,)\s*(?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل))*)/i);
+    }
     
     // Extract investment types
     const investTypeMatch = text.match(/(تجاري|سكني|صناعي|أراضي|تجارية|سكنية|صناعية)/gi);
-    if (investTypeMatch) data.investmentTypes = investTypeMatch.join("، ");
+    if (investTypeMatch) {
+      data.investmentTypes = investTypeMatch.join("، ");
+      matchedPatterns.push(/(تجاري|سكني|صناعي|أراضي|تجارية|سكنية|صناعية)/gi);
+    }
     
     // Extract budget range
     const budgetRangeMatch = text.match(/(?:الميزانية|ميزانيتي)?\s*(?:من)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?\s*(?:إلى|الى|ل|حتى|-)\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
@@ -322,11 +395,20 @@ export default function HeroSection() {
       if (budgetRangeMatch[4]?.includes("مليون")) maxAmount *= 1000000;
       else if (budgetRangeMatch[4]) maxAmount *= 1000;
       data.budgetMax = maxAmount.toString();
+      matchedPatterns.push(/(?:الميزانية|ميزانيتي)?\s*(?:من)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?\s*(?:إلى|الى|ل|حتى|-)\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
     }
     
     // Extract return preference
     const returnMatch = text.match(/(عائد\s*(?:مرتفع|متوسط|منخفض)|المرتفع|المتوسط|المنخفض)/i);
-    if (returnMatch) data.returnPreference = returnMatch[1];
+    if (returnMatch) {
+      data.returnPreference = returnMatch[1];
+      matchedPatterns.push(/(عائد\s*(?:مرتفع|متوسط|منخفض)|المرتفع|المتوسط|المنخفض)/i);
+    }
+    
+    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
+    if (additionalNotes) {
+      data.additionalNotes = additionalNotes;
+    }
     
     return data;
   };
@@ -359,6 +441,7 @@ export default function HeroSection() {
         { label: "نوع العقار", value: data.propertyType },
         data.budget ? { label: "الميزانية", value: formatBudget(data.budget) } : null,
         data.paymentMethod ? { label: "طريقة الدفع", value: data.paymentMethod === "cash" ? "كاش" : "تمويل بنكي" } : null,
+        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string}>;
       return fields;
     } else if (currentMode === "seller") {
@@ -372,6 +455,7 @@ export default function HeroSection() {
         data.status ? { label: "الحالة", value: data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء" } : null,
         { label: "الموقع", value: "تم تحديده على الخريطة" },
         { label: "الصور", value: `${uploadedFiles.length} صورة/فيديو` },
+        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string}>;
       return fields;
     } else {
@@ -382,6 +466,7 @@ export default function HeroSection() {
         data.investmentTypes ? { label: "نوع الاستثمار", value: data.investmentTypes } : null,
         (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : null,
         data.returnPreference ? { label: "هدف الاستثمار", value: data.returnPreference } : null,
+        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string}>;
       return fields;
     }
