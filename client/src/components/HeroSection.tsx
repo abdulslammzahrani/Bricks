@@ -1452,7 +1452,7 @@ export default function HeroSection() {
               setPendingConfirmation(false);
               setIsComplete(false);
             }}
-            className="text-primary-foreground hover:bg-white/20"
+            className="text-primary-foreground"
             data-testid="button-back-chat"
           >
             <ArrowRight className="h-5 w-5" />
