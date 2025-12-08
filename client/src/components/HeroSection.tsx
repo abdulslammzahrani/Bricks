@@ -201,14 +201,11 @@ export default function HeroSection() {
     }
   }, [conversation, isTyping, pendingConfirmation]);
 
-  // Lock body scroll when fullscreen chat is active or input is focused on mobile
+  // Lock body scroll when fullscreen chat is active
   useEffect(() => {
-    if (isFullScreenChat || isInputFocused) {
+    if (isFullScreenChat) {
       // Save current scroll position
-      if (!isFullScreenChat) {
-        savedScrollY.current = window.scrollY;
-      }
-      const scrollY = isFullScreenChat ? window.scrollY : savedScrollY.current;
+      const scrollY = window.scrollY;
       // Lock body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
@@ -217,18 +214,47 @@ export default function HeroSection() {
       document.body.style.overflow = 'hidden';
       
       return () => {
-        // Restore scroll when closing (only if not switching to fullscreen)
-        if (!isFullScreenChat) {
-          document.body.style.position = '';
-          document.body.style.top = '';
-          document.body.style.left = '';
-          document.body.style.right = '';
-          document.body.style.overflow = '';
-          window.scrollTo(0, savedScrollY.current);
-        }
+        // Restore scroll when closing
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
       };
     }
-  }, [isFullScreenChat, isInputFocused]);
+  }, [isFullScreenChat]);
+
+  // Prevent scroll jump when keyboard opens on mobile
+  useEffect(() => {
+    if (isInputFocused && !isFullScreenChat) {
+      savedScrollY.current = window.scrollY;
+      
+      // Prevent any scroll events
+      const preventScroll = (e: Event) => {
+        window.scrollTo(0, savedScrollY.current);
+      };
+      
+      // Handle visual viewport resize (keyboard open/close)
+      const handleViewportResize = () => {
+        window.scrollTo(0, savedScrollY.current);
+      };
+      
+      window.addEventListener('scroll', preventScroll, { passive: false });
+      window.visualViewport?.addEventListener('resize', handleViewportResize);
+      
+      // Also set overflow hidden on html element
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        window.removeEventListener('scroll', preventScroll);
+        window.visualViewport?.removeEventListener('resize', handleViewportResize);
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isInputFocused, isFullScreenChat]);
 
   // Get current example based on index from shuffled examples
   const currentExample = shuffledExamples[exampleIndex % shuffledExamples.length];
