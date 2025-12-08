@@ -1148,7 +1148,7 @@ export default function HeroSection() {
           </p>
 
           {/* Mode Toggle - Segmented Control for Buyer/Seller */}
-          <div className="flex justify-center gap-2 mb-6">
+          <div className="flex flex-col items-center gap-3 mb-6">
             <div className="inline-flex rounded-lg border p-1 bg-muted/50">
               <Button
                 size="lg"
@@ -1173,7 +1173,7 @@ export default function HeroSection() {
             </div>
             
             {/* Live Viewer Counter - Social Proof */}
-            <div className="flex items-center justify-center gap-4 mt-3" data-testid="live-stats">
+            <div className="flex items-center justify-center gap-4" data-testid="live-stats">
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
