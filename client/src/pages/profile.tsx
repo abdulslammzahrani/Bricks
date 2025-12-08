@@ -660,82 +660,109 @@ export default function ProfilePage() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header with Sidebar Trigger */}
-          <header className="border-b bg-card p-3 flex items-center justify-between gap-4 sticky top-0 z-40">
-            <div className="flex items-center gap-3">
+          <header className="border-b bg-card p-4 flex items-center justify-between gap-4 sticky top-0 z-40">
+            <div className="flex items-center gap-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <h1 className="font-bold text-lg">صفحتي الشخصية</h1>
+              <div>
+                <h1 className="font-bold text-xl">مرحباً، {userData?.name || "مستخدم"}</h1>
+                <p className="text-sm text-muted-foreground">إدارة حسابك وعقاراتك</p>
+              </div>
             </div>
           </header>
 
-          {/* Mini Dashboard */}
-          <div className="p-4 border-b bg-muted/30">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("preferences")} data-testid="stat-card-preferences">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                    <Heart className="h-4 w-4 text-pink-600 dark:text-pink-400" />
-                  </div>
+          {/* Dashboard Stats */}
+          <div className="p-6 bg-gradient-to-l from-primary/5 to-transparent">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+              <Card 
+                className="p-6 hover-elevate cursor-pointer" 
+                onClick={() => handleTabChange("preferences")} 
+                data-testid="stat-card-preferences"
+              >
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-2xl font-bold" data-testid="count-preferences">{preferencesCount}</p>
-                    <p className="text-xs text-muted-foreground">رغباتي</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">رغباتي</p>
+                    <p className="text-3xl font-bold" data-testid="count-preferences">{preferencesCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <Heart className="h-6 w-6 text-primary" />
                   </div>
                 </div>
               </Card>
-              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("properties")} data-testid="stat-card-properties">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
+              
+              <Card 
+                className="p-6 hover-elevate cursor-pointer" 
+                onClick={() => handleTabChange("properties")} 
+                data-testid="stat-card-properties"
+              >
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-2xl font-bold" data-testid="count-properties">{propertiesCount}</p>
-                    <p className="text-xs text-muted-foreground">عروضي</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">عروضي</p>
+                    <p className="text-3xl font-bold" data-testid="count-properties">{propertiesCount}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </Card>
-              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("matches")} data-testid="stat-card-matches">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  </div>
+              
+              <Card 
+                className="p-6 hover-elevate cursor-pointer" 
+                onClick={() => handleTabChange("matches")} 
+                data-testid="stat-card-matches"
+              >
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-2xl font-bold" data-testid="count-matches">0</p>
-                    <p className="text-xs text-muted-foreground">المتطابقة</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">المتطابقة</p>
+                    <p className="text-3xl font-bold" data-testid="count-matches">0</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <Zap className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                   </div>
                 </div>
               </Card>
-              <Card className="p-3 hover-elevate cursor-pointer" onClick={() => handleTabChange("messages")} data-testid="stat-card-messages">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <MessageCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  </div>
+              
+              <Card 
+                className="p-6 hover-elevate cursor-pointer" 
+                onClick={() => handleTabChange("messages")} 
+                data-testid="stat-card-messages"
+              >
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-2xl font-bold" data-testid="count-messages">0</p>
-                    <p className="text-xs text-muted-foreground">الرسائل</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">الرسائل</p>
+                    <p className="text-3xl font-bold" data-testid="count-messages">0</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </Card>
             </div>
             
-            {/* Quick Actions */}
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                onClick={() => { setEditingItem(null); resetForm(); setFormMode("preference"); setShowAddDialog(true); }} 
-                className="gap-2"
-                data-testid="button-quick-add-preference"
-              >
-                <Plus className="h-4 w-4" />
-                أضف رغبة جديدة
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => { setEditingItem(null); resetForm(); setFormMode("property"); setShowAddDialog(true); }}
-                className="gap-2 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-                data-testid="button-quick-add-property"
-              >
-                <Plus className="h-4 w-4" />
-                أضف عقار للبيع
-              </Button>
-            </div>
+            {/* Quick Actions Bar */}
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="text-sm font-medium text-muted-foreground">إجراءات سريعة:</span>
+                <div className="flex flex-wrap gap-3">
+                  <Button 
+                    onClick={() => { setEditingItem(null); resetForm(); setFormMode("preference"); setShowAddDialog(true); }} 
+                    className="gap-2"
+                    data-testid="button-quick-add-preference"
+                  >
+                    <Plus className="h-4 w-4" />
+                    أضف رغبة جديدة
+                  </Button>
+                  <Button 
+                    variant="secondary"
+                    onClick={() => { setEditingItem(null); resetForm(); setFormMode("property"); setShowAddDialog(true); }}
+                    className="gap-2"
+                    data-testid="button-quick-add-property"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    أضف عقار للبيع
+                  </Button>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* Content Area */}

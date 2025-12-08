@@ -42,6 +42,7 @@ import {
   BadgeCheck,
   ExternalLink,
 } from "lucide-react";
+import MemberLayout from "@/components/MemberLayout";
 
 interface PropertyWithSeller extends Property {
   seller: {
@@ -173,37 +174,41 @@ export default function PropertyPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
-        <div className="container mx-auto px-4 py-6">
-          <Skeleton className="h-6 w-48 mb-4" />
-          <Skeleton className="h-80 w-full rounded-lg mb-4" />
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="md:col-span-2 space-y-4">
-              <Skeleton className="h-12 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-            <div>
-              <Skeleton className="h-64 w-full" />
+      <MemberLayout>
+        <div className="min-h-screen bg-background" dir="rtl">
+          <div className="container mx-auto px-4 py-6">
+            <Skeleton className="h-6 w-48 mb-4" />
+            <Skeleton className="h-80 w-full rounded-lg mb-4" />
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="md:col-span-2 space-y-4">
+                <Skeleton className="h-12 w-3/4" />
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-64 w-full" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </MemberLayout>
     );
   }
 
   if (error || !property) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <Card className="max-w-md text-center p-8">
-          <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-xl font-bold mb-2">العقار غير موجود</h1>
-          <p className="text-muted-foreground mb-4">عذراً، لم نتمكن من إيجاد العقار المطلوب</p>
-          <Button asChild>
-            <Link href="/">العودة للرئيسية</Link>
-          </Button>
-        </Card>
-      </div>
+      <MemberLayout>
+        <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+          <Card className="max-w-md text-center p-8">
+            <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+            <h1 className="text-xl font-bold mb-2">العقار غير موجود</h1>
+            <p className="text-muted-foreground mb-4">عذراً، لم نتمكن من إيجاد العقار المطلوب</p>
+            <Button asChild>
+              <Link href="/">العودة للرئيسية</Link>
+            </Button>
+          </Card>
+        </div>
+      </MemberLayout>
     );
   }
 
@@ -212,9 +217,10 @@ export default function PropertyPage() {
   const amenities = property.amenities || [];
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      {/* Breadcrumb Navigation */}
-      <div className="bg-muted/30 border-b">
+    <MemberLayout>
+      <div className="min-h-screen bg-background" dir="rtl">
+        {/* Breadcrumb Navigation */}
+        <div className="bg-muted/30 border-b">
         <div className="container mx-auto px-4 py-3">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
             <Link href="/" className="hover:text-foreground transition-colors" data-testid="link-home">
@@ -698,6 +704,7 @@ export default function PropertyPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </MemberLayout>
   );
 }
