@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { ClipboardList, Search, Bell, Handshake } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Search, Bell, Handshake, ChevronLeft, ChevronRight } from "lucide-react";
 
 const steps = [
   {
@@ -29,6 +31,20 @@ const steps = [
 ];
 
 export default function HowItWorks() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const goToNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % steps.length);
+  };
+
+  const goToPrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + steps.length) % steps.length);
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
+
   return (
     <section className="py-6 md:py-10 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -41,22 +57,96 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <Card key={index} className="p-6 text-center relative" data-testid={`card-step-${index + 1}`}>
-                <div className="absolute top-4 right-4 text-4xl font-bold text-muted/50">
-                  {index + 1}
-                </div>
-                <div className={`mx-auto h-16 w-16 rounded-full ${step.color} flex items-center justify-center mb-4`}>
-                  <Icon className="h-8 w-8" />
-                </div>
-                <h3 className="font-bold text-lg mb-2">{step.title}</h3>
-                <p className="text-muted-foreground text-sm">{step.description}</p>
-              </Card>
-            );
-          })}
+        <div className="relative max-w-md mx-auto">
+          <div className="relative h-[280px] flex items-center justify-center">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const offset = index - currentIndex;
+              const isActive = index === currentIndex;
+              const isPrev = offset === -1 || (currentIndex === 0 && index === steps.length - 1);
+              const isNext = offset === 1 || (currentIndex === steps.length - 1 && index === 0);
+              
+              let transform = "translateX(0) scale(0.85)";
+              let zIndex = 0;
+              let opacity = 0;
+              
+              if (isActive) {
+                transform = "translateX(0) scale(1)";
+                zIndex = 30;
+                opacity = 1;
+              } else if (isPrev) {
+                transform = "translateX(30px) scale(0.9) rotate(3deg)";
+                zIndex = 20;
+                opacity = 0.6;
+              } else if (isNext) {
+                transform = "translateX(-30px) scale(0.9) rotate(-3deg)";
+                zIndex = 10;
+                opacity = 0.6;
+              }
+
+              return (
+                <Card 
+                  key={index} 
+                  className="absolute w-full max-w-[300px] p-6 text-center transition-all duration-300 ease-out"
+                  style={{
+                    transform,
+                    zIndex,
+                    opacity,
+                    pointerEvents: isActive ? "auto" : "none",
+                  }}
+                  data-testid={`card-step-${index + 1}`}
+                >
+                  <div className="absolute top-4 right-4 text-3xl font-bold text-muted/40">
+                    {index + 1}
+                  </div>
+                  <div className={`mx-auto h-14 w-14 rounded-full ${step.color} flex items-center justify-center mb-4`}>
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{step.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{step.description}</p>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={goToNext}
+              data-testid="button-how-next"
+              className="rounded-full"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+
+            <div className="flex items-center gap-2">
+              {steps.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"
+                  }`}
+                  data-testid={`dot-step-${index + 1}`}
+                />
+              ))}
+            </div>
+
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={goToPrev}
+              data-testid="button-how-prev"
+              className="rounded-full"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground mt-3">
+            {currentIndex + 1} من {steps.length}
+          </p>
         </div>
       </div>
     </section>
