@@ -127,3 +127,28 @@ Preferred communication style: Simple, everyday language.
 **Expandable Inline Editing**: Each property/preference card has an expand/collapse button (ChevronDown/ChevronUp icon) that reveals inline editing fields with auto-save functionality.
 
 **Auto-Save**: Changes to any field trigger automatic save on blur, with loading spinner during save and toast confirmation.
+
+**Tabbed Interface**: Profile page uses tabs to separate:
+- Items tab: Shows buyer preferences or seller properties with inline editing
+- Messages tab: In-app messaging system for buyer-seller communication
+
+### In-App Messaging System
+
+**Database Schema**:
+- **conversations**: Links buyerId, sellerId, and propertyId with unread counts for both parties
+- **messages**: Individual messages with senderId, content, messageType, and read status
+
+**API Endpoints**:
+- `GET /api/conversations` - Get user's conversations with query param `userId`
+- `GET /api/conversations/:id` - Get specific conversation with messages
+- `POST /api/conversations` - Create new conversation (buyerId, sellerId, propertyId)
+- `POST /api/conversations/:id/read` - Mark conversation as read for user
+- `POST /api/messages` - Send new message (conversationId, senderId, content)
+- `GET /api/messages/:conversationId` - Get messages for a conversation
+
+**MessagingPanel Component**: Located at `client/src/components/MessagingPanel.tsx`
+- Two-column layout: conversations list and active chat
+- Real-time polling every 5-10 seconds for new messages
+- Unread badge counts on conversation list items
+- Links to property detail pages from conversation headers
+- RTL-optimized message bubbles (sent messages on left, received on right)

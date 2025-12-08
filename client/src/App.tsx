@@ -10,6 +10,7 @@ import SellerFormPage from "@/pages/seller-form";
 import AdminDashboard from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import InvestorPage from "@/pages/investor";
+import PropertyPage from "@/pages/property";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/investor" component={InvestorPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/property/:id" component={PropertyPage} />
       <Route component={NotFound} />
     </Switch>
   );

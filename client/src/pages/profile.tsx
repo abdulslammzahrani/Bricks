@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2 } from "lucide-react";
-import { Link } from "wouter";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle } from "lucide-react";
+import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
 import { getCityNames, getNeighborhoodsByCity } from "@shared/saudi-locations";
+import { MessagingPanel } from "@/components/MessagingPanel";
 
 const cities = getCityNames();
 const propertyTypes = [
@@ -26,12 +28,19 @@ const propertyTypes = [
 
 export default function ProfilePage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const searchString = useSearch();
+  const searchParams = new URLSearchParams(searchString);
+  const tabParam = searchParams.get("tab");
+  const conversationParam = searchParams.get("conversation");
+  
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState(tabParam === "messages" ? "messages" : "items");
   
   const [formData, setFormData] = useState({
     city: "",
@@ -49,6 +58,23 @@ export default function ProfilePage() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [inlineEditData, setInlineEditData] = useState<Record<string, any>>({});
   const [savingField, setSavingField] = useState<string | null>(null);
+
+  // Update activeTab when URL param changes
+  useEffect(() => {
+    if (tabParam === "messages" && activeTab !== "messages") {
+      setActiveTab("messages");
+    }
+  }, [tabParam]);
+
+  // Handle tab change and update URL using Wouter
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "messages") {
+      navigate("/profile?tab=messages", { replace: true });
+    } else {
+      navigate("/profile", { replace: true });
+    }
+  };
 
   const loginMutation = useMutation({
     mutationFn: async (data: { phone: string; password: string }) => {
@@ -484,38 +510,52 @@ export default function ProfilePage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* User Info Card */}
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-center justify-between">
-                <div className="flex flex-wrap gap-4 items-center">
-                  <Badge variant={isBuyer ? "default" : "secondary"} className="gap-1">
-                    {isBuyer ? (
-                      <>
-                        <Heart className="h-3 w-3" />
-                        مشتري
-                      </>
-                    ) : (
-                      <>
-                        <Building2 className="h-3 w-3" />
-                        بائع
-                      </>
-                    )}
-                  </Badge>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span dir="ltr">{userData?.phone}</span>
-                  </div>
-                </div>
-                <Button onClick={openAddDialog} className={`gap-2 ${!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}`} data-testid="button-add-new">
-                  <Plus className="h-4 w-4" />
-                  {isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabs Navigation */}
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+              <TabsTrigger value="items" className="gap-2" data-testid="tab-items">
+                {isBuyer ? <Heart className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                {isBuyer ? "رغباتي" : "عقاراتي"}
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
+                <MessageCircle className="h-4 w-4" />
+                الرسائل
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Content based on role */}
+            <TabsContent value="items" className="mt-6">
+              {/* User Info Card */}
+              <Card className="mb-6">
+                <CardContent className="p-6">
+                  <div className="flex flex-wrap gap-4 items-center justify-between">
+                    <div className="flex flex-wrap gap-4 items-center">
+                      <Badge variant={isBuyer ? "default" : "secondary"} className="gap-1">
+                        {isBuyer ? (
+                          <>
+                            <Heart className="h-3 w-3" />
+                            مشتري
+                          </>
+                        ) : (
+                          <>
+                            <Building2 className="h-3 w-3" />
+                            بائع
+                          </>
+                        )}
+                      </Badge>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        <span dir="ltr">{userData?.phone}</span>
+                      </div>
+                    </div>
+                    <Button onClick={openAddDialog} className={`gap-2 ${!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}`} data-testid="button-add-new">
+                      <Plus className="h-4 w-4" />
+                      {isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Content based on role */}
           {isBuyer ? (
             <div className="space-y-4">
               <h2 className="text-xl font-bold flex items-center gap-2">
@@ -917,6 +957,25 @@ export default function ProfilePage() {
               )}
             </div>
           )}
+            </TabsContent>
+
+            <TabsContent value="messages" className="mt-6">
+              {userData?.id ? (
+                <MessagingPanel 
+                  userId={userData.id} 
+                  userName={userData.name || ""} 
+                  selectedConversationId={conversationParam}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">يجب تسجيل الدخول لعرض الرسائل</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

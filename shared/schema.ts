@@ -142,3 +142,36 @@ export const marketingEvents = pgTable("marketing_events", {
 export const insertMarketingEventSchema = createInsertSchema(marketingEvents).omit({ id: true, createdAt: true });
 export type InsertMarketingEvent = z.infer<typeof insertMarketingEventSchema>;
 export type MarketingEvent = typeof marketingEvents.$inferSelect;
+
+// Conversations - for in-app messaging between buyers and sellers
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  buyerId: varchar("buyer_id").references(() => users.id).notNull(),
+  sellerId: varchar("seller_id").references(() => users.id).notNull(),
+  propertyId: varchar("property_id").references(() => properties.id).notNull(),
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  buyerUnreadCount: integer("buyer_unread_count").notNull().default(0),
+  sellerUnreadCount: integer("seller_unread_count").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, lastMessageAt: true, createdAt: true });
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+// Messages - individual messages within conversations
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").references(() => conversations.id).notNull(),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  messageType: text("message_type").notNull().default("text"), // text, image, location
+  attachments: text("attachments").array().default(sql`'{}'::text[]`),
+  isRead: boolean("is_read").notNull().default(false),
+  sentAt: timestamp("sent_at").defaultNow(),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, sentAt: true });
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;

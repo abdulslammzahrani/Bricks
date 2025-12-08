@@ -495,7 +495,7 @@ export async function registerRoutes(
     }
   });
 
-  // Get single property
+  // Get single property with seller info
   app.get("/api/properties/:id", async (req, res) => {
     try {
       const property = await storage.getProperty(req.params.id);
@@ -503,7 +503,23 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Property not found" });
       }
       await storage.incrementPropertyViews(req.params.id);
-      res.json(property);
+      
+      // Include seller info
+      let seller = null;
+      if (property.sellerId) {
+        const sellerData = await storage.getUser(property.sellerId);
+        if (sellerData) {
+          seller = {
+            id: sellerData.id,
+            name: sellerData.name,
+            phone: sellerData.phone,
+            accountType: sellerData.accountType,
+            entityName: sellerData.entityName,
+          };
+        }
+      }
+      
+      res.json({ ...property, seller });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -571,6 +587,157 @@ export async function registerRoutes(
     try {
       const request = await storage.createContactRequest(req.body);
       res.json(request);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ CONVERSATION ROUTES ============
+
+  // Get conversations for a user
+  app.get("/api/conversations", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      if (!userId || typeof userId !== "string") {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      
+      const convs = await storage.getConversationsByUser(userId);
+      
+      // Enrich with property and participant info
+      const enrichedConvs = await Promise.all(convs.map(async (conv) => {
+        const property = await storage.getProperty(conv.propertyId);
+        const buyer = await storage.getUser(conv.buyerId);
+        const seller = await storage.getUser(conv.sellerId);
+        
+        return {
+          ...conv,
+          property: property ? {
+            id: property.id,
+            propertyType: property.propertyType,
+            city: property.city,
+            district: property.district,
+            price: property.price,
+            images: property.images,
+          } : null,
+          buyer: buyer ? { id: buyer.id, name: buyer.name, phone: buyer.phone } : null,
+          seller: seller ? { id: seller.id, name: seller.name, phone: seller.phone, entityName: seller.entityName } : null,
+        };
+      }));
+      
+      res.json(enrichedConvs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single conversation with messages
+  app.get("/api/conversations/:id", async (req, res) => {
+    try {
+      const conv = await storage.getConversation(req.params.id);
+      if (!conv) {
+        return res.status(404).json({ error: "المحادثة غير موجودة" });
+      }
+      
+      const messages = await storage.getMessagesByConversation(conv.id);
+      const property = await storage.getProperty(conv.propertyId);
+      const buyer = await storage.getUser(conv.buyerId);
+      const seller = await storage.getUser(conv.sellerId);
+      
+      res.json({
+        ...conv,
+        messages,
+        property: property ? {
+          id: property.id,
+          propertyType: property.propertyType,
+          city: property.city,
+          district: property.district,
+          price: property.price,
+          images: property.images,
+        } : null,
+        buyer: buyer ? { id: buyer.id, name: buyer.name, phone: buyer.phone } : null,
+        seller: seller ? { id: seller.id, name: seller.name, phone: seller.phone, entityName: seller.entityName } : null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create or get existing conversation
+  app.post("/api/conversations", async (req, res) => {
+    try {
+      const { buyerId, sellerId, propertyId } = req.body;
+      
+      if (!buyerId || !sellerId || !propertyId) {
+        return res.status(400).json({ error: "buyerId, sellerId, and propertyId are required" });
+      }
+      
+      // Check if conversation already exists
+      let conv = await storage.getConversationByParticipants(buyerId, sellerId, propertyId);
+      
+      if (!conv) {
+        conv = await storage.createConversation({
+          buyerId,
+          sellerId,
+          propertyId,
+          buyerUnreadCount: 0,
+          sellerUnreadCount: 0,
+          isActive: true,
+        });
+      }
+      
+      res.json(conv);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Mark conversation as read
+  app.post("/api/conversations/:id/read", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      
+      await storage.markConversationAsRead(req.params.id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ MESSAGE ROUTES ============
+
+  // Send a message
+  app.post("/api/messages", async (req, res) => {
+    try {
+      const { conversationId, senderId, content, messageType, attachments } = req.body;
+      
+      if (!conversationId || !senderId || !content) {
+        return res.status(400).json({ error: "conversationId, senderId, and content are required" });
+      }
+      
+      const message = await storage.createMessage({
+        conversationId,
+        senderId,
+        content,
+        messageType: messageType || "text",
+        attachments: attachments || [],
+        isRead: false,
+      });
+      
+      res.json(message);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get messages for a conversation (polling endpoint)
+  app.get("/api/messages/:conversationId", async (req, res) => {
+    try {
+      const messages = await storage.getMessagesByConversation(req.params.conversationId);
+      res.json(messages);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

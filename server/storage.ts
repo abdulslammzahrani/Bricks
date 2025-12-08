@@ -6,7 +6,9 @@ import {
   contactRequests, type ContactRequest, type InsertContactRequest,
   sendLogs, type SendLog, type InsertSendLog,
   marketingSettings, type MarketingSetting, type InsertMarketingSetting,
-  marketingEvents, type MarketingEvent, type InsertMarketingEvent
+  marketingEvents, type MarketingEvent, type InsertMarketingEvent,
+  conversations, type Conversation, type InsertConversation,
+  messages, type Message, type InsertMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -81,6 +83,21 @@ export interface IStorage {
   createMarketingEvent(event: InsertMarketingEvent): Promise<MarketingEvent>;
   getMarketingEvents(limit?: number): Promise<MarketingEvent[]>;
   getMarketingEventsByPlatform(platform: string): Promise<MarketingEvent[]>;
+
+  // Conversations
+  getConversation(id: string): Promise<Conversation | undefined>;
+  getConversationsByUser(userId: string): Promise<Conversation[]>;
+  getConversationByParticipants(buyerId: string, sellerId: string, propertyId: string): Promise<Conversation | undefined>;
+  createConversation(conv: InsertConversation): Promise<Conversation>;
+  updateConversation(id: string, conv: Partial<InsertConversation>): Promise<Conversation | undefined>;
+  updateConversationLastMessage(id: string): Promise<void>;
+  markConversationAsRead(id: string, userId: string): Promise<void>;
+
+  // Messages
+  getMessage(id: string): Promise<Message | undefined>;
+  getMessagesByConversation(conversationId: string): Promise<Message[]>;
+  createMessage(msg: InsertMessage): Promise<Message>;
+  markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -476,6 +493,110 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(marketingEvents)
       .where(eq(marketingEvents.platform, platform))
       .orderBy(desc(marketingEvents.createdAt));
+  }
+
+  // Conversations
+  async getConversation(id: string): Promise<Conversation | undefined> {
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    return conv || undefined;
+  }
+
+  async getConversationsByUser(userId: string): Promise<Conversation[]> {
+    return db.select().from(conversations)
+      .where(or(
+        eq(conversations.buyerId, userId),
+        eq(conversations.sellerId, userId)
+      ))
+      .orderBy(desc(conversations.lastMessageAt));
+  }
+
+  async getConversationByParticipants(buyerId: string, sellerId: string, propertyId: string): Promise<Conversation | undefined> {
+    const [conv] = await db.select().from(conversations)
+      .where(and(
+        eq(conversations.buyerId, buyerId),
+        eq(conversations.sellerId, sellerId),
+        eq(conversations.propertyId, propertyId)
+      ));
+    return conv || undefined;
+  }
+
+  async createConversation(conv: InsertConversation): Promise<Conversation> {
+    const [result] = await db.insert(conversations).values(conv).returning();
+    return result;
+  }
+
+  async updateConversation(id: string, conv: Partial<InsertConversation>): Promise<Conversation | undefined> {
+    const [result] = await db.update(conversations).set(conv).where(eq(conversations.id, id)).returning();
+    return result || undefined;
+  }
+
+  async updateConversationLastMessage(id: string): Promise<void> {
+    await db.update(conversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(conversations.id, id));
+  }
+
+  async markConversationAsRead(id: string, userId: string): Promise<void> {
+    const conv = await this.getConversation(id);
+    if (!conv) return;
+
+    if (conv.buyerId === userId) {
+      await db.update(conversations)
+        .set({ buyerUnreadCount: 0 })
+        .where(eq(conversations.id, id));
+    } else if (conv.sellerId === userId) {
+      await db.update(conversations)
+        .set({ sellerUnreadCount: 0 })
+        .where(eq(conversations.id, id));
+    }
+
+    await db.update(messages)
+      .set({ isRead: true })
+      .where(and(
+        eq(messages.conversationId, id),
+        sql`${messages.senderId} != ${userId}`
+      ));
+  }
+
+  // Messages
+  async getMessage(id: string): Promise<Message | undefined> {
+    const [msg] = await db.select().from(messages).where(eq(messages.id, id));
+    return msg || undefined;
+  }
+
+  async getMessagesByConversation(conversationId: string): Promise<Message[]> {
+    return db.select().from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(asc(messages.sentAt));
+  }
+
+  async createMessage(msg: InsertMessage): Promise<Message> {
+    const [result] = await db.insert(messages).values(msg).returning();
+    
+    // Update conversation last message time and unread count
+    const conv = await this.getConversation(msg.conversationId);
+    if (conv) {
+      const updateData: Partial<Conversation> = { lastMessageAt: new Date() };
+      if (msg.senderId === conv.buyerId) {
+        updateData.sellerUnreadCount = (conv.sellerUnreadCount || 0) + 1;
+      } else {
+        updateData.buyerUnreadCount = (conv.buyerUnreadCount || 0) + 1;
+      }
+      await db.update(conversations)
+        .set(updateData)
+        .where(eq(conversations.id, msg.conversationId));
+    }
+    
+    return result;
+  }
+
+  async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+    await db.update(messages)
+      .set({ isRead: true })
+      .where(and(
+        eq(messages.conversationId, conversationId),
+        sql`${messages.senderId} != ${userId}`
+      ));
   }
 }
 
