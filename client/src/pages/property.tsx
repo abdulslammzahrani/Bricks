@@ -221,6 +221,10 @@ export default function PropertyPage() {
               الرئيسية
             </Link>
             <ChevronLeft className="h-4 w-4" />
+            <Link href="/profile?tab=properties" className="hover:text-foreground transition-colors" data-testid="link-profile">
+              صفحتي
+            </Link>
+            <ChevronLeft className="h-4 w-4" />
             <span>للبيع</span>
             <ChevronLeft className="h-4 w-4" />
             <span>{propertyTypeNames[property.propertyType] || property.propertyType}</span>
