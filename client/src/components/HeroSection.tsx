@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2 } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -1764,6 +1764,22 @@ export default function HeroSection() {
                         تم تحديد الموقع
                       </Badge>
                     )}
+                  </div>
+                )}
+                
+                {/* Mic hint banner */}
+                {showMicTooltip && !isRecording && !isTranscribing && (
+                  <div 
+                    className="flex items-center justify-center gap-3 mb-3 p-3 rounded-xl bg-primary/10 border border-primary/30 cursor-pointer animate-pulse"
+                    onClick={() => setShowMicTooltip(false)}
+                  >
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <div className="p-2 bg-primary rounded-full">
+                        <Mic className="h-4 w-4 text-white" />
+                      </div>
+                      <span>تقدر تسجل طلبك صوتياً وبنحلله لك فوراً</span>
+                      <ArrowDown className="h-4 w-4 animate-bounce" />
+                    </div>
                   </div>
                 )}
                 
