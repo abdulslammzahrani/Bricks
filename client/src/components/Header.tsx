@@ -10,9 +10,6 @@ export default function Header() {
 
   const navItems = [
     { href: "/", label: "الرئيسية", icon: Home },
-    { href: "/buyer-form", label: "سجل رغبتك", icon: User },
-    { href: "/seller-form", label: "اعرض عقارك", icon: Building2 },
-    { href: "/admin", label: "لوحة التحكم", icon: User },
   ];
 
   return (
