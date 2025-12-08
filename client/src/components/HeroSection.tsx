@@ -525,18 +525,28 @@ export default function HeroSection() {
                   </p>
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsComplete(false);
-                    setConversation([]);
-                    setExtractedData({});
-                    setUploadedFiles([]);
-                  }}
-                  data-testid="button-add-another"
-                >
-                  {mode === "buyer" ? "إضافة رغبة أخرى" : "إضافة عقار آخر"}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <Button 
+                    variant="default"
+                    className={mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}
+                    onClick={() => window.location.href = "/profile"}
+                    data-testid="button-go-profile"
+                  >
+                    الدخول لصفحتي الشخصية
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setIsComplete(false);
+                      setConversation([]);
+                      setExtractedData({});
+                      setUploadedFiles([]);
+                    }}
+                    data-testid="button-add-another"
+                  >
+                    {mode === "buyer" ? "إضافة رغبة أخرى" : "إضافة عقار آخر"}
+                  </Button>
+                </div>
               </div>
             )}
           </Card>

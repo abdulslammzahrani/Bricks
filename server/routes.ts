@@ -55,6 +55,36 @@ export async function registerRoutes(
     }
   });
 
+  // ============ AUTH ROUTES ============
+
+  // Simple login with phone/password
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { phone, password } = req.body;
+      
+      if (!phone || !password) {
+        return res.status(400).json({ error: "رقم الجوال وكلمة المرور مطلوبان" });
+      }
+
+      // Find user by phone (password is the phone number)
+      const user = await storage.getUserByPhone(phone);
+      
+      if (!user) {
+        return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
+      }
+
+      // Simple password check (password = phone number)
+      if (password !== phone) {
+        return res.status(401).json({ error: "كلمة المرور غير صحيحة" });
+      }
+
+      res.json({ user });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ BUYER ROUTES ============
 
   // Register buyer wish (creates user + preference)
