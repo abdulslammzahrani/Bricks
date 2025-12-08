@@ -84,7 +84,7 @@ export default function HeroSection() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
-  const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string}>>([]);
+  const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
@@ -453,10 +453,10 @@ export default function HeroSection() {
         { label: "نوع العقار", value: data.propertyType },
         { label: "السعر", value: formatBudget(data.price) },
         data.status ? { label: "الحالة", value: data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء" } : null,
-        { label: "الموقع", value: "تم تحديده على الخريطة" },
-        { label: "الصور", value: `${uploadedFiles.length} صورة/فيديو` },
+        (data.latitude && data.longitude) ? { label: "الموقع", value: "✓ تم تحديده", isCheck: true } : { label: "الموقع", value: "لم يتم تحديده" },
+        uploadedFiles.length > 0 ? { label: "الصور", value: `✓ تم رفع ${uploadedFiles.length} ملف`, isCheck: true } : { label: "الصور", value: "لم يتم رفع صور" },
         data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
-      ].filter(Boolean) as Array<{label: string, value: string}>;
+      ].filter(Boolean) as Array<{label: string, value: string, isCheck?: boolean}>;
       return fields;
     } else {
       const fields = [
@@ -743,7 +743,7 @@ export default function HeroSection() {
                         {confirmationFields.map((field, idx) => (
                           <div key={idx} className="flex gap-2 text-sm">
                             <span className="font-bold text-muted-foreground">{field.label}:</span>
-                            <span>{field.value}</span>
+                            <span className={field.isCheck ? "text-green-600 font-medium" : ""}>{field.value}</span>
                           </div>
                         ))}
                       </div>
