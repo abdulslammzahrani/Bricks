@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS Safari keyboard scroll prevention - opacity animation trick */
+@keyframes prevent-ios-scroll {
+  0% { opacity: 0.99; }
+  100% { opacity: 1; }
+}
+
+.prevent-keyboard-scroll:focus {
+  animation: prevent-ios-scroll 0.01s;
+}
+
+/* Also apply to contenteditable elements */
+[contenteditable]:focus {
+  animation: prevent-ios-scroll 0.01s;
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

@@ -133,9 +133,7 @@ export default function HeroSection() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const savedScrollY = useRef(0);
-  
+    
   // Live viewer counter for social proof (herd effect)
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
@@ -225,23 +223,7 @@ export default function HeroSection() {
     }
   }, [isFullScreenChat]);
 
-  // Cleanup scroll lock when input loses focus
-  useEffect(() => {
-    if (!isInputFocused && !isFullScreenChat) {
-      // Restore body styles when focus is lost
-      const scrollY = Math.abs(parseInt(document.body.style.top || '0'));
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      if (scrollY > 0) {
-        window.scrollTo(0, scrollY);
-      }
-    }
-  }, [isInputFocused, isFullScreenChat]);
-
+  
   // Get current example based on index from shuffled examples
   const currentExample = shuffledExamples[exampleIndex % shuffledExamples.length];
   const exampleSegments = currentExample?.segments || [];
@@ -1687,20 +1669,6 @@ export default function HeroSection() {
                       className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      onFocus={() => {
-                        // Lock scroll IMMEDIATELY when input is focused
-                        const scrollY = window.scrollY;
-                        document.body.style.position = 'fixed';
-                        document.body.style.top = `-${scrollY}px`;
-                        document.body.style.left = '0';
-                        document.body.style.right = '0';
-                        document.body.style.overflow = 'hidden';
-                        setIsInputFocused(true);
-                      }}
-                      onBlur={() => {
-                        // Unlock scroll when input loses focus
-                        setIsInputFocused(false);
-                      }}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       data-testid="input-interactive"
                     />
