@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap } from "lucide-react";
 import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
@@ -42,8 +42,10 @@ export default function ProfilePage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(
-    tabParam === "messages" ? "messages" : tabParam === "matches" ? "matches" : "items"
+    tabParam === "messages" ? "messages" : tabParam === "matches" ? "matches" : tabParam === "properties" ? "properties" : "preferences"
   );
+  // Tracks whether dialog is for preference or property (decoupled from activeTab)
+  const [formMode, setFormMode] = useState<"preference" | "property">("preference");
   
   const [formData, setFormData] = useState({
     city: "",
@@ -68,18 +70,20 @@ export default function ProfilePage() {
       setActiveTab("messages");
     } else if (tabParam === "matches" && activeTab !== "matches") {
       setActiveTab("matches");
+    } else if (tabParam === "properties" && activeTab !== "properties") {
+      setActiveTab("properties");
+    } else if (!tabParam && activeTab !== "preferences") {
+      setActiveTab("preferences");
     }
   }, [tabParam]);
 
   // Handle tab change and update URL using Wouter
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    if (value === "messages") {
-      navigate("/profile?tab=messages", { replace: true });
-    } else if (value === "matches") {
-      navigate("/profile?tab=matches", { replace: true });
-    } else {
+    if (value === "preferences") {
       navigate("/profile", { replace: true });
+    } else {
+      navigate(`/profile?tab=${value}`, { replace: true });
     }
   };
 
@@ -104,12 +108,12 @@ export default function ProfilePage() {
 
   const { data: preferences, refetch: refetchPreferences } = useQuery({
     queryKey: ["/api/buyers", userData?.id, "preferences"],
-    enabled: isLoggedIn && userData?.role === "buyer",
+    enabled: isLoggedIn && !!userData?.id,
   });
 
   const { data: properties, refetch: refetchProperties } = useQuery({
     queryKey: ["/api/sellers", userData?.id, "properties"],
-    enabled: isLoggedIn && userData?.role === "seller",
+    enabled: isLoggedIn && !!userData?.id,
   });
 
   const addPreferenceMutation = useMutation({
@@ -252,9 +256,15 @@ export default function ProfilePage() {
 
   // Auto-save on blur
   const handleInlineFieldBlur = (fieldName: string, itemId: string) => {
-    const currentItem = userData?.role === "buyer" 
-      ? (preferences as any[])?.find((p: any) => p.id === itemId)
-      : (properties as any[])?.find((p: any) => p.id === itemId);
+    // Safe arrays with null guards to prevent runtime errors when queries are loading
+    const preferencesArray = (preferences as any[]) ?? [];
+    const propertiesArray = (properties as any[]) ?? [];
+    
+    // Check if item is a preference (by checking if it exists in preferences array)
+    const isPreferenceItem = preferencesArray.some((p: any) => p.id === itemId);
+    const currentItem = isPreferenceItem 
+      ? preferencesArray.find((p: any) => p.id === itemId)
+      : propertiesArray.find((p: any) => p.id === itemId);
     
     if (!currentItem) return;
 
@@ -272,7 +282,7 @@ export default function ProfilePage() {
 
     setSavingField(fieldName);
 
-    if (userData?.role === "buyer") {
+    if (isPreferenceItem) {
       inlineSavePreferenceMutation.mutate({
         id: itemId,
         data: {
@@ -322,12 +332,16 @@ export default function ProfilePage() {
   const openAddDialog = () => {
     resetForm();
     setEditingItem(null);
+    // Set formMode based on current activeTab
+    setFormMode(activeTab === "properties" ? "property" : "preference");
     setShowAddDialog(true);
   };
 
-  const openEditDialog = (item: any) => {
+  const openEditDialog = (item: any, isPreference: boolean) => {
     setEditingItem(item);
-    if (userData?.role === "buyer") {
+    // Set formMode to decouple from activeTab
+    setFormMode(isPreference ? "preference" : "property");
+    if (isPreference) {
       setFormData({
         city: item.city || "",
         district: item.districts?.[0] || "",
@@ -358,7 +372,7 @@ export default function ProfilePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (userData?.role === "buyer") {
+    if (formMode === "preference") {
       const data = {
         userId: userData.id,
         city: formData.city,
@@ -413,9 +427,9 @@ export default function ProfilePage() {
     }));
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, isPreference: boolean) => {
     if (confirm("هل أنت متأكد من الحذف؟")) {
-      if (userData?.role === "buyer") {
+      if (isPreference) {
         deletePreferenceMutation.mutate(id);
       } else {
         deletePropertyMutation.mutate(id);
@@ -483,7 +497,8 @@ export default function ProfilePage() {
     );
   }
 
-  const isBuyer = userData?.role === "buyer";
+  // Use formMode for dialog form type (decoupled from activeTab)
+  const isAddingPreference = formMode === "preference";
 
   return (
     <div className="min-h-screen bg-background">
@@ -519,62 +534,38 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto">
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-            <TabsList className={`grid w-full max-w-lg mx-auto ${isBuyer ? "grid-cols-3" : "grid-cols-2"}`}>
-              <TabsTrigger value="items" className="gap-2" data-testid="tab-items">
-                {isBuyer ? <Heart className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
-                {isBuyer ? "رغباتي" : "عقاراتي"}
+            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
+              <TabsTrigger value="preferences" className="gap-2" data-testid="tab-preferences">
+                <Heart className="h-4 w-4" />
+                رغباتي
               </TabsTrigger>
-              {isBuyer && (
-                <TabsTrigger value="matches" className="gap-2" data-testid="tab-matches">
-                  <Building2 className="h-4 w-4" />
-                  العروض المتطابقة
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="properties" className="gap-2" data-testid="tab-properties">
+                <Building2 className="h-4 w-4" />
+                عروضي
+              </TabsTrigger>
+              <TabsTrigger value="matches" className="gap-2" data-testid="tab-matches">
+                <Zap className="h-4 w-4" />
+                المتطابقة
+              </TabsTrigger>
               <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
                 <MessageCircle className="h-4 w-4" />
                 الرسائل
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="items" className="mt-6">
-              {/* User Info Card */}
-              <Card className="mb-6">
-                <CardContent className="p-6">
-                  <div className="flex flex-wrap gap-4 items-center justify-between">
-                    <div className="flex flex-wrap gap-4 items-center">
-                      <Badge variant={isBuyer ? "default" : "secondary"} className="gap-1">
-                        {isBuyer ? (
-                          <>
-                            <Heart className="h-3 w-3" />
-                            مشتري
-                          </>
-                        ) : (
-                          <>
-                            <Building2 className="h-3 w-3" />
-                            بائع
-                          </>
-                        )}
-                      </Badge>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <span dir="ltr">{userData?.phone}</span>
-                      </div>
-                    </div>
-                    <Button onClick={openAddDialog} className={`gap-2 ${!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}`} data-testid="button-add-new">
-                      <Plus className="h-4 w-4" />
-                      {isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Content based on role */}
-          {isBuyer ? (
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Heart className="h-5 w-5 text-primary" />
-                رغباتي العقارية
-              </h2>
+            {/* Preferences Tab */}
+            <TabsContent value="preferences" className="mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-primary" />
+                    رغباتي العقارية
+                  </h2>
+                  <Button onClick={() => { setEditingItem(null); resetForm(); setFormMode("preference"); setShowAddDialog(true); }} className="gap-2" data-testid="button-add-preference">
+                    <Plus className="h-4 w-4" />
+                    إضافة رغبة
+                  </Button>
+                </div>
               
               {preferences && Array.isArray(preferences) && preferences.length > 0 ? (
                 <div className="grid gap-4">
@@ -607,7 +598,7 @@ export default function ProfilePage() {
                                 <ChevronDown className="h-4 w-4" />
                               )}
                             </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(pref.id)} data-testid={`button-delete-pref-${pref.id}`}>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(pref.id, true)} data-testid={`button-delete-pref-${pref.id}`}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
@@ -758,25 +749,34 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
               )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {properties && Array.isArray(properties) && properties.length > 0 ? (
-                <div className="space-y-3">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    <Map className="h-5 w-5 text-green-600" />
-                    خريطة عقاراتي
-                  </h2>
-                  <PropertyMap properties={properties as any[]} />
-                </div>
-              ) : null}
+              </div>
+            </TabsContent>
 
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-green-600" />
-                عقاراتي
-              </h2>
+            {/* Properties Tab */}
+            <TabsContent value="properties" className="mt-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-green-600" />
+                    عروضي العقارية
+                  </h2>
+                  <Button onClick={() => { setEditingItem(null); resetForm(); setFormMode("property"); setShowAddDialog(true); }} className="gap-2 bg-green-600 hover:bg-green-700" data-testid="button-add-property">
+                    <Plus className="h-4 w-4" />
+                    إضافة عقار
+                  </Button>
+                </div>
+
+                {properties && Array.isArray(properties) && properties.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <Map className="h-4 w-4 text-green-600" />
+                      خريطة عقاراتي
+                    </h3>
+                    <PropertyMap properties={properties as any[]} />
+                  </div>
+                ) : null}
               
-              {properties && Array.isArray(properties) && properties.length > 0 ? (
+                {properties && Array.isArray(properties) && properties.length > 0 ? (
                 <div className="grid gap-4">
                   {properties.map((prop: any) => (
                     <Card key={prop.id}>
@@ -807,7 +807,7 @@ export default function ProfilePage() {
                                 <ChevronDown className="h-4 w-4" />
                               )}
                             </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(prop.id)} data-testid={`button-delete-prop-${prop.id}`}>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(prop.id, false)} data-testid={`button-delete-prop-${prop.id}`}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
@@ -968,15 +968,13 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
               )}
-            </div>
-          )}
+              </div>
             </TabsContent>
 
-            {isBuyer && (
-              <TabsContent value="matches" className="mt-6">
-                <MatchedPropertiesPanel preferences={Array.isArray(preferences) ? preferences : []} />
-              </TabsContent>
-            )}
+            {/* Matches Tab */}
+            <TabsContent value="matches" className="mt-6">
+              <MatchedPropertiesPanel preferences={Array.isArray(preferences) ? preferences : []} />
+            </TabsContent>
 
             <TabsContent value="messages" className="mt-6">
               {userData?.id ? (
@@ -1004,8 +1002,8 @@ export default function ProfilePage() {
           <DialogHeader>
             <DialogTitle className="text-right">
               {editingItem 
-                ? (isBuyer ? "تعديل الرغبة" : "تعديل العقار")
-                : (isBuyer ? "إضافة رغبة جديدة" : "إضافة عقار جديد")
+                ? (isAddingPreference ? "تعديل الرغبة" : "تعديل العقار")
+                : (isAddingPreference ? "إضافة رغبة جديدة" : "إضافة عقار جديد")
               }
             </DialogTitle>
           </DialogHeader>
@@ -1056,7 +1054,7 @@ export default function ProfilePage() {
               </Select>
             </div>
 
-            {isBuyer ? (
+            {isAddingPreference ? (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>الميزانية من</Label>
@@ -1113,7 +1111,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {!isBuyer && (
+            {!isAddingPreference && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-destructive">* الصور والفيديوهات (مطلوب)</Label>
@@ -1171,7 +1169,7 @@ export default function ProfilePage() {
               </Button>
               <Button 
                 type="submit" 
-                className={!isBuyer ? "bg-green-600 hover:bg-green-700" : ""}
+                className={!isAddingPreference ? "bg-green-600 hover:bg-green-700" : ""}
                 disabled={addPreferenceMutation.isPending || updatePreferenceMutation.isPending || addPropertyMutation.isPending || updatePropertyMutation.isPending}
                 data-testid="button-submit-form"
               >
