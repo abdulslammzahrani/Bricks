@@ -297,7 +297,7 @@ export default function HeroSection() {
           ]);
         }
       } else {
-        const hasRequired = newData.name && newData.phone && newData.city && newData.district && newData.propertyType && newData.price;
+        const hasRequired = newData.name && newData.phone && newData.city && newData.district && newData.propertyType && newData.price && uploadedFiles.length > 0;
         if (hasRequired) {
           sellerMutation.mutate({
             name: newData.name,
@@ -322,6 +322,7 @@ export default function HeroSection() {
           if (!newData.district) missing.push("الحي");
           if (!newData.propertyType) missing.push("نوع العقار");
           if (!newData.price) missing.push("السعر");
+          if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
           setConversation(prev => [
             ...prev,
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
