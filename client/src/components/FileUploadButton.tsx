@@ -125,9 +125,6 @@ export function FileUploadButton({
       }
     }
 
-    if (uploadedUrls.length > 0 && onFilesUploaded) {
-      onFilesUploaded(uploadedUrls);
-    }
   };
 
   const allUploaded = files.length > 0 && files.every(f => f.status === "success");
