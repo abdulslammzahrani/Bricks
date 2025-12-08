@@ -17,13 +17,17 @@ interface AIAnalysisResult {
   data: {
     name: string | null;
     phone: string | null;
+    email: string | null;
     city: string | null;
     districts: string[];
     propertyType: string | null;
+    transactionType: string | null;
     budgetMin: number | null;
     budgetMax: number | null;
     paymentMethod: string | null;
     purchasePurpose: string | null;
+    purchaseTimeline: string | null;
+    clientType: string | null;
     area: number | null;
     rooms: number | null;
     floor: number | null;
@@ -788,42 +792,76 @@ export default function HeroSection() {
     return amount;
   };
 
+  // Generate confirmation fields - shows ALL data mentioned without missing anything
   const generateConfirmationFields = (data: Record<string, string>, currentMode: UserMode) => {
     if (currentMode === "buyer") {
       const fields = [
+        // Required fields
         { label: "الاسم", value: data.name },
         { label: "الجوال", value: data.phone },
+        data.email ? { label: "الإيميل", value: data.email } : null,
         { label: "المدينة", value: data.city },
         data.district ? { label: "الحي", value: data.district } : null,
         { label: "نوع العقار", value: data.propertyType },
-        data.budget ? { label: "الميزانية", value: formatBudget(data.budget) } : null,
-        data.paymentMethod ? { label: "طريقة الدفع", value: data.paymentMethod === "cash" ? "كاش" : "تمويل بنكي" } : null,
-        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
+        // Budget - show range if available
+        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : 
+          (data.budgetMin ? { label: "الميزانية (من)", value: formatBudget(data.budgetMin) } : null),
+        (data.budgetMax && !data.budgetMin) ? { label: "الميزانية (إلى)", value: formatBudget(data.budgetMax) } : null,
+        data.budget && !data.budgetMin && !data.budgetMax ? { label: "الميزانية", value: formatBudget(data.budget) } : null,
+        // Payment method
+        data.paymentMethod ? { label: "طريقة الدفع", value: data.paymentMethod === "cash" ? "كاش" : data.paymentMethod === "mortgage" ? "تمويل بنكي" : data.paymentMethod } : null,
+        // Timeline
+        data.purchaseTimeline ? { label: "موعد الشراء", value: data.purchaseTimeline } : null,
+        // Purpose
+        data.purchasePurpose ? { label: "الغرض", value: data.purchasePurpose === "personal" ? "سكن شخصي" : data.purchasePurpose === "investment" ? "استثمار" : data.purchasePurpose } : null,
+        // Client type
+        data.clientType ? { label: "نوع العميل", value: data.clientType === "individual" ? "فرد" : data.clientType === "company" ? "شركة" : data.clientType } : null,
+        // Property details
+        data.rooms ? { label: "عدد الغرف", value: data.rooms } : null,
+        data.bathrooms ? { label: "عدد دورات المياه", value: data.bathrooms } : null,
+        data.area ? { label: "المساحة", value: `${data.area} م²` } : null,
+        data.floor ? { label: "الطابق", value: data.floor } : null,
+        data.age ? { label: "عمر العقار", value: data.age } : null,
+        // Additional notes
+        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string}>;
       return fields;
     } else if (currentMode === "seller") {
       const fields = [
         { label: "الاسم", value: data.name },
         { label: "الجوال", value: data.phone },
+        data.email ? { label: "الإيميل", value: data.email } : null,
         { label: "المدينة", value: data.city },
         { label: "الحي", value: data.district },
         { label: "نوع العقار", value: data.propertyType },
         { label: "السعر", value: formatBudget(data.price) },
+        data.area ? { label: "المساحة", value: `${data.area} م²` } : null,
+        data.rooms ? { label: "عدد الغرف", value: data.rooms } : null,
+        data.bathrooms ? { label: "عدد دورات المياه", value: data.bathrooms } : null,
+        data.floor ? { label: "الطابق", value: data.floor } : null,
+        data.age ? { label: "عمر العقار", value: data.age } : null,
         data.status ? { label: "الحالة", value: data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء" } : null,
-        (data.latitude && data.longitude) ? { label: "الموقع", value: "✓ تم تحديده", isCheck: true } : { label: "الموقع", value: "لم يتم تحديده" },
-        uploadedFiles.length > 0 ? { label: "الصور", value: `✓ تم رفع ${uploadedFiles.length} ملف`, isCheck: true } : { label: "الصور", value: "لم يتم رفع صور" },
-        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
+        data.features ? { label: "المميزات", value: data.features } : null,
+        (data.latitude && data.longitude) ? { label: "الموقع", value: "تم تحديده", isCheck: true } : { label: "الموقع", value: "لم يتم تحديده" },
+        uploadedFiles.length > 0 ? { label: "الصور", value: `تم رفع ${uploadedFiles.length} ملف`, isCheck: true } : { label: "الصور", value: "لم يتم رفع صور" },
+        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string, isCheck?: boolean}>;
       return fields;
     } else {
+      // Investor mode
       const fields = [
         { label: "الاسم", value: data.name },
         { label: "الجوال", value: data.phone },
+        data.email ? { label: "الإيميل", value: data.email } : null,
         { label: "المدن المستهدفة", value: data.cities },
         data.investmentTypes ? { label: "نوع الاستثمار", value: data.investmentTypes } : null,
-        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : null,
+        data.propertyType ? { label: "نوع العقار", value: data.propertyType } : null,
+        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : 
+          (data.budgetMin ? { label: "الميزانية (من)", value: formatBudget(data.budgetMin) } : null),
+        (data.budgetMax && !data.budgetMin) ? { label: "الميزانية (إلى)", value: formatBudget(data.budgetMax) } : null,
         data.returnPreference ? { label: "هدف الاستثمار", value: data.returnPreference } : null,
-        data.additionalNotes ? { label: "معلومات إضافية", value: data.additionalNotes } : null,
+        data.clientType ? { label: "نوع العميل", value: data.clientType === "individual" ? "فرد" : data.clientType === "company" ? "شركة" : data.clientType } : null,
+        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
       ].filter(Boolean) as Array<{label: string, value: string}>;
       return fields;
     }
@@ -1323,15 +1361,33 @@ export default function HeroSection() {
           { type: "system", text: result.assistantReply! }
         ]);
         
-        // Merge new data with existing
+        // Merge ALL new data with existing - don't miss any field!
         const newData: Record<string, string> = { ...extractedData };
+        // Basic info
         if (result.data.name) newData.name = result.data.name;
         if (result.data.phone) newData.phone = result.data.phone;
+        if (result.data.email) newData.email = result.data.email;
+        // Location
         if (result.data.city) newData.city = result.data.city;
-        if (result.data.districts && result.data.districts.length > 0) newData.district = result.data.districts[0];
+        if (result.data.districts && result.data.districts.length > 0) newData.district = result.data.districts.join("، ");
+        // Property
         if (result.data.propertyType) newData.propertyType = result.data.propertyType;
+        if (result.data.transactionType) newData.transactionType = result.data.transactionType;
+        // Budget
         if (result.data.budgetMin) newData.budgetMin = String(result.data.budgetMin);
         if (result.data.budgetMax) newData.budgetMax = String(result.data.budgetMax);
+        // Details
+        if (result.data.paymentMethod) newData.paymentMethod = result.data.paymentMethod;
+        if (result.data.purchasePurpose) newData.purchasePurpose = result.data.purchasePurpose;
+        if (result.data.purchaseTimeline) newData.purchaseTimeline = result.data.purchaseTimeline;
+        if (result.data.clientType) newData.clientType = result.data.clientType;
+        // Property specs
+        if (result.data.area) newData.area = String(result.data.area);
+        if (result.data.rooms) newData.rooms = String(result.data.rooms);
+        if (result.data.floor) newData.floor = String(result.data.floor);
+        // Notes
+        if (result.data.additionalNotes) newData.additionalNotes = result.data.additionalNotes;
+        
         setExtractedData(newData);
       }
     } catch (error) {
