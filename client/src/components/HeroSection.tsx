@@ -1645,7 +1645,15 @@ export default function HeroSection() {
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
                       onFocus={() => {
-                        // Switch to fullscreen chat mode immediately when input is focused
+                        // Switch to fullscreen chat mode with welcome message
+                        const welcomeMessages: Record<string, string> = {
+                          buyer: "أهلاً وسهلاً! أنا مساعدك للبحث عن عقار. قول لي وش تبي وأنا أساعدك 🏠",
+                          seller: "أهلاً! أنا مساعدك لعرض عقارك. وصف لي العقار اللي تبي تبيعه 🏡",
+                          investor: "مرحباً! أنا مساعدك للاستثمار العقاري. كيف أقدر أخدمك؟ 📊"
+                        };
+                        if (conversation.length === 0) {
+                          setConversation([{ type: "system", text: welcomeMessages[mode] }]);
+                        }
                         setIsFullScreenChat(true);
                       }}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
