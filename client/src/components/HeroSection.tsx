@@ -1644,6 +1644,12 @@ export default function HeroSection() {
                       className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
+                      onFocus={(e) => {
+                        // Prevent automatic scroll on mobile when keyboard appears
+                        e.preventDefault();
+                        const scrollY = window.scrollY;
+                        setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      }}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       data-testid="input-interactive"
                     />
