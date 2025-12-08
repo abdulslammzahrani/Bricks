@@ -42,58 +42,199 @@ interface ExampleSegment {
   underline?: boolean;
 }
 
-const buyerExampleSegments: ExampleSegment[] = [
-  { text: "اسمي " },
-  { text: "عبدالسلام محمد", color: "#f97316", underline: true },
-  { text: " ، رقم جوالي " },
-  { text: "0501234567", color: "#f97316", underline: true },
-  { text: " ، من مدينة " },
-  { text: "جدة", color: "#22c55e", underline: true },
-  { text: " حي " },
-  { text: "الروضة", color: "#22c55e", underline: true },
-  { text: " ، أرغب بشراء " },
-  { text: "شقة", color: "#3b82f6", underline: true },
-  { text: " ثلاث غرف حمامين مساحة 120 متر ، الميزانية " },
-  { text: "800 ألف", color: "#22c55e", underline: true },
-  { text: " ، الشراء " },
-  { text: "كاش", color: "#3b82f6", underline: true },
+// Multiple rotating buyer examples with varied writing styles
+const buyerExamplesData = [
+  {
+    segments: [
+      { text: "اسمي " },
+      { text: "عبدالسلام محمد", color: "#f97316", underline: true },
+      { text: " ، رقم جوالي " },
+      { text: "0501234567", color: "#f97316", underline: true },
+      { text: " ، من مدينة " },
+      { text: "جدة", color: "#22c55e", underline: true },
+      { text: " حي " },
+      { text: "الروضة", color: "#22c55e", underline: true },
+      { text: " ، أرغب بشراء " },
+      { text: "شقة", color: "#3b82f6", underline: true },
+      { text: " ثلاث غرف حمامين مساحة 120 متر ، الميزانية " },
+      { text: "800 ألف", color: "#22c55e", underline: true },
+      { text: " ، الشراء " },
+      { text: "كاش", color: "#3b82f6", underline: true },
+    ],
+    fullText: "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش"
+  },
+  {
+    segments: [
+      { text: "أنا " },
+      { text: "سارة العتيبي", color: "#f97316", underline: true },
+      { text: " تواصلوا معي على " },
+      { text: "٠٥٥٨٨٩٩١٢٣", color: "#f97316", underline: true },
+      { text: " ، أدور " },
+      { text: "فيلا", color: "#3b82f6", underline: true },
+      { text: " في " },
+      { text: "الرياض", color: "#22c55e", underline: true },
+      { text: " بالتحديد " },
+      { text: "حي الصفا والسامر", color: "#22c55e", underline: true },
+      { text: " ، ميزانيتي " },
+      { text: "مليون ونص", color: "#22c55e", underline: true },
+      { text: " عن طريق " },
+      { text: "تمويل بنكي", color: "#3b82f6", underline: true },
+    ],
+    fullText: "أنا سارة العتيبي تواصلوا معي على ٠٥٥٨٨٩٩١٢٣ ، أدور فيلا في الرياض بالتحديد حي الصفا والسامر ، ميزانيتي مليون ونص عن طريق تمويل بنكي"
+  },
+  {
+    segments: [
+      { text: "هلا، انا " },
+      { text: "فهد الشمري", color: "#f97316", underline: true },
+      { text: " رقمي " },
+      { text: "0509876543", color: "#f97316", underline: true },
+      { text: " ابي " },
+      { text: "دبلكس", color: "#3b82f6", underline: true },
+      { text: " في " },
+      { text: "الدمام", color: "#22c55e", underline: true },
+      { text: " حي " },
+      { text: "النخيل أو الفيصلية", color: "#22c55e", underline: true },
+      { text: " مساحة كبيرة 300 متر فوق ، السعر لين " },
+      { text: "مليون ومئتين", color: "#22c55e", underline: true },
+      { text: " " },
+      { text: "كاش", color: "#3b82f6", underline: true },
+    ],
+    fullText: "هلا، انا فهد الشمري رقمي 0509876543 ابي دبلكس في الدمام حي النخيل أو الفيصلية مساحة كبيرة 300 متر فوق ، السعر لين مليون ومئتين كاش"
+  },
+  {
+    segments: [
+      { text: "" },
+      { text: "نوره القحطاني", color: "#f97316", underline: true },
+      { text: " - " },
+      { text: "جوال: 0533221144", color: "#f97316", underline: true },
+      { text: " - ابحث عن " },
+      { text: "شقة تمليك", color: "#3b82f6", underline: true },
+      { text: " - " },
+      { text: "مكة المكرمة", color: "#22c55e", underline: true },
+      { text: " - " },
+      { text: "العزيزية", color: "#22c55e", underline: true },
+      { text: " - غرفتين كبار - الحد الأقصى " },
+      { text: "650 ألف", color: "#22c55e", underline: true },
+      { text: " - " },
+      { text: "نقداً", color: "#3b82f6", underline: true },
+    ],
+    fullText: "نوره القحطاني - جوال: 0533221144 - ابحث عن شقة تمليك - مكة المكرمة - العزيزية - غرفتين كبار - الحد الأقصى 650 ألف - نقداً"
+  },
+  {
+    segments: [
+      { text: "السلام عليكم، " },
+      { text: "عبدالله المالكي", color: "#f97316", underline: true },
+      { text: " واتساب " },
+      { text: "٠٥٦٧٨٩٠١٢٣", color: "#f97316", underline: true },
+      { text: " طالب " },
+      { text: "أرض سكنية", color: "#3b82f6", underline: true },
+      { text: " في " },
+      { text: "جدة", color: "#22c55e", underline: true },
+      { text: " أفضل " },
+      { text: "حي الواحة أو المروة", color: "#22c55e", underline: true },
+      { text: " مساحة 400 لين 600 متر ، المبلغ المتاح " },
+      { text: "500 ألف", color: "#22c55e", underline: true },
+      { text: " " },
+      { text: "كاش فوري", color: "#3b82f6", underline: true },
+    ],
+    fullText: "السلام عليكم، عبدالله المالكي واتساب ٠٥٦٧٨٩٠١٢٣ طالب أرض سكنية في جدة أفضل حي الواحة أو المروة مساحة 400 لين 600 متر ، المبلغ المتاح 500 ألف كاش فوري"
+  },
 ];
 
-const sellerExampleSegments: ExampleSegment[] = [
-  { text: "اسمي " },
-  { text: "محمد العلي", color: "#f97316", underline: true },
-  { text: " ، جوالي " },
-  { text: "0551234567", color: "#f97316", underline: true },
-  { text: " ، أعرض " },
-  { text: "فيلا", color: "#3b82f6", underline: true },
-  { text: " في " },
-  { text: "الرياض", color: "#22c55e", underline: true },
-  { text: " حي " },
-  { text: "النرجس", color: "#22c55e", underline: true },
-  { text: " ، المساحة 400 متر ، السعر " },
-  { text: "2.5 مليون", color: "#22c55e", underline: true },
-  { text: " ، " },
-  { text: "جاهزة للسكن", color: "#3b82f6", underline: true },
+// Multiple rotating seller examples
+const sellerExamplesData = [
+  {
+    segments: [
+      { text: "اسمي " },
+      { text: "محمد العلي", color: "#f97316", underline: true },
+      { text: " ، جوالي " },
+      { text: "0551234567", color: "#f97316", underline: true },
+      { text: " ، أعرض " },
+      { text: "فيلا", color: "#3b82f6", underline: true },
+      { text: " في " },
+      { text: "الرياض", color: "#22c55e", underline: true },
+      { text: " حي " },
+      { text: "النرجس", color: "#22c55e", underline: true },
+      { text: " ، المساحة 400 متر ، السعر " },
+      { text: "2.5 مليون", color: "#22c55e", underline: true },
+      { text: " ، " },
+      { text: "جاهزة للسكن", color: "#3b82f6", underline: true },
+    ],
+    fullText: "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن"
+  },
+  {
+    segments: [
+      { text: "للبيع " },
+      { text: "شقة فاخرة", color: "#3b82f6", underline: true },
+      { text: " في " },
+      { text: "جدة", color: "#22c55e", underline: true },
+      { text: " حي " },
+      { text: "الحمراء", color: "#22c55e", underline: true },
+      { text: " - 4 غرف - المساحة 180 متر - السعر " },
+      { text: "900 ألف", color: "#22c55e", underline: true },
+      { text: " - تواصل: " },
+      { text: "أحمد الغامدي", color: "#f97316", underline: true },
+      { text: " " },
+      { text: "٠٥٤٣٢١٠٩٨٧", color: "#f97316", underline: true },
+    ],
+    fullText: "للبيع شقة فاخرة في جدة حي الحمراء - 4 غرف - المساحة 180 متر - السعر 900 ألف - تواصل: أحمد الغامدي ٠٥٤٣٢١٠٩٨٧"
+  },
+  {
+    segments: [
+      { text: "عقار للبيع: " },
+      { text: "دبلكس", color: "#3b82f6", underline: true },
+      { text: " " },
+      { text: "الدمام", color: "#22c55e", underline: true },
+      { text: " " },
+      { text: "حي الشاطئ", color: "#22c55e", underline: true },
+      { text: " - 5 غرف - موقع ممتاز - " },
+      { text: "1.8 مليون", color: "#22c55e", underline: true },
+      { text: " - المالك: " },
+      { text: "سعود العنزي", color: "#f97316", underline: true },
+      { text: " - " },
+      { text: "0567891234", color: "#f97316", underline: true },
+    ],
+    fullText: "عقار للبيع: دبلكس الدمام حي الشاطئ - 5 غرف - موقع ممتاز - 1.8 مليون - المالك: سعود العنزي - 0567891234"
+  },
 ];
 
-const investorExampleSegments: ExampleSegment[] = [
-  { text: "اسمي " },
-  { text: "خالد المحمد", color: "#f97316", underline: true },
-  { text: " ، جوالي " },
-  { text: "0561234567", color: "#f97316", underline: true },
-  { text: " ، مستثمر أبحث عن فرص في " },
-  { text: "الرياض وجدة", color: "#22c55e", underline: true },
-  { text: " ، مهتم بالعقارات " },
-  { text: "التجارية والسكنية", color: "#d97706", underline: true },
-  { text: " ، الميزانية من " },
-  { text: "5 إلى 20 مليون", color: "#22c55e", underline: true },
-  { text: " ، أفضل العائد " },
-  { text: "المرتفع", color: "#d97706", underline: true },
+// Multiple rotating investor examples
+const investorExamplesData = [
+  {
+    segments: [
+      { text: "اسمي " },
+      { text: "خالد المحمد", color: "#f97316", underline: true },
+      { text: " ، جوالي " },
+      { text: "0561234567", color: "#f97316", underline: true },
+      { text: " ، مستثمر أبحث عن فرص في " },
+      { text: "الرياض وجدة", color: "#22c55e", underline: true },
+      { text: " ، مهتم بالعقارات " },
+      { text: "التجارية والسكنية", color: "#d97706", underline: true },
+      { text: " ، الميزانية من " },
+      { text: "5 إلى 20 مليون", color: "#22c55e", underline: true },
+      { text: " ، أفضل العائد " },
+      { text: "المرتفع", color: "#d97706", underline: true },
+    ],
+    fullText: "اسمي خالد المحمد ، جوالي 0561234567 ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع"
+  },
+  {
+    segments: [
+      { text: "مستثمر عقاري: " },
+      { text: "بندر الدوسري", color: "#f97316", underline: true },
+      { text: " - " },
+      { text: "٠٥٠٢٣٤٥٦٧٨", color: "#f97316", underline: true },
+      { text: " - أبحث عن فرص في " },
+      { text: "المنطقة الشرقية", color: "#22c55e", underline: true },
+      { text: " - " },
+      { text: "عمارات تجارية", color: "#d97706", underline: true },
+      { text: " - رأس المال " },
+      { text: "10 إلى 30 مليون", color: "#22c55e", underline: true },
+      { text: " - " },
+      { text: "عائد سنوي 8%+", color: "#d97706", underline: true },
+    ],
+    fullText: "مستثمر عقاري: بندر الدوسري - ٠٥٠٢٣٤٥٦٧٨ - أبحث عن فرص في المنطقة الشرقية - عمارات تجارية - رأس المال 10 إلى 30 مليون - عائد سنوي 8%+"
+  },
 ];
-
-const fullBuyerExampleText = "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش";
-const fullSellerExampleText = "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن";
-const fullInvestorExampleText = "اسمي خالد المحمد ، جوالي 0561234567 ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع";
 
 // Helper function for friendly Saudi-style messages
 type MessageType = "greeting" | "missingInfo" | "confirmation" | "success" | "modeSwitch";
@@ -175,9 +316,31 @@ export default function HeroSection() {
   const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [exampleIndex, setExampleIndex] = useState(0);
 
-  const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
-  const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
+  // Get the current examples array based on mode
+  const currentExamplesData = mode === "buyer" ? buyerExamplesData : mode === "seller" ? sellerExamplesData : investorExamplesData;
+  
+  // Get current example based on index
+  const currentExample = currentExamplesData[exampleIndex % currentExamplesData.length];
+  const exampleSegments = currentExample.segments;
+  const fullExampleText = currentExample.fullText;
+  
+  // Rotate examples every 8 seconds (after typewriter finishes)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setExampleIndex(prev => prev + 1);
+      setCharIndex(0); // Reset typewriter for new example
+    }, 12000); // 12 seconds to allow typewriter to complete
+    
+    return () => clearInterval(interval);
+  }, [mode]);
+  
+  // Reset example index when mode changes
+  useEffect(() => {
+    setExampleIndex(0);
+    setCharIndex(0);
+  }, [mode]);
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
