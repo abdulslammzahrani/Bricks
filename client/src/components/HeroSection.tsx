@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploadButton } from "./FileUploadButton";
+import { LocationPicker } from "./LocationPicker";
 
 type UserMode = "buyer" | "seller";
 
@@ -64,6 +65,7 @@ export default function HeroSection() {
   const [isComplete, setIsComplete] = useState(false);
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : sellerExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : fullSellerExampleText;
@@ -465,8 +467,8 @@ export default function HeroSection() {
             {/* Input area */}
             {!isComplete ? (
               <div className="p-4 border-t bg-card">
-                {/* Uploaded files preview */}
-                {mode === "seller" && uploadedFiles.length > 0 && (
+                {/* Uploaded files preview and location status */}
+                {mode === "seller" && (uploadedFiles.length > 0 || extractedData.latitude) && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {uploadedFiles.map((file, idx) => (
                       <div key={idx} className="relative group">
@@ -483,9 +485,17 @@ export default function HeroSection() {
                         </button>
                       </div>
                     ))}
-                    <Badge variant="secondary" className="self-center">
-                      {uploadedFiles.length} ملفات مرفوعة
-                    </Badge>
+                    {uploadedFiles.length > 0 && (
+                      <Badge variant="secondary" className="self-center">
+                        {uploadedFiles.length} ملفات مرفوعة
+                      </Badge>
+                    )}
+                    {extractedData.latitude && extractedData.longitude && (
+                      <Badge variant="secondary" className="self-center bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                        <MapPin className="h-3 w-3 ml-1" />
+                        تم تحديد الموقع
+                      </Badge>
+                    )}
                   </div>
                 )}
                 
@@ -510,6 +520,20 @@ export default function HeroSection() {
                     >
                       <Image className="h-5 w-5" />
                     </FileUploadButton>
+                  )}
+                  
+                  {/* Location picker button for sellers */}
+                  {mode === "seller" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowLocationPicker(true)}
+                      className={`flex-shrink-0 ${extractedData.latitude ? "border-green-500 bg-green-50 dark:bg-green-950 text-green-600" : "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"}`}
+                      data-testid="button-open-map"
+                    >
+                      <MapPin className="h-5 w-5" />
+                    </Button>
                   )}
                   
                   <div className="flex-1">
@@ -595,6 +619,23 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
+      
+      {/* Location Picker Modal */}
+      <LocationPicker
+        open={showLocationPicker}
+        onOpenChange={setShowLocationPicker}
+        onLocationSelect={(lat, lng) => {
+          setExtractedData(prev => ({
+            ...prev,
+            latitude: lat.toString(),
+            longitude: lng.toString()
+          }));
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
+          ]);
+        }}
+      />
     </section>
   );
 }
