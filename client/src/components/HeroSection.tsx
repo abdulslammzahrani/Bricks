@@ -8,6 +8,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
+import { SaudiMap } from "./SaudiMap";
+import { findCityInText } from "@shared/saudi-locations";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -379,6 +381,7 @@ export default function HeroSection() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [isFullScreenChat, setIsFullScreenChat] = useState(false);
+  const [mapMarkers, setMapMarkers] = useState<Array<{city: string; lat: number; lng: number}>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -471,7 +474,22 @@ export default function HeroSection() {
   useEffect(() => {
     setExampleIndex(0);
     setCharIndex(0);
+    setMapMarkers([]);
   }, [mode]);
+  
+  // Update map markers when example changes
+  useEffect(() => {
+    const cityData = findCityInText(fullExampleText);
+    if (cityData) {
+      setMapMarkers([{
+        city: cityData.city,
+        lat: cityData.coordinates.lat,
+        lng: cityData.coordinates.lng
+      }]);
+    } else {
+      setMapMarkers([]);
+    }
+  }, [fullExampleText]);
   
   // Add mic hint as a message after first AI response
   useEffect(() => {
@@ -1606,37 +1624,37 @@ export default function HeroSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           
-          {/* Main Headline - Compact */}
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight mb-2" data-testid="text-hero-title">
+          {/* Main Headline - Larger */}
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold leading-tight mb-3" data-testid="text-hero-title">
             سجّل رغبتك العقارية
-            <span className="text-primary block mt-1">ودعنا نجد لك الأفضل</span>
+            <span className="text-primary block mt-2">ودعنا نجد لك الأفضل</span>
           </h1>
           
           <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-4" data-testid="text-hero-description">
             أخبرنا ماذا تريد بكلماتك أو صوتك، وسنفهم ونوصلك بالعقار المناسب
           </p>
 
-          {/* Mode Toggle - Clean Segmented Control */}
-          <div className="flex flex-col items-center gap-3 mb-4">
-            <div className="inline-flex rounded-xl border p-1 bg-muted/30 shadow-sm">
+          {/* Mode Toggle - Larger Segmented Control */}
+          <div className="flex flex-col items-center gap-3 mb-5">
+            <div className="inline-flex rounded-xl border p-1.5 bg-muted/30 shadow-sm">
               <Button
-                size="sm"
+                size="lg"
                 variant={mode === "buyer" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-lg px-4"
+                className="gap-2 rounded-lg px-6 text-base"
                 data-testid="button-mode-buyer"
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-5 w-5" />
                 أبحث عن عقار
               </Button>
               <Button
-                size="sm"
+                size="lg"
                 variant={mode === "seller" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("seller")}
-                className={`gap-2 rounded-lg px-4 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                className={`gap-2 rounded-lg px-6 text-base ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                 data-testid="button-mode-seller"
               >
-                <Building2 className="h-4 w-4" />
+                <Building2 className="h-5 w-5" />
                 اعرض عقارك
               </Button>
             </div>
@@ -1930,6 +1948,16 @@ export default function HeroSection() {
               </div>
             )}
           </Card>
+
+          {/* Saudi Arabia Map */}
+          {!isComplete && !isFullScreenChat && (
+            <div className="mt-6 max-w-3xl mx-auto">
+              <SaudiMap 
+                markers={mapMarkers} 
+                className="h-48 md:h-64 shadow-lg border"
+              />
+            </div>
+          )}
         </div>
       </div>
       
