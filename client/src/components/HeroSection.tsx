@@ -10,6 +10,7 @@ import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
 import { SaudiMap } from "./SaudiMap";
 import { findCityInText } from "@shared/saudi-locations";
+import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -41,261 +42,6 @@ interface AIAnalysisResult {
 }
 
 type UserMode = "buyer" | "seller" | "investor";
-
-interface ExampleSegment {
-  text: string;
-  color?: string;
-  underline?: boolean;
-}
-
-// Multiple rotating buyer examples - realistic and varied Saudi conversational styles
-const buyerExamplesData = [
-  {
-    segments: [
-      { text: "يا شباب مين يوصلني " },
-      { text: "شقة", color: "#3b82f6", underline: true },
-      { text: " نظيفة في " },
-      { text: "الرياض", color: "#22c55e", underline: true },
-      { text: " حي " },
-      { text: "الملقا", color: "#22c55e", underline: true },
-      { text: " أو " },
-      { text: "الياسمين", color: "#22c55e", underline: true },
-      { text: "؟ معي " },
-      { text: "750 ألف", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "كاش", color: "#3b82f6", underline: true },
-      { text: " - " },
-      { text: "تركي", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "٠٥٠٤٥٦****", color: "#f97316", underline: true },
-    ],
-    fullText: "يا شباب مين يوصلني شقة نظيفة في الرياض حي الملقا أو الياسمين؟ معي 750 ألف كاش - تركي ٠٥٠٤٥٦****"
-  },
-  {
-    segments: [
-      { text: "أبحث عن " },
-      { text: "فيلا دورين", color: "#3b82f6", underline: true },
-      { text: " جديدة في " },
-      { text: "جدة", color: "#22c55e", underline: true },
-      { text: " حي " },
-      { text: "الشاطئ", color: "#22c55e", underline: true },
-      { text: " ، 5 غرف ومجلس ، حدود " },
-      { text: "2 مليون", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "تمويل عقاري", color: "#3b82f6", underline: true },
-      { text: " . " },
-      { text: "منى الحربي", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "055789****", color: "#f97316", underline: true },
-    ],
-    fullText: "أبحث عن فيلا دورين جديدة في جدة حي الشاطئ ، 5 غرف ومجلس ، حدود 2 مليون تمويل عقاري . منى الحربي 055789****"
-  },
-  {
-    segments: [
-      { text: "محتاج " },
-      { text: "دبلكس", color: "#3b82f6", underline: true },
-      { text: " عائلي في " },
-      { text: "الخبر", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "العزيزية", color: "#22c55e", underline: true },
-      { text: " أو " },
-      { text: "الثقبة", color: "#22c55e", underline: true },
-      { text: " ، المساحة 300+ متر ، ميزانيتي لين " },
-      { text: "مليون و400", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "نقد", color: "#3b82f6", underline: true },
-      { text: " - " },
-      { text: "عبدالرحمن", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "054321****", color: "#f97316", underline: true },
-    ],
-    fullText: "محتاج دبلكس عائلي في الخبر العزيزية أو الثقبة ، المساحة 300+ متر ، ميزانيتي لين مليون و400 نقد - عبدالرحمن 054321****"
-  },
-  {
-    segments: [
-      { text: "ودي ب" },
-      { text: "شقة صغيرة", color: "#3b82f6", underline: true },
-      { text: " غرفتين في " },
-      { text: "المدينة المنورة", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "العزيزية", color: "#22c55e", underline: true },
-      { text: " قريبة من الحرم ، السعر ما يتجاوز " },
-      { text: "450 ألف", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "كاش", color: "#3b82f6", underline: true },
-      { text: " .. " },
-      { text: "هند", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "٠٥٣٨٩٠****", color: "#f97316", underline: true },
-    ],
-    fullText: "ودي بشقة صغيرة غرفتين في المدينة المنورة العزيزية قريبة من الحرم ، السعر ما يتجاوز 450 ألف كاش .. هند ٠٥٣٨٩٠****"
-  },
-  {
-    segments: [
-      { text: "السلام عليكم ، أنا " },
-      { text: "ماجد القرني", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "056234****", color: "#f97316", underline: true },
-      { text: " ، أدور " },
-      { text: "أرض سكنية", color: "#3b82f6", underline: true },
-      { text: " في " },
-      { text: "أبها", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "المنسك", color: "#22c55e", underline: true },
-      { text: " أو " },
-      { text: "الخالدية", color: "#22c55e", underline: true },
-      { text: " ، مساحة 500 متر ، معي " },
-      { text: "350 ألف", color: "#22c55e", underline: true },
-    ],
-    fullText: "السلام عليكم ، أنا ماجد القرني 056234**** ، أدور أرض سكنية في أبها المنسك أو الخالدية ، مساحة 500 متر ، معي 350 ألف"
-  },
-  {
-    segments: [
-      { text: "ابي " },
-      { text: "شقة تمليك", color: "#3b82f6", underline: true },
-      { text: " 4 غرف في " },
-      { text: "الدمام", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "الفيصلية", color: "#22c55e", underline: true },
-      { text: " ، جاهزة وفيها مصعد ، لين " },
-      { text: "680 ألف", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "تمويل", color: "#3b82f6", underline: true },
-      { text: " - " },
-      { text: "يوسف", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "050876****", color: "#f97316", underline: true },
-    ],
-    fullText: "ابي شقة تمليك 4 غرف في الدمام الفيصلية ، جاهزة وفيها مصعد ، لين 680 ألف تمويل - يوسف 050876****"
-  },
-];
-
-// Multiple rotating seller examples - realistic Saudi conversational styles
-const sellerExamplesData = [
-  {
-    segments: [
-      { text: "عندي " },
-      { text: "فيلا", color: "#3b82f6", underline: true },
-      { text: " للبيع في " },
-      { text: "الرياض", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "حي الملقا", color: "#22c55e", underline: true },
-      { text: " ، 6 غرف ومسبح ، مساحة 450 متر ، السعر " },
-      { text: "3.2 مليون", color: "#22c55e", underline: true },
-      { text: " قابل للتفاوض - " },
-      { text: "ناصر", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "055678****", color: "#f97316", underline: true },
-    ],
-    fullText: "عندي فيلا للبيع في الرياض حي الملقا ، 6 غرف ومسبح ، مساحة 450 متر ، السعر 3.2 مليون قابل للتفاوض - ناصر 055678****"
-  },
-  {
-    segments: [
-      { text: "للبيع المستعجل " },
-      { text: "شقة", color: "#3b82f6", underline: true },
-      { text: " في " },
-      { text: "جدة", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "الروضة", color: "#22c55e", underline: true },
-      { text: " ، 3 غرف وصالة ، دور ثاني ، مجددة بالكامل ، " },
-      { text: "720 ألف", color: "#22c55e", underline: true },
-      { text: " .. " },
-      { text: "سلطان الزهراني", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "٠٥٠١٢٣****", color: "#f97316", underline: true },
-    ],
-    fullText: "للبيع المستعجل شقة في جدة الروضة ، 3 غرف وصالة ، دور ثاني ، مجددة بالكامل ، 720 ألف .. سلطان الزهراني ٠٥٠١٢٣****"
-  },
-  {
-    segments: [
-      { text: "أرض تجارية", color: "#3b82f6", underline: true },
-      { text: " على شارعين في " },
-      { text: "الخبر", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "الراكة", color: "#22c55e", underline: true },
-      { text: " ، 800 متر ، موقع استراتيجي ، " },
-      { text: "4.5 مليون", color: "#22c55e", underline: true },
-      { text: " - " },
-      { text: "فيصل", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "054789****", color: "#f97316", underline: true },
-    ],
-    fullText: "أرض تجارية على شارعين في الخبر الراكة ، 800 متر ، موقع استراتيجي ، 4.5 مليون - فيصل 054789****"
-  },
-  {
-    segments: [
-      { text: "دبلكس", color: "#3b82f6", underline: true },
-      { text: " جديد ما سكن في " },
-      { text: "الدمام", color: "#22c55e", underline: true },
-      { text: " " },
-      { text: "الفيحاء", color: "#22c55e", underline: true },
-      { text: " ، 5 غرف ، تشطيب سوبر ديلوكس ، " },
-      { text: "1.6 مليون", color: "#22c55e", underline: true },
-      { text: " - المالك " },
-      { text: "عبدالعزيز", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "056234****", color: "#f97316", underline: true },
-    ],
-    fullText: "دبلكس جديد ما سكن في الدمام الفيحاء ، 5 غرف ، تشطيب سوبر ديلوكس ، 1.6 مليون - المالك عبدالعزيز 056234****"
-  },
-];
-
-// Multiple rotating investor examples - varied conversational styles
-const investorExamplesData = [
-  {
-    segments: [
-      { text: "مستثمر أبحث عن " },
-      { text: "عمارة سكنية", color: "#d97706", underline: true },
-      { text: " مؤجرة في " },
-      { text: "الرياض", color: "#22c55e", underline: true },
-      { text: " أو " },
-      { text: "جدة", color: "#22c55e", underline: true },
-      { text: " ، رأس المال " },
-      { text: "8 إلى 15 مليون", color: "#22c55e", underline: true },
-      { text: " ، أبي عائد " },
-      { text: "7%+", color: "#d97706", underline: true },
-      { text: " - " },
-      { text: "خالد", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "055432****", color: "#f97316", underline: true },
-    ],
-    fullText: "مستثمر أبحث عن عمارة سكنية مؤجرة في الرياض أو جدة ، رأس المال 8 إلى 15 مليون ، أبي عائد 7%+ - خالد 055432****"
-  },
-  {
-    segments: [
-      { text: "مهتم ب" },
-      { text: "أراضي تجارية", color: "#d97706", underline: true },
-      { text: " في " },
-      { text: "المنطقة الشرقية", color: "#22c55e", underline: true },
-      { text: " ، خصوصاً " },
-      { text: "الدمام والخبر", color: "#22c55e", underline: true },
-      { text: " ، الميزانية " },
-      { text: "5 إلى 25 مليون", color: "#22c55e", underline: true },
-      { text: " - " },
-      { text: "راشد العتيبي", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "٠٥٠٨٧٦****", color: "#f97316", underline: true },
-    ],
-    fullText: "مهتم بأراضي تجارية في المنطقة الشرقية ، خصوصاً الدمام والخبر ، الميزانية 5 إلى 25 مليون - راشد العتيبي ٠٥٠٨٧٦****"
-  },
-  {
-    segments: [
-      { text: "أدور " },
-      { text: "مجمع سكني", color: "#d97706", underline: true },
-      { text: " أو " },
-      { text: "شقق مفروشة", color: "#d97706", underline: true },
-      { text: " للاستثمار في " },
-      { text: "مكة", color: "#22c55e", underline: true },
-      { text: " قريب من الحرم ، معي " },
-      { text: "20 مليون", color: "#22c55e", underline: true },
-      { text: " - " },
-      { text: "بندر", color: "#f97316", underline: true },
-      { text: " " },
-      { text: "054321****", color: "#f97316", underline: true },
-    ],
-    fullText: "أدور مجمع سكني أو شقق مفروشة للاستثمار في مكة قريب من الحرم ، معي 20 مليون - بندر 054321****"
-  },
-];
 
 // Helper function for friendly Saudi-style messages
 type MessageType = "greeting" | "missingInfo" | "confirmation" | "success" | "modeSwitch";
@@ -380,6 +126,7 @@ export default function HeroSection() {
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [shuffledExamples, setShuffledExamples] = useState<Example[]>(() => getShuffledExamples("buyer"));
   const [isFullScreenChat, setIsFullScreenChat] = useState(false);
   const [mapMarkers, setMapMarkers] = useState<Array<{city: string; lat: number; lng: number}>>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -452,22 +199,27 @@ export default function HeroSection() {
     }
   }, [conversation, isTyping, pendingConfirmation]);
 
-  // Get the current examples array based on mode
-  const currentExamplesData = mode === "buyer" ? buyerExamplesData : mode === "seller" ? sellerExamplesData : investorExamplesData;
-  
-  // Get current example based on index
-  const currentExample = currentExamplesData[exampleIndex % currentExamplesData.length];
-  const exampleSegments = currentExample.segments;
-  const fullExampleText = currentExample.fullText;
+  // Get current example based on index from shuffled examples
+  const currentExample = shuffledExamples[exampleIndex % shuffledExamples.length];
+  const exampleSegments = currentExample?.segments || [];
+  const fullExampleText = currentExample?.fullText || "";
   
   // No interval needed - rotation happens after typewriter finishes + 3 second delay
   
-  // Reset example index when mode changes
+  // Reset example index and get new shuffled examples when mode changes
   useEffect(() => {
     setExampleIndex(0);
     setCharIndex(0);
     setMapMarkers([]);
+    setShuffledExamples(getShuffledExamples(mode));
   }, [mode]);
+  
+  // Mark current example as viewed when it's shown
+  useEffect(() => {
+    if (currentExample?.id) {
+      markExampleViewed(mode, currentExample.id);
+    }
+  }, [currentExample?.id, mode]);
   
   // Update map markers when example changes
   useEffect(() => {
