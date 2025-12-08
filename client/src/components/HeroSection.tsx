@@ -225,34 +225,20 @@ export default function HeroSection() {
     }
   }, [isFullScreenChat]);
 
-  // Prevent scroll jump when keyboard opens on mobile
+  // Cleanup scroll lock when input loses focus
   useEffect(() => {
-    if (isInputFocused && !isFullScreenChat) {
-      savedScrollY.current = window.scrollY;
-      
-      // Prevent any scroll events
-      const preventScroll = (e: Event) => {
-        window.scrollTo(0, savedScrollY.current);
-      };
-      
-      // Handle visual viewport resize (keyboard open/close)
-      const handleViewportResize = () => {
-        window.scrollTo(0, savedScrollY.current);
-      };
-      
-      window.addEventListener('scroll', preventScroll, { passive: false });
-      window.visualViewport?.addEventListener('resize', handleViewportResize);
-      
-      // Also set overflow hidden on html element
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      
-      return () => {
-        window.removeEventListener('scroll', preventScroll);
-        window.visualViewport?.removeEventListener('resize', handleViewportResize);
-        document.documentElement.style.overflow = '';
-        document.body.style.overflow = '';
-      };
+    if (!isInputFocused && !isFullScreenChat) {
+      // Restore body styles when focus is lost
+      const scrollY = Math.abs(parseInt(document.body.style.top || '0'));
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (scrollY > 0) {
+        window.scrollTo(0, scrollY);
+      }
     }
   }, [isInputFocused, isFullScreenChat]);
 
@@ -1702,7 +1688,13 @@ export default function HeroSection() {
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
                       onFocus={() => {
-                        // Lock scroll when input is focused on mobile
+                        // Lock scroll IMMEDIATELY when input is focused
+                        const scrollY = window.scrollY;
+                        document.body.style.position = 'fixed';
+                        document.body.style.top = `-${scrollY}px`;
+                        document.body.style.left = '0';
+                        document.body.style.right = '0';
+                        document.body.style.overflow = 'hidden';
                         setIsInputFocused(true);
                       }}
                       onBlur={() => {
