@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Send, Sparkles, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ExtractedData {
   name: string;
@@ -43,6 +44,15 @@ const requiredFields: MissingField[] = [
 ];
 
 const suggestions = [
+  "اسمي عبدالسلام محمد",
+  "جوالي 0501234567",
+  "من جدة حي الروضة",
+  "أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر",
+  "الشراء كاش",
+  "ميزانيتي 800 ألف",
+];
+
+const rotatingQuestions = [
   "اسمي عبدالسلام محمد",
   "جوالي 0501234567",
   "من جدة حي الروضة",
@@ -94,6 +104,16 @@ export default function InteractiveWishForm() {
   });
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  // Rotate through questions every 3 seconds
+  useEffect(() => {
+    if (isComplete) return;
+    const interval = setInterval(() => {
+      setCurrentQuestionIndex((prev) => (prev + 1) % rotatingQuestions.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isComplete]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: ExtractedData) => {
@@ -383,20 +403,46 @@ export default function InteractiveWishForm() {
 
           <div className="p-4 border-t bg-card">
             {!isComplete && (
-              <div className="flex flex-wrap gap-2 mb-3">
-                {suggestions.map((suggestion, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addSuggestion(suggestion)}
-                    className="text-xs"
-                    data-testid={`button-suggestion-${idx}`}
-                  >
-                    {suggestion}
-                  </Button>
-                ))}
-              </div>
+              <>
+                {/* Animated rotating questions */}
+                <div className="mb-4 h-12 flex items-center justify-center overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentQuestionIndex}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.4 }}
+                      className="text-center"
+                    >
+                      <Button
+                        variant="ghost"
+                        onClick={() => addSuggestion(rotatingQuestions[currentQuestionIndex])}
+                        className="text-muted-foreground text-base"
+                        data-testid="button-rotating-question"
+                      >
+                        {rotatingQuestions[currentQuestionIndex]}
+                      </Button>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Static suggestion buttons */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {suggestions.map((suggestion, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addSuggestion(suggestion)}
+                      className="text-xs"
+                      data-testid={`button-suggestion-${idx}`}
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
+                </div>
+              </>
             )}
 
             <div className="relative">
