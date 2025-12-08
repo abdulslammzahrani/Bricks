@@ -1437,23 +1437,15 @@ export default function HeroSection() {
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
-            {/* Map + Typewriter Example Panel */}
+            {/* Typewriter Example + Map Panel */}
             {!isComplete && conversation.length === 0 && !pendingConfirmation && (
               <div 
                 className={`${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}>
-                {/* Saudi Map inside the panel */}
-                <div className="p-3 pb-0">
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
-                  />
-                </div>
-                
-                {/* Stats Bar + Typewriter */}
-                <div className="p-3 pt-2">
+                {/* Stats Bar + Typewriter (Top) */}
+                <div className="p-3 pb-2">
                   {/* Stats Bar - Integrated */}
                   <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
@@ -1491,6 +1483,14 @@ export default function HeroSection() {
                       <span className="animate-pulse text-primary font-bold">|</span>
                     </p>
                   </div>
+                </div>
+                
+                {/* Saudi Map inside the panel (Bottom) */}
+                <div className="px-3 pb-3">
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
+                  />
                 </div>
               </div>
             )}
