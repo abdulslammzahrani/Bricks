@@ -6,10 +6,16 @@ export interface Neighborhood {
   nameEn?: string;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface City {
   name: string;
   nameEn: string;
   region: string;
+  coordinates: Coordinates;
   neighborhoods: Neighborhood[];
 }
 
@@ -19,6 +25,7 @@ export const saudiCities: City[] = [
     name: "الرياض",
     nameEn: "Riyadh",
     region: "منطقة الرياض",
+    coordinates: { lat: 24.7136, lng: 46.6753 },
     neighborhoods: [
       { name: "النرجس", nameEn: "Al Narjis" },
       { name: "الياسمين", nameEn: "Al Yasmin" },
@@ -77,6 +84,7 @@ export const saudiCities: City[] = [
     name: "جدة",
     nameEn: "Jeddah",
     region: "منطقة مكة المكرمة",
+    coordinates: { lat: 21.4858, lng: 39.1925 },
     neighborhoods: [
       { name: "الحمراء", nameEn: "Al Hamra" },
       { name: "الروضة", nameEn: "Al Rawdah" },
@@ -125,6 +133,7 @@ export const saudiCities: City[] = [
     name: "مكة المكرمة",
     nameEn: "Makkah",
     region: "منطقة مكة المكرمة",
+    coordinates: { lat: 21.3891, lng: 39.8579 },
     neighborhoods: [
       { name: "العزيزية", nameEn: "Al Aziziyah" },
       { name: "الشوقية", nameEn: "Al Shawqiyah" },
@@ -153,6 +162,7 @@ export const saudiCities: City[] = [
     name: "المدينة المنورة",
     nameEn: "Madinah",
     region: "منطقة المدينة المنورة",
+    coordinates: { lat: 24.5247, lng: 39.5692 },
     neighborhoods: [
       { name: "الحرم", nameEn: "Al Haram" },
       { name: "قباء", nameEn: "Quba" },
@@ -181,6 +191,7 @@ export const saudiCities: City[] = [
     name: "الدمام",
     nameEn: "Dammam",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 26.4207, lng: 50.0888 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "النخيل", nameEn: "Al Nakheel" },
@@ -214,6 +225,7 @@ export const saudiCities: City[] = [
     name: "الخبر",
     nameEn: "Al Khobar",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 26.2172, lng: 50.1971 },
     neighborhoods: [
       { name: "الكورنيش", nameEn: "Corniche" },
       { name: "اللؤلؤ", nameEn: "Al Lulu" },
@@ -242,6 +254,7 @@ export const saudiCities: City[] = [
     name: "الظهران",
     nameEn: "Dhahran",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 26.2361, lng: 50.0393 },
     neighborhoods: [
       { name: "الدوحة الشمالية", nameEn: "North Doha" },
       { name: "الدوحة الجنوبية", nameEn: "South Doha" },
@@ -255,6 +268,7 @@ export const saudiCities: City[] = [
     name: "الأحساء",
     nameEn: "Al Ahsa",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 25.3833, lng: 49.5833 },
     neighborhoods: [
       { name: "الهفوف", nameEn: "Al Hofuf" },
       { name: "المبرز", nameEn: "Al Mubarraz" },
@@ -278,6 +292,7 @@ export const saudiCities: City[] = [
     name: "القطيف",
     nameEn: "Qatif",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 26.5196, lng: 50.0115 },
     neighborhoods: [
       { name: "القلعة", nameEn: "Al Qala" },
       { name: "الجارودية", nameEn: "Al Jarudiyah" },
@@ -296,6 +311,7 @@ export const saudiCities: City[] = [
     name: "الطائف",
     nameEn: "Taif",
     region: "منطقة مكة المكرمة",
+    coordinates: { lat: 21.2703, lng: 40.4158 },
     neighborhoods: [
       { name: "الحوية", nameEn: "Al Hawiyah" },
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
@@ -319,6 +335,7 @@ export const saudiCities: City[] = [
     name: "تبوك",
     nameEn: "Tabuk",
     region: "منطقة تبوك",
+    coordinates: { lat: 28.3838, lng: 36.5550 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "السليمانية", nameEn: "Al Sulaymaniyah" },
@@ -342,6 +359,7 @@ export const saudiCities: City[] = [
     name: "أبها",
     nameEn: "Abha",
     region: "منطقة عسير",
+    coordinates: { lat: 18.2164, lng: 42.5053 },
     neighborhoods: [
       { name: "الخالدية", nameEn: "Al Khalidiyah" },
       { name: "الضباب", nameEn: "Al Dabab" },
@@ -365,6 +383,7 @@ export const saudiCities: City[] = [
     name: "خميس مشيط",
     nameEn: "Khamis Mushait",
     region: "منطقة عسير",
+    coordinates: { lat: 18.3060, lng: 42.7294 },
     neighborhoods: [
       { name: "الراقي", nameEn: "Al Raqi" },
       { name: "الموسى", nameEn: "Al Mousa" },
@@ -386,6 +405,7 @@ export const saudiCities: City[] = [
     name: "بريدة",
     nameEn: "Buraydah",
     region: "منطقة القصيم",
+    coordinates: { lat: 26.3260, lng: 43.9750 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "الخليج", nameEn: "Al Khaleej" },
@@ -409,6 +429,7 @@ export const saudiCities: City[] = [
     name: "عنيزة",
     nameEn: "Unayzah",
     region: "منطقة القصيم",
+    coordinates: { lat: 26.0840, lng: 43.9939 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "الخالدية", nameEn: "Al Khalidiyah" },
@@ -427,6 +448,7 @@ export const saudiCities: City[] = [
     name: "حائل",
     nameEn: "Hail",
     region: "منطقة حائل",
+    coordinates: { lat: 27.5114, lng: 41.7208 },
     neighborhoods: [
       { name: "المصيف", nameEn: "Al Masif" },
       { name: "الخزامى", nameEn: "Al Khuzama" },
@@ -450,6 +472,7 @@ export const saudiCities: City[] = [
     name: "نجران",
     nameEn: "Najran",
     region: "منطقة نجران",
+    coordinates: { lat: 17.4924, lng: 44.1277 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "الفهد", nameEn: "Al Fahd" },
@@ -468,6 +491,7 @@ export const saudiCities: City[] = [
     name: "جازان",
     nameEn: "Jazan",
     region: "منطقة جازان",
+    coordinates: { lat: 16.8892, lng: 42.5511 },
     neighborhoods: [
       { name: "الروضة", nameEn: "Al Rawdah" },
       { name: "الشاطئ", nameEn: "Al Shati" },
@@ -486,6 +510,7 @@ export const saudiCities: City[] = [
     name: "الجبيل",
     nameEn: "Jubail",
     region: "المنطقة الشرقية",
+    coordinates: { lat: 27.0046, lng: 49.6225 },
     neighborhoods: [
       { name: "الفناتير", nameEn: "Al Fanatir" },
       { name: "الحويلات", nameEn: "Al Huwailat" },
@@ -504,6 +529,7 @@ export const saudiCities: City[] = [
     name: "ينبع",
     nameEn: "Yanbu",
     region: "منطقة المدينة المنورة",
+    coordinates: { lat: 24.0895, lng: 38.0618 },
     neighborhoods: [
       { name: "ينبع الصناعية", nameEn: "Yanbu Industrial" },
       { name: "ينبع البحر", nameEn: "Yanbu Al Bahr" },
@@ -522,6 +548,7 @@ export const saudiCities: City[] = [
     name: "الباحة",
     nameEn: "Al Baha",
     region: "منطقة الباحة",
+    coordinates: { lat: 20.0129, lng: 41.4677 },
     neighborhoods: [
       { name: "الخالدية", nameEn: "Al Khalidiyah" },
       { name: "الحزام", nameEn: "Al Hizam" },
@@ -540,6 +567,7 @@ export const saudiCities: City[] = [
     name: "سكاكا",
     nameEn: "Sakaka",
     region: "منطقة الجوف",
+    coordinates: { lat: 29.9697, lng: 40.2064 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "الورود", nameEn: "Al Wurud" },
@@ -558,6 +586,7 @@ export const saudiCities: City[] = [
     name: "عرعر",
     nameEn: "Arar",
     region: "منطقة الحدود الشمالية",
+    coordinates: { lat: 30.9753, lng: 41.0066 },
     neighborhoods: [
       { name: "الفيصلية", nameEn: "Al Faisaliyah" },
       { name: "الخالدية", nameEn: "Al Khalidiyah" },
@@ -621,4 +650,20 @@ export const getRegions = (): string[] => {
 // Get cities by region
 export const getCitiesByRegion = (regionName: string): City[] => {
   return saudiCities.filter(city => city.region === regionName);
+};
+
+// Get city coordinates by name
+export const getCityCoordinates = (cityName: string): Coordinates | null => {
+  const city = saudiCities.find(c => c.name === cityName || c.nameEn.toLowerCase() === cityName.toLowerCase());
+  return city ? city.coordinates : null;
+};
+
+// Find city in text and return coordinates
+export const findCityInText = (text: string): { city: string; coordinates: Coordinates } | null => {
+  for (const city of saudiCities) {
+    if (text.includes(city.name) || text.toLowerCase().includes(city.nameEn.toLowerCase())) {
+      return { city: city.name, coordinates: city.coordinates };
+    }
+  }
+  return null;
 };
