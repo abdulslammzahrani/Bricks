@@ -6,7 +6,6 @@ import { Send, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface ExtractedData {
   name: string;
@@ -52,14 +51,8 @@ const suggestions = [
   "ميزانيتي 800 ألف",
 ];
 
-const rotatingQuestions = [
-  "اسمي عبدالسلام محمد",
-  "جوالي 0501234567",
-  "من جدة حي الروضة",
-  "أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر",
-  "الشراء كاش",
-  "ميزانيتي 800 ألف",
-];
+// Full example text showing all required information
+const fullExampleText = "اسمي عبدالسلام محمد، رقم جوالي 0501234567، من جدة حي الروضة، أبحث عن شقة ثلاث غرف حمامين مساحة 120 متر، الشراء كاش";
 
 const propertyTypeMap: Record<string, string> = {
   "شقة": "apartment",
@@ -104,16 +97,39 @@ export default function InteractiveWishForm() {
   });
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [displayedText, setDisplayedText] = useState("");
+  const [isTypingExample, setIsTypingExample] = useState(true);
 
-  // Rotate through questions every 3 seconds
+  // Typewriter effect for the example text
   useEffect(() => {
     if (isComplete) return;
-    const interval = setInterval(() => {
-      setCurrentQuestionIndex((prev) => (prev + 1) % rotatingQuestions.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isComplete]);
+    
+    let currentIndex = 0;
+    setDisplayedText("");
+    setIsTypingExample(true);
+    
+    const typeInterval = setInterval(() => {
+      if (currentIndex < fullExampleText.length) {
+        setDisplayedText(fullExampleText.slice(0, currentIndex + 1));
+        currentIndex++;
+      } else {
+        // Pause at the end, then restart
+        setIsTypingExample(false);
+        clearInterval(typeInterval);
+        
+        // Restart after 3 seconds pause
+        setTimeout(() => {
+          if (!isComplete) {
+            currentIndex = 0;
+            setDisplayedText("");
+            setIsTypingExample(true);
+          }
+        }, 3000);
+      }
+    }, 60); // Speed of typing
+    
+    return () => clearInterval(typeInterval);
+  }, [isComplete, isTypingExample]);
 
   const registerMutation = useMutation({
     mutationFn: async (data: ExtractedData) => {
@@ -404,27 +420,17 @@ export default function InteractiveWishForm() {
           <div className="p-4 border-t bg-card">
             {!isComplete && (
               <>
-                {/* Animated rotating questions */}
-                <div className="mb-4 h-12 flex items-center justify-center overflow-hidden">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={currentQuestionIndex}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.4 }}
-                      className="text-center"
-                    >
-                      <Button
-                        variant="ghost"
-                        onClick={() => addSuggestion(rotatingQuestions[currentQuestionIndex])}
-                        className="text-muted-foreground text-base"
-                        data-testid="button-rotating-question"
-                      >
-                        {rotatingQuestions[currentQuestionIndex]}
-                      </Button>
-                    </motion.div>
-                  </AnimatePresence>
+                {/* Typewriter example showing all required info */}
+                <div 
+                  className="mb-4 p-3 rounded-lg bg-muted/50 border border-dashed cursor-pointer hover-elevate"
+                  onClick={() => addSuggestion(fullExampleText)}
+                  data-testid="button-typewriter-example"
+                >
+                  <p className="text-sm text-muted-foreground mb-1">مثال: اضغط لإضافة النص</p>
+                  <p className="text-base leading-relaxed min-h-[3rem]">
+                    <span className="text-foreground">{displayedText}</span>
+                    <span className="animate-pulse text-primary">|</span>
+                  </p>
                 </div>
 
                 {/* Static suggestion buttons */}
