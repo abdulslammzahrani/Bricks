@@ -503,15 +503,35 @@ export default function HeroSection() {
                 <h3 className="text-xl font-bold mb-2">
                   {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
                 </h3>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-muted-foreground mb-2">
                   {mode === "buyer" ? "سنتواصل معك عند توفر عقار مناسب" : "سنتواصل معك عند وجود مشترين مهتمين"}
                 </p>
+                
+                {/* Registration info */}
+                <div className="bg-card border rounded-lg p-4 my-4 text-right max-w-sm mx-auto">
+                  <p className="text-sm mb-2">
+                    <span className="text-muted-foreground">تم تسجيلك بالموقع:</span>
+                  </p>
+                  <p className="text-sm mb-1">
+                    <span className="text-muted-foreground">رقم الجوال: </span>
+                    <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
+                  </p>
+                  <p className="text-sm mb-3">
+                    <span className="text-muted-foreground">كلمة المرور: </span>
+                    <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    بتسجيلك، أنت توافق على الشروط والأحكام وسياسة الخصوصية
+                  </p>
+                </div>
+                
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsComplete(false);
                     setConversation([]);
                     setExtractedData({});
+                    setUploadedFiles([]);
                   }}
                   data-testid="button-add-another"
                 >
