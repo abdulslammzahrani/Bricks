@@ -1359,7 +1359,7 @@ export default function HeroSection() {
                 onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                 onKeyDown={handleKeyDown}
                 className="flex-1 min-h-[40px] py-2 px-3 max-h-[120px] overflow-y-auto outline-none text-[15px] bg-transparent"
-                data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رسالتك أو سجل صوتك..."}
+                data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                 style={{ wordBreak: "break-word" }}
                 data-testid="input-chat-fullscreen"
               />
@@ -1644,7 +1644,7 @@ export default function HeroSection() {
                       className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب أو سجل صوتك..."}
+                      data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       data-testid="input-interactive"
                     />
                   </div>
