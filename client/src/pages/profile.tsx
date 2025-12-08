@@ -16,6 +16,7 @@ import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
 import { getCityNames, getNeighborhoodsByCity } from "@shared/saudi-locations";
 import { MessagingPanel } from "@/components/MessagingPanel";
+import { MatchedPropertiesPanel } from "@/components/MatchedPropertiesPanel";
 
 const cities = getCityNames();
 const propertyTypes = [
@@ -40,7 +41,9 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState(tabParam === "messages" ? "messages" : "items");
+  const [activeTab, setActiveTab] = useState(
+    tabParam === "messages" ? "messages" : tabParam === "matches" ? "matches" : "items"
+  );
   
   const [formData, setFormData] = useState({
     city: "",
@@ -63,6 +66,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (tabParam === "messages" && activeTab !== "messages") {
       setActiveTab("messages");
+    } else if (tabParam === "matches" && activeTab !== "matches") {
+      setActiveTab("matches");
     }
   }, [tabParam]);
 
@@ -71,6 +76,8 @@ export default function ProfilePage() {
     setActiveTab(value);
     if (value === "messages") {
       navigate("/profile?tab=messages", { replace: true });
+    } else if (value === "matches") {
+      navigate("/profile?tab=matches", { replace: true });
     } else {
       navigate("/profile", { replace: true });
     }
@@ -512,11 +519,17 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto">
           {/* Tabs Navigation */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+            <TabsList className={`grid w-full max-w-lg mx-auto ${isBuyer ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger value="items" className="gap-2" data-testid="tab-items">
                 {isBuyer ? <Heart className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
                 {isBuyer ? "رغباتي" : "عقاراتي"}
               </TabsTrigger>
+              {isBuyer && (
+                <TabsTrigger value="matches" className="gap-2" data-testid="tab-matches">
+                  <Building2 className="h-4 w-4" />
+                  العروض المتطابقة
+                </TabsTrigger>
+              )}
               <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
                 <MessageCircle className="h-4 w-4" />
                 الرسائل
@@ -958,6 +971,12 @@ export default function ProfilePage() {
             </div>
           )}
             </TabsContent>
+
+            {isBuyer && (
+              <TabsContent value="matches" className="mt-6">
+                <MatchedPropertiesPanel preferences={preferences || []} />
+              </TabsContent>
+            )}
 
             <TabsContent value="messages" className="mt-6">
               {userData?.id ? (
