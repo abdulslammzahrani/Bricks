@@ -49,7 +49,7 @@ const buyerExamplesData = [
       { text: "اسمي " },
       { text: "عبدالسلام محمد", color: "#f97316", underline: true },
       { text: " ، جوالي " },
-      { text: "0501234567", color: "#f97316", underline: true },
+      { text: "050123****", color: "#f97316", underline: true },
       { text: " ، أبحث عن " },
       { text: "شقة", color: "#3b82f6", underline: true },
       { text: " في " },
@@ -61,14 +61,14 @@ const buyerExamplesData = [
       { text: " " },
       { text: "كاش", color: "#3b82f6", underline: true },
     ],
-    fullText: "اسمي عبدالسلام محمد ، جوالي 0501234567 ، أبحث عن شقة في جدة حي الحمراء ، 3 غرف ، الميزانية 800 ألف كاش"
+    fullText: "اسمي عبدالسلام محمد ، جوالي 050123**** ، أبحث عن شقة في جدة حي الحمراء ، 3 غرف ، الميزانية 800 ألف كاش"
   },
   {
     segments: [
       { text: "أنا " },
       { text: "سارة العتيبي", color: "#f97316", underline: true },
       { text: " " },
-      { text: "٠٥٥٨٨٩٩١٢٣", color: "#f97316", underline: true },
+      { text: "٠٥٥٨٨٩****", color: "#f97316", underline: true },
       { text: " ، أدور " },
       { text: "فيلا", color: "#3b82f6", underline: true },
       { text: " في " },
@@ -80,14 +80,14 @@ const buyerExamplesData = [
       { text: " عن طريق " },
       { text: "تمويل بنكي", color: "#3b82f6", underline: true },
     ],
-    fullText: "أنا سارة العتيبي ٠٥٥٨٨٩٩١٢٣ ، أدور فيلا في الرياض حي النرجس ، ميزانيتي مليون ونص عن طريق تمويل بنكي"
+    fullText: "أنا سارة العتيبي ٠٥٥٨٨٩**** ، أدور فيلا في الرياض حي النرجس ، ميزانيتي مليون ونص عن طريق تمويل بنكي"
   },
   {
     segments: [
       { text: "هلا، انا " },
       { text: "فهد الشمري", color: "#f97316", underline: true },
       { text: " رقمي " },
-      { text: "0509876543", color: "#f97316", underline: true },
+      { text: "050987****", color: "#f97316", underline: true },
       { text: " ابي " },
       { text: "دبلكس", color: "#3b82f6", underline: true },
       { text: " في " },
@@ -99,14 +99,14 @@ const buyerExamplesData = [
       { text: " " },
       { text: "كاش", color: "#3b82f6", underline: true },
     ],
-    fullText: "هلا، انا فهد الشمري رقمي 0509876543 ابي دبلكس في الدمام حي النخيل أو الفيصلية مساحة كبيرة 300 متر فوق ، السعر لين مليون ومئتين كاش"
+    fullText: "هلا، انا فهد الشمري رقمي 050987**** ابي دبلكس في الدمام حي النخيل أو الفيصلية مساحة كبيرة 300 متر فوق ، السعر لين مليون ومئتين كاش"
   },
   {
     segments: [
       { text: "" },
       { text: "نوره القحطاني", color: "#f97316", underline: true },
       { text: " - " },
-      { text: "جوال: 0533221144", color: "#f97316", underline: true },
+      { text: "جوال: 053322****", color: "#f97316", underline: true },
       { text: " - ابحث عن " },
       { text: "شقة تمليك", color: "#3b82f6", underline: true },
       { text: " - " },
@@ -118,14 +118,14 @@ const buyerExamplesData = [
       { text: " - " },
       { text: "نقداً", color: "#3b82f6", underline: true },
     ],
-    fullText: "نوره القحطاني - جوال: 0533221144 - ابحث عن شقة تمليك - مكة المكرمة - العزيزية - غرفتين كبار - الحد الأقصى 650 ألف - نقداً"
+    fullText: "نوره القحطاني - جوال: 053322**** - ابحث عن شقة تمليك - مكة المكرمة - العزيزية - غرفتين كبار - الحد الأقصى 650 ألف - نقداً"
   },
   {
     segments: [
       { text: "السلام عليكم، " },
       { text: "عبدالله المالكي", color: "#f97316", underline: true },
       { text: " واتساب " },
-      { text: "٠٥٦٧٨٩٠١٢٣", color: "#f97316", underline: true },
+      { text: "٠٥٦٧٨٩****", color: "#f97316", underline: true },
       { text: " طالب " },
       { text: "أرض سكنية", color: "#3b82f6", underline: true },
       { text: " في " },
@@ -137,7 +137,7 @@ const buyerExamplesData = [
       { text: " " },
       { text: "كاش فوري", color: "#3b82f6", underline: true },
     ],
-    fullText: "السلام عليكم، عبدالله المالكي واتساب ٠٥٦٧٨٩٠١٢٣ طالب أرض سكنية في جدة أفضل حي الواحة أو المروة مساحة 400 لين 600 متر ، المبلغ المتاح 500 ألف كاش فوري"
+    fullText: "السلام عليكم، عبدالله المالكي واتساب ٠٥٦٧٨٩**** طالب أرض سكنية في جدة أفضل حي الواحة أو المروة مساحة 400 لين 600 متر ، المبلغ المتاح 500 ألف كاش فوري"
   },
 ];
 
@@ -148,7 +148,7 @@ const sellerExamplesData = [
       { text: "اسمي " },
       { text: "محمد العلي", color: "#f97316", underline: true },
       { text: " ، جوالي " },
-      { text: "0551234567", color: "#f97316", underline: true },
+      { text: "055123****", color: "#f97316", underline: true },
       { text: " ، أعرض " },
       { text: "فيلا", color: "#3b82f6", underline: true },
       { text: " في " },
@@ -160,7 +160,7 @@ const sellerExamplesData = [
       { text: " ، " },
       { text: "جاهزة للسكن", color: "#3b82f6", underline: true },
     ],
-    fullText: "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن"
+    fullText: "اسمي محمد العلي ، جوالي 055123**** ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن"
   },
   {
     segments: [
@@ -175,9 +175,9 @@ const sellerExamplesData = [
       { text: " - تواصل: " },
       { text: "أحمد الغامدي", color: "#f97316", underline: true },
       { text: " " },
-      { text: "٠٥٤٣٢١٠٩٨٧", color: "#f97316", underline: true },
+      { text: "٠٥٤٣٢١****", color: "#f97316", underline: true },
     ],
-    fullText: "للبيع شقة فاخرة في جدة حي الحمراء - 4 غرف - المساحة 180 متر - السعر 900 ألف - تواصل: أحمد الغامدي ٠٥٤٣٢١٠٩٨٧"
+    fullText: "للبيع شقة فاخرة في جدة حي الحمراء - 4 غرف - المساحة 180 متر - السعر 900 ألف - تواصل: أحمد الغامدي ٠٥٤٣٢١****"
   },
   {
     segments: [
@@ -192,9 +192,9 @@ const sellerExamplesData = [
       { text: " - المالك: " },
       { text: "سعود العنزي", color: "#f97316", underline: true },
       { text: " - " },
-      { text: "0567891234", color: "#f97316", underline: true },
+      { text: "056789****", color: "#f97316", underline: true },
     ],
-    fullText: "عقار للبيع: دبلكس الدمام حي الشاطئ - 5 غرف - موقع ممتاز - 1.8 مليون - المالك: سعود العنزي - 0567891234"
+    fullText: "عقار للبيع: دبلكس الدمام حي الشاطئ - 5 غرف - موقع ممتاز - 1.8 مليون - المالك: سعود العنزي - 056789****"
   },
 ];
 
@@ -205,7 +205,7 @@ const investorExamplesData = [
       { text: "اسمي " },
       { text: "خالد المحمد", color: "#f97316", underline: true },
       { text: " ، جوالي " },
-      { text: "0561234567", color: "#f97316", underline: true },
+      { text: "056123****", color: "#f97316", underline: true },
       { text: " ، مستثمر أبحث عن فرص في " },
       { text: "الرياض وجدة", color: "#22c55e", underline: true },
       { text: " ، مهتم بالعقارات " },
@@ -215,14 +215,14 @@ const investorExamplesData = [
       { text: " ، أفضل العائد " },
       { text: "المرتفع", color: "#d97706", underline: true },
     ],
-    fullText: "اسمي خالد المحمد ، جوالي 0561234567 ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع"
+    fullText: "اسمي خالد المحمد ، جوالي 056123**** ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع"
   },
   {
     segments: [
       { text: "مستثمر عقاري: " },
       { text: "بندر الدوسري", color: "#f97316", underline: true },
       { text: " - " },
-      { text: "٠٥٠٢٣٤٥٦٧٨", color: "#f97316", underline: true },
+      { text: "٠٥٠٢٣٤****", color: "#f97316", underline: true },
       { text: " - أبحث عن فرص في " },
       { text: "المنطقة الشرقية", color: "#22c55e", underline: true },
       { text: " - " },
@@ -232,7 +232,7 @@ const investorExamplesData = [
       { text: " - " },
       { text: "عائد سنوي 8%+", color: "#d97706", underline: true },
     ],
-    fullText: "مستثمر عقاري: بندر الدوسري - ٠٥٠٢٣٤٥٦٧٨ - أبحث عن فرص في المنطقة الشرقية - عمارات تجارية - رأس المال 10 إلى 30 مليون - عائد سنوي 8%+"
+    fullText: "مستثمر عقاري: بندر الدوسري - ٠٥٠٢٣٤**** - أبحث عن فرص في المنطقة الشرقية - عمارات تجارية - رأس المال 10 إلى 30 مليون - عائد سنوي 8%+"
   },
 ];
 
