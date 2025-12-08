@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map } from "lucide-react";
 import { Link } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
+import { PropertyMap } from "@/components/PropertyMap";
 
 const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم"];
 const propertyTypes = [
@@ -471,7 +472,17 @@ export default function ProfilePage() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {properties && Array.isArray(properties) && properties.length > 0 ? (
+                <div className="space-y-3">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Map className="h-5 w-5 text-green-600" />
+                    خريطة عقاراتي
+                  </h2>
+                  <PropertyMap properties={properties as any[]} />
+                </div>
+              ) : null}
+
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <Building2 className="h-5 w-5 text-green-600" />
                 عقاراتي
@@ -510,7 +521,7 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Eye className="h-4 w-4" />
-                            {prop.views || 0} مشاهدة
+                            {prop.viewsCount || 0} مشاهدة
                           </div>
                         </div>
                       </CardContent>

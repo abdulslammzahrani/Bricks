@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -53,6 +53,8 @@ export const properties = pgTable("properties", {
   images: text("images").array().default(sql`'{}'::text[]`),
   isActive: boolean("is_active").notNull().default(true),
   viewsCount: integer("views_count").notNull().default(0),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({ id: true, viewsCount: true });
