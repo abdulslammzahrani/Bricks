@@ -82,6 +82,8 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const [pendingData, setPendingData] = useState<Record<string, string>>({});
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
@@ -339,8 +341,127 @@ export default function HeroSection() {
     }, 50);
   };
 
+  const formatBudget = (amount: string) => {
+    const num = parseInt(amount);
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)} مليون`;
+    if (num >= 1000) return `${(num / 1000).toFixed(0)} ألف`;
+    return amount;
+  };
+
+  const generateConfirmationMessage = (data: Record<string, string>, currentMode: UserMode) => {
+    if (currentMode === "buyer") {
+      const lines = [
+        `الاسم: ${data.name}`,
+        `الجوال: ${data.phone}`,
+        `المدينة: ${data.city}`,
+        data.district ? `الحي: ${data.district}` : null,
+        `نوع العقار: ${data.propertyType}`,
+        data.budget ? `الميزانية: ${formatBudget(data.budget)}` : null,
+        data.paymentMethod ? `طريقة الدفع: ${data.paymentMethod === "cash" ? "كاش" : "تمويل بنكي"}` : null,
+      ].filter(Boolean);
+      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+    } else if (currentMode === "seller") {
+      const lines = [
+        `الاسم: ${data.name}`,
+        `الجوال: ${data.phone}`,
+        `المدينة: ${data.city}`,
+        `الحي: ${data.district}`,
+        `نوع العقار: ${data.propertyType}`,
+        `السعر: ${formatBudget(data.price)}`,
+        data.status ? `الحالة: ${data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء"}` : null,
+        `الموقع: تم تحديده على الخريطة`,
+        `الصور: ${uploadedFiles.length} صورة/فيديو`,
+      ].filter(Boolean);
+      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+    } else {
+      const lines = [
+        `الاسم: ${data.name}`,
+        `الجوال: ${data.phone}`,
+        `المدن المستهدفة: ${data.cities}`,
+        data.investmentTypes ? `نوع الاستثمار: ${data.investmentTypes}` : null,
+        (data.budgetMin && data.budgetMax) ? `الميزانية: من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` : null,
+        data.returnPreference ? `هدف الاستثمار: ${data.returnPreference}` : null,
+      ].filter(Boolean);
+      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+    }
+  };
+
+  const submitData = (data: Record<string, string>) => {
+    if (mode === "buyer") {
+      buyerMutation.mutate({
+        name: data.name,
+        email: `${data.phone}@temp.com`,
+        phone: data.phone,
+        city: data.city,
+        districts: data.district ? [data.district] : [],
+        propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
+        budgetMin: 0,
+        budgetMax: parseInt(data.budget || "0"),
+        paymentMethod: data.paymentMethod || "cash",
+      });
+      setConversation(prev => [
+        ...prev,
+        { type: "system", text: "تم تسجيل رغبتك بنجاح! سنتواصل معك عند توفر عقار مناسب." }
+      ]);
+    } else if (mode === "seller") {
+      sellerMutation.mutate({
+        name: data.name,
+        email: `${data.phone}@temp.com`,
+        phone: data.phone,
+        city: data.city,
+        district: data.district,
+        propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
+        price: parseInt(data.price),
+        status: data.status || "ready",
+        images: uploadedFiles,
+        latitude: parseFloat(data.latitude),
+        longitude: parseFloat(data.longitude),
+      });
+      setConversation(prev => [
+        ...prev,
+        { type: "system", text: "تم تسجيل عقارك بنجاح! سنتواصل معك عند وجود مشترين مهتمين." }
+      ]);
+    } else {
+      investorMutation.mutate({
+        name: data.name,
+        email: `${data.phone}@temp.com`,
+        phone: data.phone,
+        cities: data.cities,
+        investmentTypes: data.investmentTypes || "",
+        budgetMin: parseInt(data.budgetMin || "0"),
+        budgetMax: parseInt(data.budgetMax || "0"),
+        returnPreference: data.returnPreference || "",
+      });
+      setConversation(prev => [
+        ...prev,
+        { type: "system", text: "تم تسجيل اهتمامك بنجاح! سنتواصل معك عند توفر فرص استثمارية مناسبة." }
+      ]);
+    }
+    setPendingConfirmation(false);
+    setPendingData({});
+  };
+
   const handleSubmit = () => {
     const hasInput = inputText.trim().length > 0;
+    const userText = inputText.trim();
+    
+    // Check if user is confirming
+    if (pendingConfirmation && userText.includes("موافق")) {
+      setConversation(prev => [
+        ...prev,
+        { type: "user", text: userText }
+      ]);
+      setInputText("");
+      if (textareaRef.current) {
+        textareaRef.current.textContent = "";
+      }
+      setIsTyping(true);
+      setTimeout(() => {
+        submitData(pendingData);
+        setIsTyping(false);
+      }, 500);
+      return;
+    }
     
     let mergedData = { ...extractedData };
     
@@ -370,20 +491,11 @@ export default function HeroSection() {
       if (mode === "buyer") {
         const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
         if (hasRequired) {
-          buyerMutation.mutate({
-            name: mergedData.name,
-            email: `${mergedData.phone}@temp.com`,
-            phone: mergedData.phone,
-            city: mergedData.city,
-            districts: mergedData.district ? [mergedData.district] : [],
-            propertyType: mergedData.propertyType === "شقة" ? "apartment" : mergedData.propertyType === "فيلا" ? "villa" : mergedData.propertyType === "أرض" ? "land" : "apartment",
-            budgetMin: 0,
-            budgetMax: parseInt(mergedData.budget || "0"),
-            paymentMethod: mergedData.paymentMethod || "cash",
-          });
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
           setConversation(prev => [
             ...prev,
-            { type: "system", text: "تم تسجيل رغبتك بنجاح! سنتواصل معك عند توفر عقار مناسب." }
+            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
           ]);
         } else {
           const missing: string[] = [];
@@ -399,22 +511,11 @@ export default function HeroSection() {
       } else if (mode === "seller") {
         const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
         if (hasRequired) {
-          sellerMutation.mutate({
-            name: mergedData.name,
-            email: `${mergedData.phone}@temp.com`,
-            phone: mergedData.phone,
-            city: mergedData.city,
-            district: mergedData.district,
-            propertyType: mergedData.propertyType === "شقة" ? "apartment" : mergedData.propertyType === "فيلا" ? "villa" : mergedData.propertyType === "أرض" ? "land" : "apartment",
-            price: parseInt(mergedData.price),
-            status: mergedData.status || "ready",
-            images: uploadedFiles,
-            latitude: parseFloat(mergedData.latitude),
-            longitude: parseFloat(mergedData.longitude),
-          });
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
           setConversation(prev => [
             ...prev,
-            { type: "system", text: "تم تسجيل عقارك بنجاح! سنتواصل معك عند وجود مشترين مهتمين." }
+            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
           ]);
         } else {
           const missing: string[] = [];
@@ -425,7 +526,7 @@ export default function HeroSection() {
           if (!mergedData.propertyType) missing.push("نوع العقار");
           if (!mergedData.price) missing.push("السعر");
           if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
-          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق (أرسل رابط خرائط جوجل أو الإحداثيات)");
+          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
           setConversation(prev => [
             ...prev,
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
@@ -435,19 +536,11 @@ export default function HeroSection() {
         // Investor mode
         const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
         if (hasRequired) {
-          investorMutation.mutate({
-            name: mergedData.name,
-            email: `${mergedData.phone}@temp.com`,
-            phone: mergedData.phone,
-            cities: mergedData.cities,
-            investmentTypes: mergedData.investmentTypes || "",
-            budgetMin: parseInt(mergedData.budgetMin || "0"),
-            budgetMax: parseInt(mergedData.budgetMax || "0"),
-            returnPreference: mergedData.returnPreference || "",
-          });
+          setPendingConfirmation(true);
+          setPendingData(mergedData);
           setConversation(prev => [
             ...prev,
-            { type: "system", text: "تم تسجيل اهتمامك بنجاح! سنتواصل معك عند توفر فرص استثمارية مناسبة." }
+            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
           ]);
         } else {
           const missing: string[] = [];
