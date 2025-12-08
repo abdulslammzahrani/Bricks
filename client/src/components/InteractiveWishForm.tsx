@@ -122,6 +122,7 @@ export default function InteractiveWishForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [charIndex, setCharIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<"examples" | "write">("examples");
 
   // Typewriter effect for the example text
   useEffect(() => {
@@ -371,10 +372,13 @@ export default function InteractiveWishForm() {
   const addSuggestion = (suggestion: string) => {
     const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
     setInputText(newText);
-    if (textareaRef.current) {
-      textareaRef.current.textContent = newText;
-    }
-    textareaRef.current?.focus();
+    // Use setTimeout to ensure DOM is ready after tab switch
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.textContent = newText;
+        textareaRef.current.focus();
+      }
+    }, 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -392,126 +396,132 @@ export default function InteractiveWishForm() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-8 md:py-16">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <Sparkles className="h-6 w-6 text-primary" />
-            <Badge variant="secondary">تجربة جديدة</Badge>
-          </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2" data-testid="text-interactive-title">
             أخبرنا عن عقارك المثالي
           </h1>
-          <p className="text-muted-foreground text-lg mb-6" data-testid="text-interactive-subtitle">
+          <p className="text-muted-foreground text-lg" data-testid="text-interactive-subtitle">
             اكتب بطريقتك الخاصة... وسنفهم ما تحتاجه
           </p>
-          
-          {/* Typewriter example showing all required info with colors - always visible at top */}
-          {!isComplete && (
-            <Card 
-              className="p-6 cursor-pointer hover-elevate mx-auto max-w-3xl"
-              onClick={() => addSuggestion(fullExampleText)}
-              data-testid="button-typewriter-example"
-            >
-              <p className="text-sm text-muted-foreground mb-2">مثال على طريقة الكتابة:</p>
-              <p className="text-xl leading-loose min-h-[3.5rem]">
-                {renderTypedText()}
-                <span className="animate-pulse text-primary font-bold">|</span>
-              </p>
-            </Card>
-          )}
         </div>
 
         <Card className="p-0 overflow-hidden shadow-2xl">
-          <div className="p-4 border-b bg-card flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span>جاهز للمساعدة</span>
+          {/* Tabs Header */}
+          {!isComplete && (
+            <div className="flex border-b">
+              <button
+                onClick={() => setActiveTab("write")}
+                className={`flex-1 py-3 text-center font-medium transition-colors ${
+                  activeTab === "write" 
+                    ? "text-foreground border-b-2 border-primary" 
+                    : "text-muted-foreground"
+                }`}
+                data-testid="tab-write"
+              >
+                اكتب رغبتك
+              </button>
+              <button
+                onClick={() => setActiveTab("examples")}
+                className={`flex-1 py-3 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
+                  activeTab === "examples" 
+                    ? "text-foreground border-b-2 border-primary" 
+                    : "text-muted-foreground"
+                }`}
+                data-testid="tab-examples"
+              >
+                <Sparkles className="h-4 w-4" />
+                أمثلة
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{filledRequiredFields}/{totalRequiredFields} معلومات مطلوبة</span>
-              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+          )}
+
+          {/* Tab Content */}
+          {!isComplete && activeTab === "examples" && (
+            <div className="p-6 bg-muted/10">
+              {/* Typewriter example */}
+              <div 
+                className="text-center cursor-pointer"
+                onClick={() => {
+                  addSuggestion(fullExampleText);
+                  setActiveTab("write");
+                }}
+                data-testid="button-typewriter-example"
+              >
+                <p className="text-xl leading-loose min-h-[4rem]">
+                  {renderTypedText()}
+                  <span className="animate-pulse text-primary font-bold">|</span>
+                </p>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="min-h-[300px] max-h-[400px] overflow-y-auto p-6 space-y-4 bg-muted/20">
-            {conversation.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    msg.type === "user"
-                      ? "bg-primary text-primary-foreground rounded-tr-none"
-                      : "bg-card border rounded-tl-none"
-                  }`}
-                >
-                  {msg.highlights ? (
-                    <div dangerouslySetInnerHTML={{ __html: msg.highlights[0] }} />
-                  ) : (
-                    <p>{msg.text}</p>
+          {/* Write Tab Content */}
+          {(activeTab === "write" || isComplete) && (
+            <>
+              {/* Conversation area */}
+              {conversation.length > 0 && (
+                <div className="min-h-[200px] max-h-[300px] overflow-y-auto p-6 space-y-4 bg-muted/20">
+                  {conversation.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                          msg.type === "user"
+                            ? "bg-primary text-primary-foreground rounded-tr-none"
+                            : "bg-card border rounded-tl-none"
+                        }`}
+                      >
+                        {msg.highlights ? (
+                          <div dangerouslySetInnerHTML={{ __html: msg.highlights[0] }} />
+                        ) : (
+                          <p>{msg.text}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="flex justify-end">
+                      <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="flex justify-end">
-                <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              )}
+
+              <div className="p-4 border-t bg-card">
+                <div className="relative">
+                  <div className="flex items-start gap-3">
+                    <Button
+                      size="icon"
+                      onClick={handleSubmit}
+                      disabled={!inputText.trim() || isComplete || registerMutation.isPending}
+                      data-testid="button-send"
+                      className="flex-shrink-0"
+                    >
+                      <Send className="h-5 w-5" />
+                    </Button>
+                    <div className="flex-1 relative">
+                      <div
+                        ref={textareaRef}
+                        contentEditable={!isComplete}
+                        className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                        onKeyDown={handleKeyDown}
+                        data-placeholder="اكتب هنا... مثال: اسمي أحمد من الرياض أبحث عن فيلا"
+                        data-testid="input-interactive"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="p-4 border-t bg-card">
-            {!isComplete && (
-              <>
-                {/* Static suggestion buttons */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {suggestions.map((suggestion, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addSuggestion(suggestion)}
-                      className="text-xs"
-                      data-testid={`button-suggestion-${idx}`}
-                    >
-                      {suggestion}
-                    </Button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="relative">
-              <div
-                ref={textareaRef}
-                contentEditable={!isComplete}
-                className="min-h-[60px] max-h-[150px] overflow-y-auto p-4 pr-14 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
-                onInput={(e) => setInputText(e.currentTarget.textContent || "")}
-                onKeyDown={handleKeyDown}
-                data-placeholder="اكتب هنا... مثال: اسمي عبدالسلام من جدة حي الروضة، أبحث عن شقة"
-                data-testid="input-interactive"
-              />
-              <Button
-                size="icon"
-                className="absolute left-2 bottom-2"
-                onClick={handleSubmit}
-                disabled={!inputText.trim() || isComplete || registerMutation.isPending}
-                data-testid="button-send"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+            </>
+          )}
         </Card>
 
 
