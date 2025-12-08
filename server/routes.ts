@@ -983,5 +983,128 @@ export async function registerRoutes(
     }
   });
 
+  // ============ MARKETING ROUTES ============
+
+  // Get all marketing settings
+  app.get("/api/admin/marketing", async (req, res) => {
+    try {
+      const settings = await storage.getMarketingSettings();
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get enabled marketing settings (for frontend tracking)
+  app.get("/api/marketing/enabled", async (req, res) => {
+    try {
+      const settings = await storage.getEnabledMarketingSettings();
+      const sanitizedSettings = settings.map(s => ({
+        platform: s.platform,
+        pixelId: s.pixelId,
+        isEnabled: s.isEnabled,
+      }));
+      res.json(sanitizedSettings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get marketing setting by platform
+  app.get("/api/admin/marketing/:platform", async (req, res) => {
+    try {
+      const setting = await storage.getMarketingSetting(req.params.platform);
+      if (!setting) {
+        return res.status(404).json({ error: "إعدادات المنصة غير موجودة" });
+      }
+      res.json(setting);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create or update marketing setting
+  app.put("/api/admin/marketing/:platform", async (req, res) => {
+    try {
+      const { platform } = req.params;
+      const validPlatforms = ["snapchat", "tiktok", "facebook", "google", "mailchimp"];
+      
+      if (!validPlatforms.includes(platform)) {
+        return res.status(400).json({ error: "منصة غير مدعومة" });
+      }
+
+      const { isEnabled, pixelId, accessToken, apiKey, audienceId, conversionApiToken, testEventCode, dataCenter } = req.body;
+
+      const setting = await storage.upsertMarketingSetting({
+        platform,
+        isEnabled: isEnabled || false,
+        pixelId: pixelId || null,
+        accessToken: accessToken || null,
+        apiKey: apiKey || null,
+        audienceId: audienceId || null,
+        conversionApiToken: conversionApiToken || null,
+        testEventCode: testEventCode || null,
+        dataCenter: dataCenter || null,
+      });
+
+      res.json(setting);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete marketing setting
+  app.delete("/api/admin/marketing/:platform", async (req, res) => {
+    try {
+      await storage.deleteMarketingSetting(req.params.platform);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Track marketing event (for server-side tracking)
+  app.post("/api/marketing/events", async (req, res) => {
+    try {
+      const { platform, eventName, eventData, userId, sessionId } = req.body;
+      
+      if (!platform || !eventName) {
+        return res.status(400).json({ error: "Platform and eventName are required" });
+      }
+
+      const event = await storage.createMarketingEvent({
+        platform,
+        eventName,
+        eventData: eventData || null,
+        userId: userId || null,
+        sessionId: sessionId || null,
+        status: "sent",
+      });
+
+      res.json(event);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get marketing events (admin)
+  app.get("/api/admin/marketing/events", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const platform = req.query.platform as string;
+      
+      let events;
+      if (platform) {
+        events = await storage.getMarketingEventsByPlatform(platform);
+      } else {
+        events = await storage.getMarketingEvents(limit);
+      }
+      
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
