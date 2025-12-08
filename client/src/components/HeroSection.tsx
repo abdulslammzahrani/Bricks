@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -373,6 +373,7 @@ export default function HeroSection() {
   const [aiConfidence, setAiConfidence] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
+  const [isFullScreenChat, setIsFullScreenChat] = useState(false);
   
   // Live viewer counter for social proof (herd effect)
   const [liveViewers, setLiveViewers] = useState(0);
@@ -908,6 +909,11 @@ export default function HeroSection() {
     
     if (!hasInput) return;
     
+    // Switch to fullscreen chat mode on first message
+    if (!isFullScreenChat) {
+      setIsFullScreenChat(true);
+    }
+    
     // Add user message to conversation
     setConversation(prev => [
       ...prev,
@@ -1152,6 +1158,165 @@ export default function HeroSection() {
       handleSubmit();
     }
   };
+
+  // Full-screen WhatsApp-like chat view
+  if (isFullScreenChat) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        {/* Chat Header */}
+        <div className={`flex items-center gap-3 p-4 border-b ${mode === "seller" ? "bg-green-600" : mode === "investor" ? "bg-amber-600" : "bg-primary"} text-primary-foreground`}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => {
+              setIsFullScreenChat(false);
+              setConversation([]);
+              setExtractedData({});
+              setPendingConfirmation(false);
+              setIsComplete(false);
+            }}
+            className="text-primary-foreground hover:bg-white/20"
+            data-testid="button-back-chat"
+          >
+            <ArrowRight className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-3 flex-1">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${mode === "seller" ? "bg-green-700" : mode === "investor" ? "bg-amber-700" : "bg-primary-foreground/20"}`}>
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">تطابق</h2>
+              <p className="text-xs opacity-80">
+                {mode === "buyer" ? "مساعد البحث عن عقار" : mode === "seller" ? "مساعد عرض العقارات" : "مساعد الاستثمار العقاري"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages Area - WhatsApp style */}
+        <div 
+          className="flex-1 overflow-y-auto p-4 space-y-3"
+          style={{ 
+            backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
+          }}
+        >
+          {conversation.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
+                  msg.type === "user"
+                    ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : mode === "investor" ? "bg-amber-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
+                    : "bg-card border rounded-tl-none"
+                }`}
+              >
+                <p className="text-[15px] leading-relaxed">{msg.text}</p>
+              </div>
+            </div>
+          ))}
+          
+          {/* Confirmation Card */}
+          {pendingConfirmation && confirmationFields.length > 0 && (
+            <div className="flex justify-end">
+              <div className="max-w-[85%] rounded-2xl rounded-tl-none bg-card border p-4 shadow-sm" data-testid="confirmation-card">
+                <p className="font-bold text-base mb-3 text-center">تأكيد البيانات</p>
+                <div className="space-y-2">
+                  {confirmationFields.map((field, idx) => (
+                    <div key={idx} className="flex gap-2 text-sm">
+                      <span className="font-bold text-muted-foreground">{field.label}:</span>
+                      <span className={field.isCheck ? "text-green-600 font-medium" : ""}>{field.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground mt-4 pt-3 border-t text-center">
+                  إذا كانت المعلومات صحيحة اكتب <span className="font-bold text-primary">"موافق"</span> لاعتمادها
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {isTyping && (
+            <div className="flex justify-end">
+              <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  {isAnalyzing && (
+                    <div className="flex items-center gap-1 text-xs text-primary">
+                      <Brain className="h-3 w-3 animate-pulse" />
+                      <span>جارٍ التحليل</span>
+                    </div>
+                  )}
+                  {!isAnalyzing && (
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Auto-scroll anchor */}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Area - WhatsApp style */}
+        {!isComplete ? (
+          <div className="p-3 border-t bg-muted/30">
+            <div className="flex items-end gap-2 max-w-3xl mx-auto">
+              <div className="flex-1 bg-card border rounded-3xl px-4 py-2 flex items-center gap-2">
+                <div
+                  ref={textareaRef}
+                  contentEditable
+                  dir="rtl"
+                  onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1 min-h-[24px] max-h-[120px] overflow-y-auto outline-none text-[15px]"
+                  data-placeholder="اكتب رسالتك..."
+                  style={{ 
+                    wordBreak: "break-word",
+                  }}
+                  data-testid="input-chat-fullscreen"
+                />
+              </div>
+              <Button
+                size="icon"
+                onClick={handleSubmit}
+                disabled={!inputText.trim() && !pendingConfirmation}
+                className={`rounded-full h-11 w-11 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : mode === "investor" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                data-testid="button-send-fullscreen"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 border-t bg-green-50 dark:bg-green-950/30 text-center">
+            <div className="flex items-center justify-center gap-2 text-green-600">
+              <Check className="h-5 w-5" />
+              <span className="font-medium">تم تسجيل طلبك بنجاح!</span>
+            </div>
+            <Button
+              variant="outline"
+              className="mt-3"
+              onClick={() => {
+                setIsFullScreenChat(false);
+                setConversation([]);
+                setExtractedData({});
+                setIsComplete(false);
+              }}
+              data-testid="button-new-request"
+            >
+              طلب جديد
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
