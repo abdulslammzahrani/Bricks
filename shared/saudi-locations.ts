@@ -659,11 +659,23 @@ export const getCityCoordinates = (cityName: string): Coordinates | null => {
 };
 
 // Find city in text and return coordinates
+// Also checks for neighborhood names and maps them to their parent city
 export const findCityInText = (text: string): { city: string; coordinates: Coordinates } | null => {
+  // First try to find exact city name match
   for (const city of saudiCities) {
     if (text.includes(city.name) || text.toLowerCase().includes(city.nameEn.toLowerCase())) {
       return { city: city.name, coordinates: city.coordinates };
     }
   }
+  
+  // If no city found, try to find a neighborhood and return its parent city
+  for (const city of saudiCities) {
+    for (const neighborhood of city.neighborhoods) {
+      if (text.includes(neighborhood.name)) {
+        return { city: city.name, coordinates: city.coordinates };
+      }
+    }
+  }
+  
   return null;
 };

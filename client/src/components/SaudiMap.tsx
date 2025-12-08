@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+// leaflet CSS is imported in main.tsx
 
 interface MapMarker {
   city: string;
