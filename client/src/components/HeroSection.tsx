@@ -1437,49 +1437,60 @@ export default function HeroSection() {
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
-            {/* Typewriter Example - Live Request Indicator */}
-            {!isComplete && (
+            {/* Map + Typewriter Example Panel */}
+            {!isComplete && conversation.length === 0 && !pendingConfirmation && (
               <div 
-                className={`p-3 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}
+                className={`${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}>
-                {/* Stats Bar - Integrated */}
-                <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                    </span>
-                    <span className="font-medium text-foreground">{liveViewers}</span>
-                    <span>يتصفحون</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="h-3 w-3 text-amber-500" />
-                    <span className="font-medium text-foreground">{requestsToday}</span>
-                    <span>طلب اليوم</span>
-                  </div>
+                {/* Saudi Map inside the panel */}
+                <div className="p-3 pb-0">
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
+                  />
                 </div>
                 
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                  </span>
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                    {mode === "buyer" ? "عميل يطلب الآن:" : mode === "seller" ? "بائع يعرض الآن:" : "مستثمر يبحث الآن:"}
-                  </p>
-                </div>
-                <div 
-                  className="text-center cursor-pointer h-[120px] flex items-center justify-center px-2 overflow-hidden"
-                  onClick={() => addSuggestion(fullExampleText)}
-                  data-testid="button-typewriter-example"
-                >
-                  <p className="text-base leading-relaxed line-clamp-2">
-                    {renderTypedText()}
-                    <span className="text-muted-foreground">...</span>
-                    <span className="animate-pulse text-primary font-bold">|</span>
-                  </p>
+                {/* Stats Bar + Typewriter */}
+                <div className="p-3 pt-2">
+                  {/* Stats Bar - Integrated */}
+                  <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                      </span>
+                      <span className="font-medium text-foreground">{liveViewers}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="h-3 w-3 text-amber-500" />
+                      <span className="font-medium text-foreground">{requestsToday}</span>
+                      <span>طلب اليوم</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                      {mode === "buyer" ? "عميل يطلب الآن:" : mode === "seller" ? "بائع يعرض الآن:" : "مستثمر يبحث الآن:"}
+                    </p>
+                  </div>
+                  <div 
+                    className="text-center cursor-pointer min-h-[80px] flex items-center justify-center px-2 overflow-hidden"
+                    onClick={() => addSuggestion(fullExampleText)}
+                    data-testid="button-typewriter-example"
+                  >
+                    <p className="text-base leading-relaxed line-clamp-2">
+                      {renderTypedText()}
+                      <span className="text-muted-foreground">...</span>
+                      <span className="animate-pulse text-primary font-bold">|</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1698,15 +1709,6 @@ export default function HeroSection() {
             )}
           </Card>
 
-          {/* Saudi Arabia Map */}
-          {!isComplete && !isFullScreenChat && (
-            <div className="mt-8 max-w-3xl mx-auto">
-              <SaudiMap 
-                markers={mapMarkers} 
-                className="h-48 md:h-56 rounded-md border border-border/50 shadow-sm"
-              />
-            </div>
-          )}
         </div>
       </div>
       
