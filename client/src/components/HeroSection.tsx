@@ -460,15 +460,7 @@ export default function HeroSection() {
   const exampleSegments = currentExample.segments;
   const fullExampleText = currentExample.fullText;
   
-  // Rotate examples every 8 seconds (after typewriter finishes)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setExampleIndex(prev => prev + 1);
-      setCharIndex(0); // Reset typewriter for new example
-    }, 12000); // 12 seconds to allow typewriter to complete
-    
-    return () => clearInterval(interval);
-  }, [mode]);
+  // No interval needed - rotation happens after typewriter finishes + 3 second delay
   
   // Reset example index when mode changes
   useEffect(() => {
@@ -574,16 +566,23 @@ export default function HeroSection() {
     },
   });
 
-  // Typewriter effect - only types, doesn't reset (rotation interval handles that)
+  // Typewriter effect - types then waits 3 seconds before next example
   useEffect(() => {
     const totalLength = exampleSegments.reduce((acc, seg) => acc + seg.text.length, 0);
     if (charIndex < totalLength) {
+      // Still typing - advance one character every 50ms
       const timer = setTimeout(() => {
         setCharIndex(prev => prev + 1);
       }, 50);
       return () => clearTimeout(timer);
+    } else {
+      // Finished typing - wait 3 seconds then go to next example
+      const timer = setTimeout(() => {
+        setExampleIndex(prev => prev + 1);
+        setCharIndex(0);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-    // No auto-reset here - the rotation interval handles cycling to next example
   }, [charIndex, exampleSegments]);
 
   const handleModeSwitch = (newMode: UserMode) => {
