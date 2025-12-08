@@ -388,31 +388,31 @@ export default function HeroSection() {
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
   
-  // Calculate requests based on time of day (0 at midnight, max at 11:59 PM)
+  // Calculate requests based on time of day (0 at midnight, max 120 at 11:59 PM)
   const calculateDailyRequests = () => {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
     // Total minutes since midnight
     const minutesSinceMidnight = hours * 60 + minutes;
-    // Max requests at end of day ~500, start at 0
+    // Max requests at end of day ~120, start at 0
     // Growth rate varies - slower at night, faster during day
     let baseRequests = 0;
     if (hours >= 0 && hours < 6) {
-      // Night: very slow growth (0-30)
-      baseRequests = Math.floor(minutesSinceMidnight * 0.08);
+      // Night: very slow growth (0-7)
+      baseRequests = Math.floor(minutesSinceMidnight * 0.02);
     } else if (hours >= 6 && hours < 12) {
-      // Morning: moderate growth (30-180)
-      baseRequests = 30 + Math.floor((minutesSinceMidnight - 360) * 0.4);
+      // Morning: moderate growth (7-45)
+      baseRequests = 7 + Math.floor((minutesSinceMidnight - 360) * 0.1);
     } else if (hours >= 12 && hours < 18) {
-      // Afternoon: peak growth (180-380)
-      baseRequests = 180 + Math.floor((minutesSinceMidnight - 720) * 0.55);
+      // Afternoon: peak growth (45-90)
+      baseRequests = 45 + Math.floor((minutesSinceMidnight - 720) * 0.125);
     } else {
-      // Evening: moderate growth (380-500)
-      baseRequests = 380 + Math.floor((minutesSinceMidnight - 1080) * 0.33);
+      // Evening: moderate growth (90-120)
+      baseRequests = 90 + Math.floor((minutesSinceMidnight - 1080) * 0.08);
     }
-    // Add small random variation
-    return baseRequests + Math.floor(Math.random() * 10);
+    // Add small random variation (0-3)
+    return baseRequests + Math.floor(Math.random() * 4);
   };
   
   // Initialize and animate live viewer count
