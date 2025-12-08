@@ -1163,7 +1163,8 @@ export default function HeroSection() {
     }
   };
 
-  // Voice recording using Web Speech API (browser-based, no server needed)
+  // Voice recording using Web Speech API - LIVE CONVERSATION MODE
+  // Analyzes and asks questions while still recording!
   const startRecording = () => {
     // Check if Web Speech API is supported
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -1182,7 +1183,8 @@ export default function HeroSection() {
     recognition.continuous = true;
     recognition.interimResults = true;
     
-    let finalTranscript = "";
+    let lastProcessedText = "";
+    let processingTimeout: NodeJS.Timeout | null = null;
     
     recognition.onstart = () => {
       setIsRecording(true);
@@ -1190,9 +1192,10 @@ export default function HeroSection() {
     };
     
     recognition.onresult = (event: any) => {
+      let finalTranscript = "";
       let interimTranscript = "";
       
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           finalTranscript += transcript + " ";
@@ -1201,40 +1204,65 @@ export default function HeroSection() {
         }
       }
       
-      // Show interim results in the input field
+      // Show current text in input field
       const currentText = finalTranscript + interimTranscript;
       setInputText(currentText);
       if (textareaRef.current) {
         textareaRef.current.textContent = currentText;
       }
+      
+      // Auto-analyze when we have new final text (after pause in speech)
+      if (finalTranscript.trim() && finalTranscript.trim() !== lastProcessedText) {
+        // Clear any pending timeout
+        if (processingTimeout) {
+          clearTimeout(processingTimeout);
+        }
+        
+        // Wait 1.5 seconds of no new speech before analyzing
+        processingTimeout = setTimeout(() => {
+          const textToProcess = finalTranscript.trim();
+          if (textToProcess && textToProcess !== lastProcessedText && textToProcess.length > 5) {
+            lastProcessedText = textToProcess;
+            
+            // Clear input and submit for analysis (keeps recording active!)
+            setInputText("");
+            if (textareaRef.current) {
+              textareaRef.current.textContent = "";
+            }
+            
+            // Submit for live analysis while still recording
+            handleSubmitWithText(textToProcess);
+          }
+        }, 1500);
+      }
     };
     
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error:", event.error);
-      setIsRecording(false);
       
       if (event.error === "not-allowed") {
+        setIsRecording(false);
         toast({
           title: "خطأ",
           description: "لم نتمكن من الوصول للميكروفون. تأكد من إعطاء الإذن.",
           variant: "destructive",
         });
       } else if (event.error === "no-speech") {
-        toast({
-          title: "تنبيه",
-          description: "لم يتم اكتشاف صوت. حاول مرة أخرى.",
-        });
+        // Don't stop on no-speech, just continue listening
+        console.log("No speech detected, continuing...");
+      } else if (event.error === "aborted") {
+        // Ignore aborted errors
       }
     };
     
     recognition.onend = () => {
-      setIsRecording(false);
-      
-      // Auto-submit if we got text
-      if (finalTranscript.trim()) {
-        setTimeout(() => {
-          handleSubmitWithText(finalTranscript.trim());
-        }, 100);
+      // Auto-restart if still in recording mode (keeps conversation alive)
+      if (isRecording) {
+        try {
+          recognition.start();
+        } catch (e) {
+          setIsRecording(false);
+        }
       }
     };
     
@@ -1244,10 +1272,11 @@ export default function HeroSection() {
   };
 
   const stopRecording = () => {
+    setIsRecording(false);
     const recognition = (window as any).currentRecognition;
-    if (recognition && isRecording) {
+    if (recognition) {
       recognition.stop();
-      setIsRecording(false);
+      (window as any).currentRecognition = null;
     }
   };
 
