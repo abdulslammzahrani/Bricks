@@ -371,7 +371,7 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [showMicTooltip, setShowMicTooltip] = useState(true);
+  const [showMicTooltip, setShowMicTooltip] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
   const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
@@ -447,9 +447,15 @@ export default function HeroSection() {
     setCharIndex(0);
   }, [mode]);
   
-  // Hide mic tooltip after user starts chatting
+  // Show mic tooltip when chat first expands (when there's 1 message from AI)
   useEffect(() => {
-    if (conversation.length > 2) {
+    if (conversation.length === 1) {
+      // Delay slightly to let UI render
+      const timer = setTimeout(() => {
+        setShowMicTooltip(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    } else if (conversation.length > 2) {
       setShowMicTooltip(false);
     }
   }, [conversation.length]);
