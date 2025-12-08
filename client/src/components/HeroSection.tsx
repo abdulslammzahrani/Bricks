@@ -42,45 +42,45 @@ interface ExampleSegment {
   underline?: boolean;
 }
 
-// Multiple rotating buyer examples with varied writing styles
+// Multiple rotating buyer examples with varied writing styles and correct city-neighborhood combinations
 const buyerExamplesData = [
   {
     segments: [
       { text: "اسمي " },
       { text: "عبدالسلام محمد", color: "#f97316", underline: true },
-      { text: " ، رقم جوالي " },
+      { text: " ، جوالي " },
       { text: "0501234567", color: "#f97316", underline: true },
-      { text: " ، من مدينة " },
+      { text: " ، أبحث عن " },
+      { text: "شقة", color: "#3b82f6", underline: true },
+      { text: " في " },
       { text: "جدة", color: "#22c55e", underline: true },
       { text: " حي " },
-      { text: "الروضة", color: "#22c55e", underline: true },
-      { text: " ، أرغب بشراء " },
-      { text: "شقة", color: "#3b82f6", underline: true },
-      { text: " ثلاث غرف حمامين مساحة 120 متر ، الميزانية " },
+      { text: "الحمراء", color: "#22c55e", underline: true },
+      { text: " ، 3 غرف ، الميزانية " },
       { text: "800 ألف", color: "#22c55e", underline: true },
-      { text: " ، الشراء " },
+      { text: " " },
       { text: "كاش", color: "#3b82f6", underline: true },
     ],
-    fullText: "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش"
+    fullText: "اسمي عبدالسلام محمد ، جوالي 0501234567 ، أبحث عن شقة في جدة حي الحمراء ، 3 غرف ، الميزانية 800 ألف كاش"
   },
   {
     segments: [
       { text: "أنا " },
       { text: "سارة العتيبي", color: "#f97316", underline: true },
-      { text: " تواصلوا معي على " },
+      { text: " " },
       { text: "٠٥٥٨٨٩٩١٢٣", color: "#f97316", underline: true },
       { text: " ، أدور " },
       { text: "فيلا", color: "#3b82f6", underline: true },
       { text: " في " },
       { text: "الرياض", color: "#22c55e", underline: true },
-      { text: " بالتحديد " },
-      { text: "حي الصفا والسامر", color: "#22c55e", underline: true },
+      { text: " حي " },
+      { text: "النرجس", color: "#22c55e", underline: true },
       { text: " ، ميزانيتي " },
       { text: "مليون ونص", color: "#22c55e", underline: true },
       { text: " عن طريق " },
       { text: "تمويل بنكي", color: "#3b82f6", underline: true },
     ],
-    fullText: "أنا سارة العتيبي تواصلوا معي على ٠٥٥٨٨٩٩١٢٣ ، أدور فيلا في الرياض بالتحديد حي الصفا والسامر ، ميزانيتي مليون ونص عن طريق تمويل بنكي"
+    fullText: "أنا سارة العتيبي ٠٥٥٨٨٩٩١٢٣ ، أدور فيلا في الرياض حي النرجس ، ميزانيتي مليون ونص عن طريق تمويل بنكي"
   },
   {
     segments: [

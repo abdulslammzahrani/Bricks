@@ -13,8 +13,9 @@ import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, Map
 import { Link } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
+import { getCityNames, getNeighborhoodsByCity } from "@shared/saudi-locations";
 
-const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم"];
+const cities = getCityNames();
 const propertyTypes = [
   { value: "apartment", label: "شقة" },
   { value: "villa", label: "فيلا" },
@@ -595,13 +596,22 @@ export default function ProfilePage() {
                               </div>
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">الحي</Label>
-                                <Input
-                                  value={inlineEditData.districts?.[0] || ""}
-                                  onChange={(e) => handleInlineFieldChange("districts", [e.target.value], pref.id)}
-                                  onBlur={() => handleInlineFieldBlur("districts", pref.id)}
-                                  placeholder="اسم الحي"
-                                  data-testid={`inline-input-district-${pref.id}`}
-                                />
+                                <Select 
+                                  value={inlineEditData.districts?.[0] || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("districts", [v], pref.id);
+                                    setTimeout(() => handleInlineFieldBlur("districts", pref.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-district-${pref.id}`}>
+                                    <SelectValue placeholder="اختر الحي" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getNeighborhoodsByCity(inlineEditData.city || "").map(neighborhood => (
+                                      <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
@@ -792,13 +802,22 @@ export default function ProfilePage() {
                               </div>
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">الحي</Label>
-                                <Input
-                                  value={inlineEditData.district || ""}
-                                  onChange={(e) => handleInlineFieldChange("district", e.target.value, prop.id)}
-                                  onBlur={() => handleInlineFieldBlur("district", prop.id)}
-                                  placeholder="اسم الحي"
-                                  data-testid={`inline-input-district-${prop.id}`}
-                                />
+                                <Select 
+                                  value={inlineEditData.district || ""} 
+                                  onValueChange={(v) => {
+                                    handleInlineFieldChange("district", v, prop.id);
+                                    setTimeout(() => handleInlineFieldBlur("district", prop.id), 100);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`inline-select-district-${prop.id}`}>
+                                    <SelectValue placeholder="اختر الحي" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getNeighborhoodsByCity(inlineEditData.city || "").map(neighborhood => (
+                                      <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
@@ -929,12 +948,19 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label>الحي</Label>
-                <Input
-                  value={formData.district}
-                  onChange={(e) => setFormData(prev => ({ ...prev, district: e.target.value }))}
-                  placeholder="اسم الحي"
-                  data-testid="input-district"
-                />
+                <Select 
+                  value={formData.district} 
+                  onValueChange={(v) => setFormData(prev => ({ ...prev, district: v }))}
+                >
+                  <SelectTrigger data-testid="select-district">
+                    <SelectValue placeholder="اختر الحي" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getNeighborhoodsByCity(formData.city).map(neighborhood => (
+                      <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

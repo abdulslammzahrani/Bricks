@@ -98,3 +98,32 @@ Preferred communication style: Simple, everyday language.
 **Analytics & Monitoring**: Admin dashboard implements custom analytics (top districts, average budgets by city, demand by property type) using direct database queries with Drizzle ORM aggregations.
 
 **Notable Absent Dependencies**: No authentication library fully implemented despite passport.js being in dependencies. No payment processing despite Stripe being listed. No file upload handling despite multer being present. These suggest planned features not yet implemented or scaffolding from template.
+
+### Saudi Arabia Locations Database
+
+**File Location**: `shared/saudi-locations.ts`
+
+**Comprehensive Database**: Contains 23 major Saudi cities with their neighborhoods (over 400 neighborhoods total). Cities include:
+- Riyadh (الرياض) - 50 neighborhoods
+- Jeddah (جدة) - 40 neighborhoods
+- Makkah (مكة المكرمة) - 20 neighborhoods
+- Madinah (المدينة المنورة) - 20 neighborhoods
+- Dammam (الدمام) - 25 neighborhoods
+- Al Khobar (الخبر) - 20 neighborhoods
+- And 17 more cities...
+
+**Helper Functions**:
+- `getCityNames()` - Returns list of all city names
+- `getNeighborhoodsByCity(cityName)` - Returns neighborhoods for a specific city
+- `getCityByName(cityName)` - Returns full city object with region and neighborhoods
+- `searchNeighborhoods(query)` - Searches neighborhoods across all cities
+- `getRegions()` - Returns list of Saudi regions
+- `getCitiesByRegion(regionName)` - Returns cities in a specific region
+
+**Usage in Profile Page**: City and neighborhood dropdowns are dynamically linked - selecting a city populates the neighborhood dropdown with that city's neighborhoods only.
+
+### Profile Page Features
+
+**Expandable Inline Editing**: Each property/preference card has an expand/collapse button (ChevronDown/ChevronUp icon) that reveals inline editing fields with auto-save functionality.
+
+**Auto-Save**: Changes to any field trigger automatic save on blur, with loading spinner during save and toast confirmation.
