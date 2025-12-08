@@ -974,7 +974,7 @@ export default function ProfilePage() {
 
             {isBuyer && (
               <TabsContent value="matches" className="mt-6">
-                <MatchedPropertiesPanel preferences={preferences || []} />
+                <MatchedPropertiesPanel preferences={Array.isArray(preferences) ? preferences : []} />
               </TabsContent>
             )}
 

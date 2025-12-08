@@ -152,3 +152,44 @@ Preferred communication style: Simple, everyday language.
 - Unread badge counts on conversation list items
 - Links to property detail pages from conversation headers
 - RTL-optimized message bubbles (sent messages on left, received on right)
+
+### Property Detail Page (/property/:id)
+
+**Design**: Inspired by Bayut.sa layout with Arabic RTL orientation.
+
+**Key Features**:
+- Breadcrumb navigation: الرئيسية > للبيع > نوع العقار > المدينة > الحي
+- Image gallery with main image (3-column span) and thumbnail grid (1 column, 3 rows)
+- Fullscreen gallery modal with navigation controls (arrow buttons, image counter)
+- Price display with per-square-meter calculation
+- Quick specs row: غرف نوم, دورات مياه, مساحة
+- Property info table: نوع العقار, حالة البناء, التأثيث, عدد الغرف, دورات المياه, سنة البناء
+- Features/amenities section with icons (parking, ac, wifi, security, garden, gym, maid_room, electricity, water)
+- Seller contact card with messaging and call buttons
+- Google Maps embed if coordinates available
+- CTA card encouraging visitors to register their preferences
+
+**Database Fields** (added Dec 2025):
+- `bathrooms`: Number of bathrooms (text)
+- `furnishing`: Furnishing status - furnished, semi_furnished, unfurnished
+- `yearBuilt`: Year the property was built (text)
+- `amenities`: Array of amenity identifiers (text array)
+
+**Test IDs**:
+- `link-home`: Breadcrumb home link
+- `img-property-main`: Main property image
+- `img-thumbnail-{idx}`: Desktop thumbnail images
+- `img-mobile-thumbnail-{idx}`: Mobile thumbnail images
+- `text-property-price`: Price display
+- `text-property-location`: Location text
+- `text-property-title`: Property title
+- `text-property-description`: Description text
+- `text-seller-name`: Seller name
+- `button-share`: Share button
+- `button-favorite`: Favorite button
+- `button-start-conversation`: Message seller button
+- `button-call-seller`: Call seller button
+- `button-close-gallery`: Close gallery modal
+- `button-gallery-next`: Gallery next image
+- `button-gallery-prev`: Gallery previous image
+- `amenity-{amenityId}`: Amenity items

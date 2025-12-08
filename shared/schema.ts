@@ -51,8 +51,12 @@ export const properties = pgTable("properties", {
   price: integer("price").notNull(),
   area: text("area"),
   rooms: text("rooms"),
+  bathrooms: text("bathrooms"),
   description: text("description"),
   status: text("status").notNull().default("ready"), // ready, under_construction
+  furnishing: text("furnishing").default("unfurnished"), // furnished, semi_furnished, unfurnished
+  yearBuilt: text("year_built"),
+  amenities: text("amenities").array().default(sql`'{}'::text[]`), // parking, ac, wifi, security, garden, gym, maid_room, electricity, water
   images: text("images").array().default(sql`'{}'::text[]`),
   isActive: boolean("is_active").notNull().default(true),
   viewsCount: integer("views_count").notNull().default(0),
