@@ -340,6 +340,54 @@ export async function registerRoutes(
     }
   });
 
+  // ============ INVESTOR ROUTES ============
+
+  // Register investor
+  app.post("/api/investors/register", async (req, res) => {
+    try {
+      const { name, email, phone, cities, investmentTypes, budgetMin, budgetMax, returnPreference } = req.body;
+
+      // Validate required fields
+      if (!name || typeof name !== "string" || name.trim().length < 2) {
+        return res.status(400).json({ error: "الاسم مطلوب" });
+      }
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+      }
+      if (!phone || typeof phone !== "string" || phone.length < 10) {
+        return res.status(400).json({ error: "رقم الجوال مطلوب" });
+      }
+
+      // Check if user exists
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.createUser({
+          email: email.trim(),
+          phone: phone.trim(),
+          name: name.trim(),
+          role: "investor",
+          accountType: null,
+          entityName: null,
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        user,
+        investmentPreferences: {
+          cities,
+          investmentTypes,
+          budgetMin,
+          budgetMax,
+          returnPreference
+        }
+      });
+    } catch (error: any) {
+      console.error("Error registering investor:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get seller's properties
   app.get("/api/sellers/:sellerId/properties", async (req, res) => {
     try {

@@ -8,9 +8,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
-import { InvestorModal } from "./InvestorModal";
 
-type UserMode = "buyer" | "seller";
+type UserMode = "buyer" | "seller" | "investor";
 
 interface ExampleSegment {
   text: string;
@@ -52,8 +51,24 @@ const sellerExampleSegments: ExampleSegment[] = [
   { text: "جاهزة للسكن", color: "#3b82f6", underline: true },
 ];
 
+const investorExampleSegments: ExampleSegment[] = [
+  { text: "اسمي " },
+  { text: "خالد المحمد", color: "#f97316", underline: true },
+  { text: " ، جوالي " },
+  { text: "0561234567", color: "#f97316", underline: true },
+  { text: " ، مستثمر أبحث عن فرص في " },
+  { text: "الرياض وجدة", color: "#22c55e", underline: true },
+  { text: " ، مهتم بالعقارات " },
+  { text: "التجارية والسكنية", color: "#d97706", underline: true },
+  { text: " ، الميزانية من " },
+  { text: "5 إلى 20 مليون", color: "#22c55e", underline: true },
+  { text: " ، أفضل العائد " },
+  { text: "المرتفع", color: "#d97706", underline: true },
+];
+
 const fullBuyerExampleText = "اسمي عبدالسلام محمد ، رقم جوالي 0501234567 ، من مدينة جدة حي الروضة ، أرغب بشراء شقة ثلاث غرف حمامين مساحة 120 متر ، الميزانية 800 ألف ، الشراء كاش";
 const fullSellerExampleText = "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن";
+const fullInvestorExampleText = "اسمي خالد المحمد ، جوالي 0561234567 ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع";
 
 export default function HeroSection() {
   const { toast } = useToast();
@@ -67,10 +82,9 @@ export default function HeroSection() {
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [showInvestorModal, setShowInvestorModal] = useState(false);
 
-  const exampleSegments = mode === "buyer" ? buyerExampleSegments : sellerExampleSegments;
-  const fullExampleText = mode === "buyer" ? fullBuyerExampleText : fullSellerExampleText;
+  const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
+  const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -101,6 +115,26 @@ export default function HeroSection() {
       toast({
         title: "تم تسجيل عقارك بنجاح!",
         description: "سنتواصل معك عند وجود مشترين مهتمين",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "حدث خطأ",
+        description: "يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const investorMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/investors/register", data);
+    },
+    onSuccess: () => {
+      setIsComplete(true);
+      toast({
+        title: "تم تسجيل اهتمامك بنجاح!",
+        description: "سنتواصل معك عند توفر فرص استثمارية مناسبة",
       });
     },
     onError: () => {
@@ -256,6 +290,44 @@ export default function HeroSection() {
     return data;
   };
 
+  const extractInvestorInfo = (text: string) => {
+    const data: Record<string, string> = { ...extractedData };
+    
+    const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
+    if (nameMatch) data.name = nameMatch[1];
+    
+    const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
+    if (phoneMatch) data.phone = phoneMatch[1];
+    
+    // Extract multiple cities
+    const citiesMatch = text.match(/(?:في|مدينة|مدن)\s+((?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)(?:\s*(?:و|،|,)\s*(?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل))*)/i);
+    if (citiesMatch) data.cities = citiesMatch[1];
+    
+    // Extract investment types
+    const investTypeMatch = text.match(/(تجاري|سكني|صناعي|أراضي|تجارية|سكنية|صناعية)/gi);
+    if (investTypeMatch) data.investmentTypes = investTypeMatch.join("، ");
+    
+    // Extract budget range
+    const budgetRangeMatch = text.match(/(?:الميزانية|ميزانيتي)?\s*(?:من)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?\s*(?:إلى|الى|ل|حتى|-)\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
+    if (budgetRangeMatch) {
+      let minAmount = parseFloat(budgetRangeMatch[1]);
+      if (budgetRangeMatch[2]?.includes("مليون")) minAmount *= 1000000;
+      else if (budgetRangeMatch[2]) minAmount *= 1000;
+      data.budgetMin = minAmount.toString();
+      
+      let maxAmount = parseFloat(budgetRangeMatch[3]);
+      if (budgetRangeMatch[4]?.includes("مليون")) maxAmount *= 1000000;
+      else if (budgetRangeMatch[4]) maxAmount *= 1000;
+      data.budgetMax = maxAmount.toString();
+    }
+    
+    // Extract return preference
+    const returnMatch = text.match(/(عائد\s*(?:مرتفع|متوسط|منخفض)|المرتفع|المتوسط|المنخفض)/i);
+    if (returnMatch) data.returnPreference = returnMatch[1];
+    
+    return data;
+  };
+
   const addSuggestion = (suggestion: string) => {
     const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
     setInputText(newText);
@@ -273,7 +345,7 @@ export default function HeroSection() {
     let mergedData = { ...extractedData };
     
     if (hasInput) {
-      const newData = mode === "buyer" ? extractBuyerInfo(inputText) : extractSellerInfo(inputText);
+      const newData = mode === "buyer" ? extractBuyerInfo(inputText) : mode === "seller" ? extractSellerInfo(inputText) : extractInvestorInfo(inputText);
       Object.keys(newData).forEach(key => {
         if (newData[key]) {
           mergedData[key] = newData[key];
@@ -324,7 +396,7 @@ export default function HeroSection() {
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
           ]);
         }
-      } else {
+      } else if (mode === "seller") {
         const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
         if (hasRequired) {
           sellerMutation.mutate({
@@ -354,6 +426,34 @@ export default function HeroSection() {
           if (!mergedData.price) missing.push("السعر");
           if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
           if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق (أرسل رابط خرائط جوجل أو الإحداثيات)");
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+          ]);
+        }
+      } else {
+        // Investor mode
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
+        if (hasRequired) {
+          investorMutation.mutate({
+            name: mergedData.name,
+            email: `${mergedData.phone}@temp.com`,
+            phone: mergedData.phone,
+            cities: mergedData.cities,
+            investmentTypes: mergedData.investmentTypes || "",
+            budgetMin: parseInt(mergedData.budgetMin || "0"),
+            budgetMax: parseInt(mergedData.budgetMax || "0"),
+            returnPreference: mergedData.returnPreference || "",
+          });
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: "تم تسجيل اهتمامك بنجاح! سنتواصل معك عند توفر فرص استثمارية مناسبة." }
+          ]);
+        } else {
+          const missing: string[] = [];
+          if (!mergedData.name) missing.push("الاسم");
+          if (!mergedData.phone) missing.push("رقم الجوال");
+          if (!mergedData.cities) missing.push("المدن المستهدفة");
           setConversation(prev => [
             ...prev,
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
@@ -413,9 +513,9 @@ export default function HeroSection() {
             </Button>
             <Button
               size="lg"
-              variant="outline"
-              onClick={() => setShowInvestorModal(true)}
-              className="gap-2 border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"
+              variant={mode === "investor" ? "default" : "outline"}
+              onClick={() => handleModeSwitch("investor")}
+              className={`gap-2 ${mode === "investor" ? "bg-amber-600 hover:bg-amber-700" : "border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"}`}
               data-testid="button-investor"
             >
               <TrendingUp className="h-5 w-5" />
@@ -426,9 +526,9 @@ export default function HeroSection() {
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-2xl mb-8">
             {/* Typewriter Example - Always visible */}
             {!isComplete && (
-              <div className={`p-4 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : "bg-muted/10"}`}>
+              <div className={`p-4 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}>
                 <p className="text-sm text-muted-foreground mb-2 text-center">
-                  {mode === "buyer" ? "مثال على طلب شراء:" : "مثال على عرض عقار:"}
+                  {mode === "buyer" ? "مثال على طلب شراء:" : mode === "seller" ? "مثال على عرض عقار:" : "مثال على طلب استثماري:"}
                 </p>
                 <div 
                   className="text-center cursor-pointer min-h-[100px] flex items-center justify-center"
@@ -454,7 +554,7 @@ export default function HeroSection() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         msg.type === "user"
-                          ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
+                          ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : mode === "investor" ? "bg-amber-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
                           : "bg-card border rounded-tl-none"
                       }`}
                     >
@@ -647,12 +747,6 @@ export default function HeroSection() {
             { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
           ]);
         }}
-      />
-      
-      {/* Investor Modal */}
-      <InvestorModal
-        open={showInvestorModal}
-        onOpenChange={setShowInvestorModal}
       />
     </section>
   );
