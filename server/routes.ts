@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema, insertSendLogSchema } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { analyzeIntakeWithAI } from "./ai-service";
+import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
@@ -95,6 +95,38 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("AI analysis error:", error);
       res.status(500).json({ error: "فشل في تحليل النص" });
+    }
+  });
+
+  // Transcribe voice message with AI
+  app.post("/api/intake/transcribe", async (req, res) => {
+    try {
+      // Get raw audio data from request body
+      const chunks: Buffer[] = [];
+      
+      req.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+      
+      req.on("end", async () => {
+        const audioBuffer = Buffer.concat(chunks);
+        
+        if (audioBuffer.length === 0) {
+          return res.status(400).json({ error: "لم يتم استلام الصوت" });
+        }
+        
+        const mimeType = req.headers["content-type"] || "audio/webm";
+        const result = await transcribeAudio(audioBuffer, mimeType);
+        
+        if (result.success) {
+          res.json({ success: true, text: result.text });
+        } else {
+          res.status(500).json({ success: false, error: result.error });
+        }
+      });
+    } catch (error: any) {
+      console.error("Transcription error:", error);
+      res.status(500).json({ error: "فشل في تحويل الصوت" });
     }
   });
 

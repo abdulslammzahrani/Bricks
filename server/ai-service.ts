@@ -406,3 +406,29 @@ function fallbackExtraction(text: string): IntakeAnalysisResult {
     missingFields,
   };
 }
+
+// Voice transcription using OpenAI Whisper
+export async function transcribeAudio(audioBuffer: Buffer, mimeType: string): Promise<{ success: boolean; text?: string; error?: string }> {
+  try {
+    // Create a File object from the buffer
+    const file = new File([audioBuffer], "audio.webm", { type: mimeType });
+    
+    const response = await openai.audio.transcriptions.create({
+      file: file,
+      model: "whisper-1",
+      language: "ar", // Arabic
+      response_format: "text",
+    });
+
+    return {
+      success: true,
+      text: response,
+    };
+  } catch (error: any) {
+    console.error("Whisper transcription error:", error);
+    return {
+      success: false,
+      error: error.message || "فشل في تحويل الصوت لنص",
+    };
+  }
+}

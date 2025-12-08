@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -374,6 +374,10 @@ export default function HeroSection() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [isFullScreenChat, setIsFullScreenChat] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
   // Live viewer counter for social proof (herd effect)
   const [liveViewers, setLiveViewers] = useState(0);
@@ -1159,6 +1163,149 @@ export default function HeroSection() {
     }
   };
 
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Transcribe the audio
+        setIsTranscribing(true);
+        setIsFullScreenChat(true);
+        
+        try {
+          const response = await fetch("/api/intake/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "audio/webm" },
+            body: audioBlob,
+          });
+          
+          const result = await response.json();
+          
+          if (result.success && result.text) {
+            // Set the transcribed text and submit it
+            setInputText(result.text);
+            if (textareaRef.current) {
+              textareaRef.current.textContent = result.text;
+            }
+            // Auto-submit the transcribed text
+            setTimeout(() => {
+              handleSubmitWithText(result.text);
+            }, 100);
+          } else {
+            toast({
+              title: "خطأ",
+              description: result.error || "فشل في تحويل الصوت لنص",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          toast({
+            title: "خطأ",
+            description: "فشل في إرسال الصوت",
+            variant: "destructive",
+          });
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "لم نتمكن من الوصول للميكروفون. تأكد من إعطاء الإذن.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Submit with specific text (for voice transcription)
+  const handleSubmitWithText = async (text: string) => {
+    if (!text.trim()) return;
+    
+    setConversation(prev => [
+      ...prev,
+      { type: "user", text: text }
+    ]);
+    
+    setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.textContent = "";
+    }
+    
+    setIsAnalyzing(true);
+    setIsTyping(true);
+    
+    try {
+      const context = {
+        name: extractedData.name || undefined,
+        phone: extractedData.phone || undefined,
+        city: extractedData.city || undefined,
+        districts: extractedData.district ? [extractedData.district] : undefined,
+        propertyType: extractedData.propertyType || undefined,
+        budgetMin: extractedData.budgetMin ? parseInt(extractedData.budgetMin) : undefined,
+        budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : undefined,
+        role: mode,
+      };
+      
+      const response = await fetch("/api/intake/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, context }),
+      });
+      
+      const result: AIAnalysisResult = await response.json();
+      
+      if (result.success && result.assistantReply) {
+        setConversation(prev => [
+          ...prev,
+          { type: "system", text: result.assistantReply! }
+        ]);
+        
+        // Merge new data with existing
+        const newData: Record<string, string> = { ...extractedData };
+        if (result.data.name) newData.name = result.data.name;
+        if (result.data.phone) newData.phone = result.data.phone;
+        if (result.data.city) newData.city = result.data.city;
+        if (result.data.districts && result.data.districts.length > 0) newData.district = result.data.districts[0];
+        if (result.data.propertyType) newData.propertyType = result.data.propertyType;
+        if (result.data.budgetMin) newData.budgetMin = String(result.data.budgetMin);
+        if (result.data.budgetMax) newData.budgetMax = String(result.data.budgetMax);
+        setExtractedData(newData);
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في تحليل النص",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+      setIsTyping(false);
+    }
+  };
+
   // Full-screen WhatsApp-like chat view
   if (isFullScreenChat) {
     return (
@@ -1266,7 +1413,26 @@ export default function HeroSection() {
         {/* Input Area - WhatsApp style */}
         {!isComplete ? (
           <div className="p-3 border-t bg-muted/30">
+            {/* Transcribing indicator */}
+            {isTranscribing && (
+              <div className="flex items-center justify-center gap-2 mb-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>جارٍ تحويل الصوت لنص...</span>
+              </div>
+            )}
             <div className="flex items-end gap-2 max-w-3xl mx-auto">
+              {/* Microphone button */}
+              <Button
+                size="icon"
+                variant={isRecording ? "destructive" : "outline"}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTranscribing}
+                className={`rounded-full h-11 w-11 ${isRecording ? "animate-pulse" : ""}`}
+                data-testid="button-voice-record"
+              >
+                {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </Button>
+              
               <div className="flex-1 bg-card border rounded-3xl px-4 py-2 flex items-center gap-2">
                 <div
                   ref={textareaRef}
@@ -1275,7 +1441,7 @@ export default function HeroSection() {
                   onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                   onKeyDown={handleKeyDown}
                   className="flex-1 min-h-[24px] max-h-[120px] overflow-y-auto outline-none text-[15px]"
-                  data-placeholder="اكتب رسالتك..."
+                  data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رسالتك أو سجل صوتك..."}
                   style={{ 
                     wordBreak: "break-word",
                   }}
@@ -1292,6 +1458,11 @@ export default function HeroSection() {
                 <Send className="h-5 w-5" />
               </Button>
             </div>
+            {isRecording && (
+              <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
+                جارٍ التسجيل... اضغط مرة أخرى للإيقاف
+              </p>
+            )}
           </div>
         ) : (
           <div className="p-4 border-t bg-green-50 dark:bg-green-950/30 text-center">
@@ -1508,6 +1679,14 @@ export default function HeroSection() {
                   </div>
                 )}
                 
+                {/* Transcribing indicator */}
+                {isTranscribing && (
+                  <div className="flex items-center justify-center gap-2 mb-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>جارٍ تحويل الصوت لنص...</span>
+                  </div>
+                )}
+                
                 <div className="flex items-start gap-3">
                   <Button
                     size="icon"
@@ -1517,6 +1696,18 @@ export default function HeroSection() {
                     className={`flex-shrink-0 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                   >
                     <Send className="h-5 w-5" />
+                  </Button>
+                  
+                  {/* Voice recording button */}
+                  <Button
+                    size="icon"
+                    variant={isRecording ? "destructive" : "outline"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isTranscribing}
+                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                    data-testid="button-voice-record-landing"
+                  >
+                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </Button>
                   
                   {/* Upload button for sellers */}
@@ -1552,11 +1743,17 @@ export default function HeroSection() {
                       className={`min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 ${mode === "seller" ? "focus:ring-green-500/50" : "focus:ring-primary/50"}`}
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
-                      data-placeholder={mode === "buyer" ? "اكتب رغبتك هنا..." : "اكتب تفاصيل عقارك هنا..."}
+                      data-placeholder={isRecording ? "جارٍ التسجيل..." : mode === "buyer" ? "اكتب أو سجل صوتك..." : "اكتب أو سجل صوتك..."}
                       data-testid="input-interactive"
                     />
                   </div>
                 </div>
+                
+                {isRecording && (
+                  <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
+                    جارٍ التسجيل... اضغط مرة أخرى للإيقاف
+                  </p>
+                )}
               </div>
             ) : (
               <div className={`p-6 text-center ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : "bg-primary/5"}`}>
