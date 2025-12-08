@@ -93,6 +93,69 @@ const fullBuyerExampleText = "اسمي عبدالسلام محمد ، رقم ج�
 const fullSellerExampleText = "اسمي محمد العلي ، جوالي 0551234567 ، أعرض فيلا في الرياض حي النرجس ، المساحة 400 متر ، السعر 2.5 مليون ، جاهزة للسكن";
 const fullInvestorExampleText = "اسمي خالد المحمد ، جوالي 0561234567 ، مستثمر أبحث عن فرص في الرياض وجدة ، مهتم بالعقارات التجارية والسكنية ، الميزانية من 5 إلى 20 مليون ، أفضل العائد المرتفع";
 
+// Helper function for friendly Saudi-style messages
+type MessageType = "greeting" | "missingInfo" | "confirmation" | "success" | "modeSwitch";
+
+const formatFriendlyMessage = (
+  type: MessageType,
+  mode: UserMode,
+  name?: string,
+  missingFields?: string[]
+): string => {
+  // Get first name only for more personal greeting
+  const firstName = name ? name.split(" ")[0] : "";
+  const greeting = firstName ? `يا ${firstName}` : "يا غالي";
+  
+  switch (type) {
+    case "greeting":
+      return firstName 
+        ? `حياك الله ${greeting}، وش أقدر أساعدك فيه اليوم؟`
+        : `حياك الله، وش أقدر أساعدك فيه اليوم؟`;
+    
+    case "missingInfo":
+      const fieldsList = missingFields?.join(" و ") || "";
+      if (mode === "buyer") {
+        return firstName
+          ? `طيب ${greeting}، عشان أقدر أبحث لك العقار المناسب، أحتاج منك ${fieldsList}`
+          : `طيب يا غالي، عشان أبحث لك العقار المناسب، أحتاج منك ${fieldsList}`;
+      } else if (mode === "seller") {
+        return firstName
+          ? `تمام ${greeting}، عشان أوصّل عقارك للمشترين المناسبين، باقي عندي ${fieldsList}`
+          : `تمام يا غالي، عشان أوصّل عقارك للمشترين المناسبين، باقي عندي ${fieldsList}`;
+      } else {
+        return firstName
+          ? `حلو ${greeting}، عشان أرسل لك أفضل الفرص الاستثمارية، أحتاج منك ${fieldsList}`
+          : `حلو يا غالي، عشان أرسل لك أفضل الفرص الاستثمارية، أحتاج منك ${fieldsList}`;
+      }
+    
+    case "confirmation":
+      return firstName
+        ? `تمام ${greeting}، راجع البيانات وإذا كل شي صحيح قل لي "موافق"`
+        : `تمام، راجع البيانات وإذا كل شي صحيح قل لي "موافق"`;
+    
+    case "success":
+      if (mode === "buyer") {
+        return firstName
+          ? `تم ${greeting}، سجلنا طلبك وإن شاء الله أول ما نلقى عقار يناسبك بنتواصل معك`
+          : `تم يا غالي، سجلنا طلبك وإن شاء الله أول ما نلقى عقار يناسبك بنتواصل معك`;
+      } else if (mode === "seller") {
+        return firstName
+          ? `تم ${greeting}، سجلنا عقارك وإن شاء الله أول ما نلقى مشتري مناسب بنتواصل معك`
+          : `تم يا غالي، سجلنا عقارك وإن شاء الله أول ما نلقى مشتري مناسب بنتواصل معك`;
+      } else {
+        return firstName
+          ? `تم ${greeting}، سجلنا اهتمامك وإن شاء الله أول ما تطلع فرصة استثمارية مناسبة بنتواصل معك`
+          : `تم يا غالي، سجلنا اهتمامك وإن شاء الله أول ما تطلع فرصة استثمارية مناسبة بنتواصل معك`;
+      }
+    
+    case "modeSwitch":
+      return `يبدو أنك تبي تعرض عقار للبيع، تبيني أحولك لوضع البائع؟`;
+    
+    default:
+      return "";
+  }
+};
+
 export default function HeroSection() {
   const { toast } = useToast();
   const textareaRef = useRef<HTMLDivElement>(null);
@@ -121,14 +184,14 @@ export default function HeroSection() {
     onSuccess: () => {
       setIsComplete(true);
       toast({
-        title: "تم تسجيل رغبتك بنجاح!",
-        description: "سنتواصل معك عند توفر عقار مناسب",
+        title: "تم يا بطل",
+        description: "سجلنا طلبك وإن شاء الله بنتواصل معك قريب",
       });
     },
     onError: () => {
       toast({
-        title: "حدث خطأ",
-        description: "يرجى المحاولة مرة أخرى",
+        title: "عذراً",
+        description: "صار خطأ، جرب مرة ثانية",
         variant: "destructive",
       });
     },
@@ -141,14 +204,14 @@ export default function HeroSection() {
     onSuccess: () => {
       setIsComplete(true);
       toast({
-        title: "تم تسجيل عقارك بنجاح!",
-        description: "سنتواصل معك عند وجود مشترين مهتمين",
+        title: "تم يا بطل",
+        description: "سجلنا عقارك وبنوصله للمشترين المناسبين",
       });
     },
     onError: () => {
       toast({
-        title: "حدث خطأ",
-        description: "يرجى المحاولة مرة أخرى",
+        title: "عذراً",
+        description: "صار خطأ، جرب مرة ثانية",
         variant: "destructive",
       });
     },
@@ -161,14 +224,14 @@ export default function HeroSection() {
     onSuccess: () => {
       setIsComplete(true);
       toast({
-        title: "تم تسجيل اهتمامك بنجاح!",
-        description: "سنتواصل معك عند توفر فرص استثمارية مناسبة",
+        title: "تم يا بطل",
+        description: "سجلنا اهتمامك وبنرسل لك أفضل الفرص الاستثمارية",
       });
     },
     onError: () => {
       toast({
-        title: "حدث خطأ",
-        description: "يرجى المحاولة مرة أخرى",
+        title: "عذراً",
+        description: "صار خطأ، جرب مرة ثانية",
         variant: "destructive",
       });
     },
@@ -523,7 +586,7 @@ export default function HeroSection() {
       });
       setConversation(prev => [
         ...prev,
-        { type: "system", text: "تم تسجيل رغبتك بنجاح! سنتواصل معك عند توفر عقار مناسب." }
+        { type: "system", text: formatFriendlyMessage("success", "buyer", data.name) }
       ]);
     } else if (mode === "seller") {
       sellerMutation.mutate({
@@ -541,7 +604,7 @@ export default function HeroSection() {
       });
       setConversation(prev => [
         ...prev,
-        { type: "system", text: "تم تسجيل عقارك بنجاح! سنتواصل معك عند وجود مشترين مهتمين." }
+        { type: "system", text: formatFriendlyMessage("success", "seller", data.name) }
       ]);
     } else {
       investorMutation.mutate({
@@ -556,7 +619,7 @@ export default function HeroSection() {
       });
       setConversation(prev => [
         ...prev,
-        { type: "system", text: "تم تسجيل اهتمامك بنجاح! سنتواصل معك عند توفر فرص استثمارية مناسبة." }
+        { type: "system", text: formatFriendlyMessage("success", "investor", data.name) }
       ]);
     }
     setPendingConfirmation(false);
@@ -644,7 +707,7 @@ export default function HeroSection() {
           if (aiResult.role === "seller") {
             setConversation(prev => [
               ...prev,
-              { type: "system", text: "يبدو أنك تريد عرض عقار للبيع. هل تريد التبديل لوضع البائع؟" }
+              { type: "system", text: formatFriendlyMessage("modeSwitch", mode, mergedData.name) }
             ]);
           }
         }
@@ -668,7 +731,7 @@ export default function HeroSection() {
           if (!mergedData.propertyType && !missing.includes("نوع العقار")) missing.push("نوع العقار");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "buyer", mergedData.name, missing) }
           ]);
         }
       } else if (mode === "seller") {
@@ -689,7 +752,7 @@ export default function HeroSection() {
           if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "seller", mergedData.name, missing) }
           ]);
         }
       } else {
@@ -709,7 +772,7 @@ export default function HeroSection() {
           if (!mergedData.cities) missing.push("المدن المستهدفة");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `فهمت طلبك! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "investor", mergedData.name, missing) }
           ]);
         }
       }
@@ -739,7 +802,7 @@ export default function HeroSection() {
           if (!mergedData.propertyType) missing.push("نوع العقار");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "buyer", mergedData.name, missing) }
           ]);
         }
       } else if (mode === "seller") {
@@ -760,7 +823,7 @@ export default function HeroSection() {
           if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "seller", mergedData.name, missing) }
           ]);
         }
       } else {
@@ -776,7 +839,7 @@ export default function HeroSection() {
           if (!mergedData.cities) missing.push("المدن المستهدفة");
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
+            { type: "system", text: formatFriendlyMessage("missingInfo", "investor", mergedData.name, missing) }
           ]);
         }
       }
