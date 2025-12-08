@@ -357,6 +357,7 @@ const formatFriendlyMessage = (
 export default function HeroSection() {
   const { toast } = useToast();
   const textareaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
@@ -404,6 +405,13 @@ export default function HeroSection() {
       clearInterval(requestInterval);
     };
   }, []);
+
+  // Auto-scroll to bottom when conversation updates
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [conversation, isTyping, pendingConfirmation]);
 
   // Get the current examples array based on mode
   const currentExamplesData = mode === "buyer" ? buyerExamplesData : mode === "seller" ? sellerExamplesData : investorExamplesData;
@@ -1295,6 +1303,8 @@ export default function HeroSection() {
                     </div>
                   </div>
                 )}
+                {/* Auto-scroll anchor */}
+                <div ref={messagesEndRef} />
               </div>
             )}
 
