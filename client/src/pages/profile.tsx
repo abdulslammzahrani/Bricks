@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock } from "lucide-react";
 import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
@@ -439,60 +439,92 @@ export default function ProfilePage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-            <p className="text-muted-foreground">أدخل بياناتك للوصول لصفحتك الشخصية</p>
+      <div className="min-h-screen bg-gradient-to-br from-primary/20 via-primary/10 to-background flex flex-col items-center justify-center p-4">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary flex items-center justify-center shadow-lg">
+            <Building2 className="h-8 w-8 text-primary-foreground" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">مرحباً بعودتك!</h1>
+          <p className="text-muted-foreground">سجل الدخول للمتابعة إلى حسابك</p>
+        </div>
+
+        {/* Login Card */}
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="text-xl">تسجيل الدخول</CardTitle>
+            <p className="text-sm text-muted-foreground">أدخل بياناتك للوصول لصفحتك الشخصية</p>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+          <CardContent className="pt-4">
+            <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="phone">رقم الجوال</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="05xxxxxxxx"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  dir="ltr"
-                  className="text-left"
-                  data-testid="input-login-phone"
-                />
+                <Label htmlFor="phone" className="text-sm font-medium">رقم الجوال</Label>
+                <div className="relative">
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="05xxxxxxxx"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    dir="ltr"
+                    className="text-left pl-10"
+                    data-testid="input-login-phone"
+                  />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">كلمة المرور</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="كلمة المرور"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  dir="ltr"
-                  className="text-left"
-                  data-testid="input-login-password"
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium">كلمة المرور</Label>
+                  <button type="button" className="text-xs text-primary hover:underline">
+                    نسيت كلمة المرور؟
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="أدخل كلمة المرور"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    dir="ltr"
+                    className="text-left pl-10"
+                    data-testid="input-login-password"
+                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
               <Button 
                 type="submit" 
-                className="w-full"
+                className="w-full h-11"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
-                {loginMutation.isPending ? "جاري الدخول..." : "دخول"}
+                {loginMutation.isPending ? "جاري الدخول..." : "تسجيل الدخول"}
               </Button>
             </form>
             
-            <div className="mt-6 text-center">
+            <div className="mt-6 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                ليس لديك حساب؟{" "}
+                <Link href="/buyer-form">
+                  <span className="text-primary font-medium hover:underline cursor-pointer">سجل الآن مجاناً</span>
+                </Link>
+              </p>
               <Link href="/">
-                <Button variant="ghost" className="gap-2">
+                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                   <ArrowRight className="h-4 w-4" />
-                  العودة للرئيسية
+                  العودة للصفحة الرئيسية
                 </Button>
               </Link>
             </div>
           </CardContent>
         </Card>
+
+        {/* Footer */}
+        <p className="mt-8 text-xs text-muted-foreground">
+          تطابق - منصة التوفيق العقاري الذكية
+        </p>
       </div>
     );
   }
