@@ -1061,64 +1061,49 @@ export default function HeroSection() {
         setExtractedData(mergedData);
       }
       
-      // Check required fields based on mode
+      // Check required fields based on mode - ALL fields must be complete!
       if (mode === "buyer") {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
-        if (hasRequired) {
+        // Required: name, phone, city, propertyType, budget, purchaseTimeline, clientType
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType && 
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) && 
+          mergedData.purchaseTimeline && mergedData.clientType;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
-          const missing: string[] = (aiResult?.missingFields && aiResult.missingFields.length > 0) ? [...aiResult.missingFields] : [];
-          if (!mergedData.name && !missing.includes("الاسم")) missing.push("الاسم");
-          if (!mergedData.phone && !missing.includes("رقم الجوال")) missing.push("رقم الجوال");
-          if (!mergedData.city && !missing.includes("المدينة")) missing.push("المدينة");
-          if (!mergedData.propertyType && !missing.includes("نوع العقار")) missing.push("نوع العقار");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "buyer", mergedData.name, missing) }
-          ]);
+          // AI already asks follow-up questions, no need to add system message
+          // The conversation continues naturally
         }
       } else if (mode === "seller") {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
-        if (hasRequired) {
+        // Required for seller: name, phone, city, district, propertyType, price, images, location
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && 
+          mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && 
+          mergedData.latitude && mergedData.longitude;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
-          const missing: string[] = [];
-          if (!mergedData.name) missing.push("الاسم");
-          if (!mergedData.phone) missing.push("رقم الجوال");
-          if (!mergedData.city) missing.push("المدينة");
-          if (!mergedData.district) missing.push("الحي");
-          if (!mergedData.propertyType) missing.push("نوع العقار");
-          if (!mergedData.price) missing.push("السعر");
-          if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
-          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "seller", mergedData.name, missing) }
-          ]);
+          // AI already asks follow-up questions, conversation continues naturally
         }
       } else {
         // Investor mode - use cities from AI
         if (aiResult?.data?.city) {
           mergedData.cities = aiResult.data.city;
         }
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
-        if (hasRequired) {
+        // Required for investor: name, phone, cities, budget, clientType
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.cities &&
+          (mergedData.budgetMin || mergedData.budgetMax) && mergedData.clientType;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
-          const missing: string[] = [];
-          if (!mergedData.name) missing.push("الاسم");
-          if (!mergedData.phone) missing.push("رقم الجوال");
-          if (!mergedData.cities) missing.push("المدن المستهدفة");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "investor", mergedData.name, missing) }
-          ]);
+          // AI already asks follow-up questions, conversation continues naturally
         }
       }
     } catch (error) {
@@ -1132,61 +1117,39 @@ export default function HeroSection() {
       });
       setExtractedData(mergedData);
       
-      // Check required fields
+      // Check ALL required fields (fallback mode)
       if (mode === "buyer") {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
-        if (hasRequired) {
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType && 
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) && 
+          mergedData.purchaseTimeline && mergedData.clientType;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        } else {
-          const missing: string[] = [];
-          if (!mergedData.name) missing.push("الاسم");
-          if (!mergedData.phone) missing.push("رقم الجوال");
-          if (!mergedData.city) missing.push("المدينة");
-          if (!mergedData.propertyType) missing.push("نوع العقار");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "buyer", mergedData.name, missing) }
-          ]);
         }
+        // No else - conversation continues naturally
       } else if (mode === "seller") {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && mergedData.latitude && mergedData.longitude;
-        if (hasRequired) {
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && 
+          mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && 
+          mergedData.latitude && mergedData.longitude;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        } else {
-          const missing: string[] = [];
-          if (!mergedData.name) missing.push("الاسم");
-          if (!mergedData.phone) missing.push("رقم الجوال");
-          if (!mergedData.city) missing.push("المدينة");
-          if (!mergedData.district) missing.push("الحي");
-          if (!mergedData.propertyType) missing.push("نوع العقار");
-          if (!mergedData.price) missing.push("السعر");
-          if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
-          if (!mergedData.latitude || !mergedData.longitude) missing.push("الموقع الدقيق");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "seller", mergedData.name, missing) }
-          ]);
         }
+        // No else - conversation continues naturally
       } else {
-        const hasRequired = mergedData.name && mergedData.phone && mergedData.cities;
-        if (hasRequired) {
+        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.cities &&
+          (mergedData.budgetMin || mergedData.budgetMax) && mergedData.clientType;
+        
+        if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        } else {
-          const missing: string[] = [];
-          if (!mergedData.name) missing.push("الاسم");
-          if (!mergedData.phone) missing.push("رقم الجوال");
-          if (!mergedData.cities) missing.push("المدن المستهدفة");
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("missingInfo", "investor", mergedData.name, missing) }
-          ]);
         }
+        // No else - conversation continues naturally
       }
     } finally {
       setIsAnalyzing(false);
