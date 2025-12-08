@@ -399,9 +399,24 @@ export default function InteractiveWishForm() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2" data-testid="text-interactive-title">
             أخبرنا عن عقارك المثالي
           </h1>
-          <p className="text-muted-foreground text-lg" data-testid="text-interactive-subtitle">
+          <p className="text-muted-foreground text-lg mb-6" data-testid="text-interactive-subtitle">
             اكتب بطريقتك الخاصة... وسنفهم ما تحتاجه
           </p>
+          
+          {/* Typewriter example showing all required info with colors - always visible at top */}
+          {!isComplete && (
+            <Card 
+              className="p-6 cursor-pointer hover-elevate mx-auto max-w-3xl"
+              onClick={() => addSuggestion(fullExampleText)}
+              data-testid="button-typewriter-example"
+            >
+              <p className="text-sm text-muted-foreground mb-2">مثال على طريقة الكتابة:</p>
+              <p className="text-xl leading-loose min-h-[3.5rem]">
+                {renderTypedText()}
+                <span className="animate-pulse text-primary font-bold">|</span>
+              </p>
+            </Card>
+          )}
         </div>
 
         <Card className="p-0 overflow-hidden shadow-2xl">
@@ -458,18 +473,6 @@ export default function InteractiveWishForm() {
           <div className="p-4 border-t bg-card">
             {!isComplete && (
               <>
-                {/* Typewriter example showing all required info with colors */}
-                <div 
-                  className="mb-4 p-4 rounded-lg bg-muted/30 cursor-pointer hover-elevate"
-                  onClick={() => addSuggestion(fullExampleText)}
-                  data-testid="button-typewriter-example"
-                >
-                  <p className="text-lg leading-loose min-h-[4rem] text-center">
-                    {renderTypedText()}
-                    <span className="animate-pulse text-primary font-bold">|</span>
-                  </p>
-                </div>
-
                 {/* Static suggestion buttons */}
                 <div className="flex flex-wrap gap-2 mb-3">
                   {suggestions.map((suggestion, idx) => (
