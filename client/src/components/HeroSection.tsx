@@ -1602,36 +1602,38 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
-      <div className="container mx-auto px-4 py-8 md:py-16">
+    <section className="relative min-h-[85vh] flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8">
+      <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           
           {/* Main Headline - Compact */}
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-4" data-testid="text-hero-title">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold leading-tight mb-2" data-testid="text-hero-title">
             سجّل رغبتك العقارية
             <span className="text-primary block mt-1">ودعنا نجد لك الأفضل</span>
           </h1>
           
-          <p className="text-base text-muted-foreground max-w-xl mx-auto mb-6" data-testid="text-hero-description">
+          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-4" data-testid="text-hero-description">
             أخبرنا ماذا تريد بكلماتك، وسنفهم ونوصلك بالعقار المناسب
           </p>
 
           {/* Mode Toggle - Clean Segmented Control */}
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="inline-flex rounded-xl border p-1.5 bg-muted/30 shadow-sm">
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="inline-flex rounded-xl border p-1 bg-muted/30 shadow-sm">
               <Button
+                size="sm"
                 variant={mode === "buyer" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-lg px-6"
+                className="gap-2 rounded-lg px-4"
                 data-testid="button-mode-buyer"
               >
                 <Users className="h-4 w-4" />
                 أبحث عن عقار
               </Button>
               <Button
+                size="sm"
                 variant={mode === "seller" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("seller")}
-                className={`gap-2 rounded-lg px-6 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                className={`gap-2 rounded-lg px-4 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                 data-testid="button-mode-seller"
               >
                 <Building2 className="h-4 w-4" />
@@ -1640,11 +1642,28 @@ export default function HeroSection() {
             </div>
           </div>
 
-          <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-2xl mb-8">
+          <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
             {/* Typewriter Example - Live Request Indicator */}
             {!isComplete && (
-              <div className={`p-4 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}>
-                <div className="flex items-center justify-center gap-2 mb-2">
+              <div className={`p-3 border-b ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}>
+                {/* Stats Bar - Integrated */}
+                <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                    </span>
+                    <span className="font-medium text-foreground">{liveViewers}</span>
+                    <span>يتصفحون</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="h-3 w-3 text-amber-500" />
+                    <span className="font-medium text-foreground">{requestsToday}</span>
+                    <span>طلب اليوم</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-center gap-2 mb-1">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -1654,11 +1673,11 @@ export default function HeroSection() {
                   </p>
                 </div>
                 <div 
-                  className="text-center cursor-pointer min-h-[100px] flex items-center justify-center"
+                  className="text-center cursor-pointer min-h-[60px] flex items-center justify-center"
                   onClick={() => addSuggestion(fullExampleText)}
                   data-testid="button-typewriter-example"
                 >
-                  <p className="text-lg leading-relaxed">
+                  <p className="text-base leading-relaxed">
                     {renderTypedText()}
                     <span className="animate-pulse text-primary font-bold">|</span>
                   </p>
@@ -1896,25 +1915,6 @@ export default function HeroSection() {
               </div>
             )}
           </Card>
-
-          {/* Live Stats - Below Chat Box */}
-          <div className="flex items-center justify-center gap-6 mt-4" data-testid="live-stats">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <span className="font-bold text-foreground">{liveViewers}</span>
-              <span className="text-muted-foreground">يتصفحون الآن</span>
-            </div>
-            <div className="w-px h-4 bg-border"></div>
-            <div className="flex items-center gap-2 text-sm">
-              <Zap className="h-4 w-4 text-amber-500" />
-              <span className="font-bold text-foreground">{requestsToday}</span>
-              <span className="text-muted-foreground">طلب اليوم</span>
-            </div>
-          </div>
         </div>
       </div>
       
