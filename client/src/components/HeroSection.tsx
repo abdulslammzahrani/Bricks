@@ -1666,7 +1666,7 @@ export default function HeroSection() {
                     <div
                       ref={textareaRef}
                       contentEditable
-                      className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-0"
                       onInput={(e) => setInputText(e.currentTarget.textContent || "")}
                       onKeyDown={handleKeyDown}
                       data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
