@@ -4,7 +4,9 @@ import {
   properties, type Property, type InsertProperty,
   matches, type Match, type InsertMatch,
   contactRequests, type ContactRequest, type InsertContactRequest,
-  sendLogs, type SendLog, type InsertSendLog
+  sendLogs, type SendLog, type InsertSendLog,
+  marketingSettings, type MarketingSetting, type InsertMarketingSetting,
+  marketingEvents, type MarketingEvent, type InsertMarketingEvent
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -67,6 +69,18 @@ export interface IStorage {
   getSendLogsByPreference(preferenceId: string): Promise<SendLog[]>;
   updateSendLog(id: string, log: Partial<InsertSendLog>): Promise<SendLog | undefined>;
   getPropertyIdsSentToPreference(preferenceId: string): Promise<string[]>;
+
+  // Marketing Settings
+  getMarketingSettings(): Promise<MarketingSetting[]>;
+  getMarketingSetting(platform: string): Promise<MarketingSetting | undefined>;
+  upsertMarketingSetting(setting: InsertMarketingSetting): Promise<MarketingSetting>;
+  deleteMarketingSetting(platform: string): Promise<void>;
+  getEnabledMarketingSettings(): Promise<MarketingSetting[]>;
+
+  // Marketing Events
+  createMarketingEvent(event: InsertMarketingEvent): Promise<MarketingEvent>;
+  getMarketingEvents(limit?: number): Promise<MarketingEvent[]>;
+  getMarketingEventsByPlatform(platform: string): Promise<MarketingEvent[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -414,6 +428,54 @@ export class DatabaseStorage implements IStorage {
       }
     });
     return Array.from(new Set(allIds)); // Return unique IDs
+  }
+
+  // Marketing Settings
+  async getMarketingSettings(): Promise<MarketingSetting[]> {
+    return db.select().from(marketingSettings);
+  }
+
+  async getMarketingSetting(platform: string): Promise<MarketingSetting | undefined> {
+    const [setting] = await db.select().from(marketingSettings).where(eq(marketingSettings.platform, platform));
+    return setting || undefined;
+  }
+
+  async upsertMarketingSetting(setting: InsertMarketingSetting): Promise<MarketingSetting> {
+    const existing = await this.getMarketingSetting(setting.platform);
+    if (existing) {
+      const [updated] = await db.update(marketingSettings)
+        .set({ ...setting, updatedAt: new Date() })
+        .where(eq(marketingSettings.platform, setting.platform))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(marketingSettings).values(setting).returning();
+      return created;
+    }
+  }
+
+  async deleteMarketingSetting(platform: string): Promise<void> {
+    await db.delete(marketingSettings).where(eq(marketingSettings.platform, platform));
+  }
+
+  async getEnabledMarketingSettings(): Promise<MarketingSetting[]> {
+    return db.select().from(marketingSettings).where(eq(marketingSettings.isEnabled, true));
+  }
+
+  // Marketing Events
+  async createMarketingEvent(event: InsertMarketingEvent): Promise<MarketingEvent> {
+    const [result] = await db.insert(marketingEvents).values(event).returning();
+    return result;
+  }
+
+  async getMarketingEvents(limit: number = 100): Promise<MarketingEvent[]> {
+    return db.select().from(marketingEvents).orderBy(desc(marketingEvents.createdAt)).limit(limit);
+  }
+
+  async getMarketingEventsByPlatform(platform: string): Promise<MarketingEvent[]> {
+    return db.select().from(marketingEvents)
+      .where(eq(marketingEvents.platform, platform))
+      .orderBy(desc(marketingEvents.createdAt));
   }
 }
 
