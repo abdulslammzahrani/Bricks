@@ -1550,43 +1550,42 @@ export default function HeroSection() {
                 <span>جارٍ تحويل الصوت لنص...</span>
               </div>
             )}
-            <div className="flex items-end gap-2 max-w-3xl mx-auto">
-              {/* Microphone button */}
-              <Button
-                size="icon"
-                variant={isRecording ? "destructive" : "outline"}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing}
-                className={`rounded-full h-11 w-11 ${isRecording ? "animate-pulse" : ""}`}
-                data-testid="button-voice-record"
-              >
-                {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </Button>
-              
-              <div className="flex-1 bg-card border rounded-3xl px-4 py-2 flex items-center gap-2">
-                <div
-                  ref={textareaRef}
-                  contentEditable
-                  dir="rtl"
-                  onInput={(e) => setInputText(e.currentTarget.textContent || "")}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 min-h-[24px] max-h-[120px] overflow-y-auto outline-none text-[15px]"
-                  data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رسالتك أو سجل صوتك..."}
-                  style={{ 
-                    wordBreak: "break-word",
-                  }}
-                  data-testid="input-chat-fullscreen"
-                />
-              </div>
+            <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5 max-w-3xl mx-auto">
+              {/* Send button */}
               <Button
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!inputText.trim() && !pendingConfirmation}
-                className="rounded-full"
+                className="rounded-full h-10 w-10 flex-shrink-0"
                 data-testid="button-send-fullscreen"
               >
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               </Button>
+              
+              {/* Microphone button */}
+              <Button
+                size="icon"
+                variant={isRecording ? "destructive" : "ghost"}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTranscribing}
+                className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                data-testid="button-voice-record"
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+              
+              {/* Input field */}
+              <div
+                ref={textareaRef}
+                contentEditable
+                dir="rtl"
+                onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                onKeyDown={handleKeyDown}
+                className="flex-1 min-h-[40px] py-2 px-3 max-h-[120px] overflow-y-auto outline-none text-[15px] bg-transparent"
+                data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رسالتك أو سجل صوتك..."}
+                style={{ wordBreak: "break-word" }}
+                data-testid="input-chat-fullscreen"
+              />
             </div>
             {isRecording && (
               <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
@@ -1827,38 +1826,39 @@ export default function HeroSection() {
                   </div>
                 )}
                 
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
+                  {/* Send button */}
                   <Button
                     size="icon"
                     onClick={handleSubmit}
                     disabled={buyerMutation.isPending || sellerMutation.isPending}
                     data-testid="button-send"
-                    className="flex-shrink-0"
+                    className="rounded-full h-10 w-10 flex-shrink-0"
                   >
-                    <Send className="h-5 w-5" />
+                    <Send className="h-4 w-4" />
                   </Button>
                   
                   {/* Voice recording button */}
                   <Button
                     size="icon"
-                    variant={isRecording ? "destructive" : "outline"}
+                    variant={isRecording ? "destructive" : "ghost"}
                     onClick={isRecording ? stopRecording : startRecording}
                     disabled={isTranscribing}
-                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                    className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
                     data-testid="button-voice-record-landing"
                   >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                    {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </Button>
                   
                   {/* Upload button for sellers */}
                   {mode === "seller" && (
                     <FileUploadButton
                       onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
-                      buttonVariant="outline"
+                      buttonVariant="ghost"
                       buttonSize="icon"
-                      buttonClassName="flex-shrink-0"
+                      buttonClassName="rounded-full h-10 w-10 flex-shrink-0"
                     >
-                      <Image className="h-5 w-5" />
+                      <Image className="h-4 w-4" />
                     </FileUploadButton>
                   )}
                   
@@ -1866,27 +1866,26 @@ export default function HeroSection() {
                   {mode === "seller" && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
                       onClick={() => setShowLocationPicker(true)}
-                      className={`flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
+                      className={`rounded-full h-10 w-10 flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
                       data-testid="button-open-map"
                     >
-                      <MapPin className="h-5 w-5" />
+                      <MapPin className="h-4 w-4" />
                     </Button>
                   )}
                   
-                  <div className="flex-1">
-                    <div
-                      ref={textareaRef}
-                      contentEditable
-                      className={`min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 ${mode === "seller" ? "focus:ring-green-500/50" : "focus:ring-primary/50"}`}
-                      onInput={(e) => setInputText(e.currentTarget.textContent || "")}
-                      onKeyDown={handleKeyDown}
-                      data-placeholder={isRecording ? "جارٍ التسجيل..." : mode === "buyer" ? "اكتب أو سجل صوتك..." : "اكتب أو سجل صوتك..."}
-                      data-testid="input-interactive"
-                    />
-                  </div>
+                  {/* Input field */}
+                  <div
+                    ref={textareaRef}
+                    contentEditable
+                    className="flex-1 min-h-[40px] py-2 px-3 text-base focus:outline-none bg-transparent"
+                    onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                    onKeyDown={handleKeyDown}
+                    data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب أو سجل صوتك..."}
+                    data-testid="input-interactive"
+                  />
                 </div>
                 
                 {isRecording && (
