@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, Search, Bell, Handshake, ChevronLeft, ChevronRight } from "lucide-react";
+import { ClipboardList, Search, Bell, Handshake, RotateCcw } from "lucide-react";
+import TinderCard from "react-tinder-card";
 
 const steps = [
   {
@@ -31,19 +32,61 @@ const steps = [
 ];
 
 export default function HowItWorks() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(steps.length - 1);
+  const [lastDirection, setLastDirection] = useState<string>("");
+  const currentIndexRef = useRef(currentIndex);
 
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % steps.length);
+  const childRefs = useMemo(
+    () =>
+      Array(steps.length)
+        .fill(0)
+        .map(() => ({ current: null as any })),
+    []
+  );
+
+  const updateCurrentIndex = (val: number) => {
+    setCurrentIndex(val);
+    currentIndexRef.current = val;
   };
 
-  const goToPrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + steps.length) % steps.length);
+  const canSwipe = currentIndex >= 0;
+
+  const swiped = (direction: string, index: number) => {
+    setLastDirection(direction);
+    updateCurrentIndex(index - 1);
   };
 
-  const goToSlide = (index: number) => {
-    setCurrentIndex(index);
+  const outOfFrame = (idx: number) => {
+    if (currentIndexRef.current >= idx && childRefs[idx].current) {
+      childRefs[idx].current.restoreCard();
+    }
   };
+
+  const swipe = async (dir: string) => {
+    if (canSwipe && currentIndex < steps.length && childRefs[currentIndex]?.current) {
+      await childRefs[currentIndex].current.swipe(dir);
+    }
+  };
+
+  const goBack = async () => {
+    if (currentIndex >= steps.length - 1) return;
+    const newIndex = currentIndex + 1;
+    updateCurrentIndex(newIndex);
+    if (childRefs[newIndex]?.current) {
+      await childRefs[newIndex].current.restoreCard();
+    }
+  };
+
+  const resetCards = () => {
+    updateCurrentIndex(steps.length - 1);
+    childRefs.forEach((ref) => {
+      if (ref.current) {
+        ref.current.restoreCard();
+      }
+    });
+  };
+
+  const allSwiped = currentIndex < 0;
 
   return (
     <section className="py-6 md:py-10 bg-muted/30">
@@ -57,96 +100,62 @@ export default function HowItWorks() {
           </p>
         </div>
 
-        <div className="relative max-w-md mx-auto">
-          <div className="relative h-[280px] flex items-center justify-center">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const offset = index - currentIndex;
-              const isActive = index === currentIndex;
-              const isPrev = offset === -1 || (currentIndex === 0 && index === steps.length - 1);
-              const isNext = offset === 1 || (currentIndex === steps.length - 1 && index === 0);
-              
-              let transform = "translateX(0) scale(0.85)";
-              let zIndex = 0;
-              let opacity = 0;
-              
-              if (isActive) {
-                transform = "translateX(0) scale(1)";
-                zIndex = 30;
-                opacity = 1;
-              } else if (isPrev) {
-                transform = "translateX(30px) scale(0.9) rotate(3deg)";
-                zIndex = 20;
-                opacity = 0.6;
-              } else if (isNext) {
-                transform = "translateX(-30px) scale(0.9) rotate(-3deg)";
-                zIndex = 10;
-                opacity = 0.6;
-              }
-
-              return (
-                <Card 
-                  key={index} 
-                  className="absolute w-full max-w-[300px] p-6 text-center transition-all duration-300 ease-out"
-                  style={{
-                    transform,
-                    zIndex,
-                    opacity,
-                    pointerEvents: isActive ? "auto" : "none",
-                  }}
-                  data-testid={`card-step-${index + 1}`}
-                >
-                  <div className="absolute top-4 right-4 text-3xl font-bold text-muted/40">
-                    {index + 1}
-                  </div>
-                  <div className={`mx-auto h-14 w-14 rounded-full ${step.color} flex items-center justify-center mb-4`}>
-                    <Icon className="h-7 w-7" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{step.description}</p>
-                </Card>
-              );
-            })}
+        <div className="relative max-w-sm mx-auto">
+          <div className="relative h-[300px] flex items-center justify-center">
+            {allSwiped ? (
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">انتهت الخطوات!</p>
+                <Button onClick={resetCards} variant="outline" data-testid="button-reset-steps">
+                  <RotateCcw className="h-4 w-4 ml-2" />
+                  إعادة العرض
+                </Button>
+              </div>
+            ) : (
+              steps.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <TinderCard
+                    ref={childRefs[index]}
+                    key={index}
+                    onSwipe={(dir) => swiped(dir, index)}
+                    onCardLeftScreen={() => outOfFrame(index)}
+                    preventSwipe={["up", "down"]}
+                    className="absolute"
+                    swipeRequirementType="position"
+                    swipeThreshold={100}
+                  >
+                    <Card 
+                      className="w-[300px] p-6 text-center cursor-grab active:cursor-grabbing select-none"
+                      style={{
+                        transform: `translateY(${(steps.length - 1 - index) * 4}px) scale(${1 - (steps.length - 1 - index) * 0.02})`,
+                      }}
+                      data-testid={`card-step-${index + 1}`}
+                    >
+                      <div className="absolute top-4 right-4 text-3xl font-bold text-muted/40">
+                        {index + 1}
+                      </div>
+                      <div className={`mx-auto h-14 w-14 rounded-full ${step.color} flex items-center justify-center mb-4`}>
+                        <Icon className="h-7 w-7" />
+                      </div>
+                      <h3 className="font-bold text-lg mb-2">{step.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{step.description}</p>
+                    </Card>
+                  </TinderCard>
+                );
+              })
+            )}
           </div>
 
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={goToNext}
-              data-testid="button-how-next"
-              className="rounded-full"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-
-            <div className="flex items-center gap-2">
-              {steps.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`h-2 rounded-full transition-all ${
-                    index === currentIndex ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30"
-                  }`}
-                  data-testid={`dot-step-${index + 1}`}
-                />
-              ))}
-            </div>
-
-            <Button
-              size="icon"
-              variant="outline"
-              onClick={goToPrev}
-              data-testid="button-how-prev"
-              className="rounded-full"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground mt-3">
-            {currentIndex + 1} من {steps.length}
-          </p>
+          {!allSwiped && (
+            <>
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                اسحب الكارت يمين أو يسار
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                {currentIndex + 1} من {steps.length}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </section>
