@@ -409,6 +409,7 @@ export default function HeroSection() {
     },
   });
 
+  // Typewriter effect - only types, doesn't reset (rotation interval handles that)
   useEffect(() => {
     const totalLength = exampleSegments.reduce((acc, seg) => acc + seg.text.length, 0);
     if (charIndex < totalLength) {
@@ -416,12 +417,8 @@ export default function HeroSection() {
         setCharIndex(prev => prev + 1);
       }, 50);
       return () => clearTimeout(timer);
-    } else {
-      const resetTimer = setTimeout(() => {
-        setCharIndex(0);
-      }, 3000);
-      return () => clearTimeout(resetTimer);
     }
+    // No auto-reset here - the rotation interval handles cycling to next example
   }, [charIndex, exampleSegments]);
 
   const handleModeSwitch = (newMode: UserMode) => {
