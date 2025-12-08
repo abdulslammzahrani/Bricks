@@ -447,29 +447,21 @@ export default function HeroSection() {
     setCharIndex(0);
   }, [mode]);
   
-  // Show mic tooltip when chat first expands (after first exchange)
+  // Add mic hint as a message after first AI response
   useEffect(() => {
-    // Show after first AI response (conversation has user msg + AI response = 2)
-    if (conversation.length === 2) {
+    if (conversation.length === 2 && !showMicTooltip) {
+      // Mark that we've shown the hint
+      setShowMicTooltip(true);
+      // Add mic hint as a system message after a short delay
       const timer = setTimeout(() => {
-        setShowMicTooltip(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (conversation.length > 4) {
-      // Hide after more conversation
-      setShowMicTooltip(false);
-    }
-  }, [conversation.length]);
-  
-  // Auto-hide mic tooltip after 10 seconds
-  useEffect(() => {
-    if (showMicTooltip) {
-      const timer = setTimeout(() => {
-        setShowMicTooltip(false);
-      }, 10000);
+        setConversation(prev => [
+          ...prev,
+          { type: "system", text: "💡 تقدر تسجل طلبك صوتياً بالضغط على زر المايكروفون وبنحلله لك فوراً!" }
+        ]);
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [showMicTooltip]);
+  }, [conversation.length, showMicTooltip]);
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1773,22 +1765,6 @@ export default function HeroSection() {
                   </div>
                 )}
                 
-                {/* Mic hint banner */}
-                {showMicTooltip && !isRecording && !isTranscribing && (
-                  <div 
-                    className="flex items-center justify-center gap-3 mb-3 p-3 rounded-xl bg-primary/10 border border-primary/30 cursor-pointer animate-pulse"
-                    onClick={() => setShowMicTooltip(false)}
-                  >
-                    <div className="flex items-center gap-2 text-primary font-medium">
-                      <div className="p-2 bg-primary rounded-full">
-                        <Mic className="h-4 w-4 text-white" />
-                      </div>
-                      <span>تقدر تسجل طلبك صوتياً وبنحلله لك فوراً</span>
-                      <ArrowDown className="h-4 w-4 animate-bounce" />
-                    </div>
-                  </div>
-                )}
-                
                 {/* Transcribing indicator */}
                 {isTranscribing && (
                   <div className="flex items-center justify-center gap-2 mb-3 text-sm text-muted-foreground">
@@ -1808,36 +1784,17 @@ export default function HeroSection() {
                     <Send className="h-5 w-5" />
                   </Button>
                   
-                  {/* Voice recording button with tooltip */}
-                  <div className="relative flex-shrink-0">
-                    <Button
-                      size="icon"
-                      variant={isRecording ? "destructive" : "outline"}
-                      onClick={() => {
-                        setShowMicTooltip(false);
-                        isRecording ? stopRecording() : startRecording();
-                      }}
-                      disabled={isTranscribing}
-                      className={`${isRecording ? "animate-pulse" : ""} ${showMicTooltip ? "ring-2 ring-primary ring-offset-2 animate-pulse" : ""}`}
-                      data-testid="button-voice-record-landing"
-                    >
-                      {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                    </Button>
-                    
-                    {/* Mic tooltip */}
-                    {showMicTooltip && !isRecording && (
-                      <div 
-                        className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-3 rounded-lg text-sm shadow-lg z-50"
-                        onClick={() => setShowMicTooltip(false)}
-                      >
-                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rotate-45" />
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <Mic className="h-4 w-4 flex-shrink-0" />
-                          <span>سجّل طلبك صوتياً وسنحلله فوراً</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {/* Voice recording button */}
+                  <Button
+                    size="icon"
+                    variant={isRecording ? "destructive" : "outline"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isTranscribing}
+                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                    data-testid="button-voice-record-landing"
+                  >
+                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
                   
                   {/* Upload button for sellers */}
                   {mode === "seller" && (
