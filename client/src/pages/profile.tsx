@@ -613,6 +613,14 @@ export default function ProfilePage() {
               <SidebarGroupLabel>القائمة</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <Link href="/">
+                      <SidebarMenuButton data-testid="sidebar-home">
+                        <Home className="h-4 w-4" />
+                        <span className="flex-1">الرئيسية</span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
                   {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -639,14 +647,6 @@ export default function ProfilePage() {
 
           <SidebarFooter className="p-2 border-t mt-auto">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href="/">
-                  <SidebarMenuButton data-testid="sidebar-home">
-                    <Home className="h-4 w-4" />
-                    <span>الرئيسية</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} data-testid="button-logout">
                   <LogOut className="h-4 w-4" />

@@ -55,6 +55,7 @@ export default function MemberLayout({ children, activeTab }: MemberLayoutProps)
   };
 
   const menuItems = [
+    { id: "home", label: "الرئيسية", icon: Home, href: "/" },
     { id: "preferences", label: "رغباتي", icon: Heart, href: "/profile?tab=preferences" },
     { id: "properties", label: "عروضي", icon: Building2, href: "/profile?tab=properties" },
     { id: "matches", label: "المتطابقة", icon: Zap, href: "/profile?tab=matches" },
@@ -109,14 +110,6 @@ export default function MemberLayout({ children, activeTab }: MemberLayoutProps)
 
           <SidebarFooter className="border-t p-2">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href="/">
-                  <SidebarMenuButton data-testid="sidebar-home">
-                    <Home className="h-4 w-4" />
-                    <span>الرئيسية</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout} data-testid="button-logout">
                   <LogOut className="h-4 w-4" />
