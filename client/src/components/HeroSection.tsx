@@ -476,7 +476,7 @@ export default function HeroSection() {
                   <Button
                     size="icon"
                     onClick={handleSubmit}
-                    disabled={!inputText.trim() || buyerMutation.isPending || sellerMutation.isPending}
+                    disabled={buyerMutation.isPending || sellerMutation.isPending}
                     data-testid="button-send"
                     className={`flex-shrink-0 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
                   >
