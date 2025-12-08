@@ -84,13 +84,13 @@ export async function registerRoutes(
   // Analyze text input with AI
   app.post("/api/intake/analyze", async (req, res) => {
     try {
-      const { text } = req.body;
+      const { text, context } = req.body;
       
       if (!text || typeof text !== "string" || text.trim().length < 10) {
         return res.status(400).json({ error: "النص قصير جداً، يرجى كتابة المزيد من التفاصيل" });
       }
 
-      const result = await analyzeIntakeWithAI(text);
+      const result = await analyzeIntakeWithAI(text, context);
       res.json(result);
     } catch (error: any) {
       console.error("AI analysis error:", error);

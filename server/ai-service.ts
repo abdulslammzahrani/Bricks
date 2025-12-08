@@ -37,7 +37,7 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي ودود لمنصة عقارية
 مهمتك الرئيسية:
 1. فهم نية المستخدم: هل يسأل سؤال أم يقدم معلومات؟
 2. إذا كان سؤال، جاوب عليه بأسلوب ودي ثم استمر
-3. استخراج المعلومات العقارية من النص
+3. استخراج المعلومات العقارية من النص بدقة عالية
 
 تحديد النية (intent):
 - "question": إذا المستخدم يسأل سؤال (وش، ايش، كيف، ليش، متى، هل، شنو، ممكن توضح، ماهو، يعني ايه)
@@ -51,20 +51,31 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي ودود لمنصة عقارية
 - لو سأل عن الميزانية: "الميزانية يعني كم تقدر تدفع للعقار، مثلاً من 500 ألف لمليون ريال"
 - لو سأل عن طريقة الدفع: "طريقة الدفع يعني تبي تدفع كاش ولا عن طريق تمويل بنكي؟"
 
-قواعد الاستخراج:
-- الاسم: استخرج الاسم الكامل إذا ذُكر
-- الجوال: ابحث عن أرقام تبدأ بـ 05 (10 أرقام)
-- المدينة: (الرياض، جدة، مكة، الدمام، الخبر، المدينة، الطائف، تبوك، أبها، القصيم، الأحساء)
-- الأحياء: استخرج أسماء الأحياء كمصفوفة
-- نوع العقار: شقة، فيلا، أرض، دور، دبلكس، عمارة، محل، مكتب
-- الميزانية: حوّل للأرقام ("500 ألف" = 500000، "مليون" = 1000000)
-- طريقة الدفع: كاش، تمويل، نقد، بنكي
-- غرض الشراء: سكن، استثمار، تجاري
+قواعد الاستخراج (مهم جداً - اقرأ بتركيز):
+- الاسم: استخرج الاسم الكامل إذا ذُكر (أنا محمد، اسمي فهد، معك سارة)
+- الجوال: ابحث عن أرقام تبدأ بـ 05 (10 أرقام) - قد تكون مكتوبة بالعربي أو الإنجليزي
+- المدينة: استخرج المدينة حتى لو ذُكرت بجانب كلمات أخرى. المدن السعودية:
+  الرياض، جدة، مكة، مكة المكرمة، المدينة، المدينة المنورة، الدمام، الخبر، الظهران، الجبيل،
+  الطائف، تبوك، أبها، خميس مشيط، جازان، نجران، الباحة، القصيم، بريدة، عنيزة،
+  الأحساء، الهفوف، حفر الباطن، ينبع، رابغ، القطيف، سكاكا، عرعر، حائل، بيشة
+  
+  مهم: لو كتب "جدة فيلا" أو "الرياض شقة" فهذا يعني المدينة جدة/الرياض ونوع العقار فيلا/شقة
+  مثال: "جدة فيلا" → city: "جدة", propertyType: "فيلا"
+  مثال: "شقة بالرياض" → city: "الرياض", propertyType: "شقة"
+  مثال: "ابي فيلا جدة" → city: "جدة", propertyType: "فيلا"
+
+- الأحياء: استخرج أسماء الأحياء كمصفوفة (الملقا، الياسمين، النرجس، الشاطئ، الحمراء، إلخ)
+- نوع العقار: شقة، فيلا، أرض، دور، دبلكس، عمارة، محل، مكتب، استراحة، مزرعة
+- الميزانية: حوّل للأرقام ("500 ألف" = 500000، "مليون" = 1000000، "مليون ونص" = 1500000)
+- طريقة الدفع: كاش، تمويل، نقد، بنكي، أقساط
+- غرض الشراء: سكن، استثمار، تجاري، إيجار
 
 تصنيف العميل:
-- مشتري: يبحث عن عقار
-- بائع: يعرض عقار للبيع
-- مستثمر: يبحث عن فرص استثمارية
+- مشتري (buyer): يبحث عن عقار للشراء أو السكن
+- بائع (seller): يعرض عقار للبيع (عندي، للبيع، أبيع)
+- مستثمر (investor): يبحث عن فرص استثمارية (عائد، إيجار، استثمار)
+
+مهم جداً: استخرج كل المعلومات المتاحة في النص حتى لو كانت مختصرة أو بدون ترتيب.
 
 أعد JSON فقط:
 {
@@ -88,14 +99,53 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي ودود لمنصة عقارية
   "classificationTags": string[]
 }`;
 
-export async function analyzeIntakeWithAI(text: string): Promise<IntakeAnalysisResult> {
+export interface ConversationContext {
+  name?: string;
+  phone?: string;
+  city?: string;
+  districts?: string[];
+  propertyType?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  paymentMethod?: string;
+  purchasePurpose?: string;
+  area?: number;
+  rooms?: number;
+  role?: string;
+}
+
+export async function analyzeIntakeWithAI(text: string, context?: ConversationContext): Promise<IntakeAnalysisResult> {
   try {
+    // Build context message if we have previously extracted data
+    let contextMessage = "";
+    if (context && Object.keys(context).length > 0) {
+      const contextParts: string[] = [];
+      if (context.name) contextParts.push(`الاسم: ${context.name}`);
+      if (context.phone) contextParts.push(`الجوال: ${context.phone}`);
+      if (context.city) contextParts.push(`المدينة: ${context.city}`);
+      if (context.districts && context.districts.length > 0) contextParts.push(`الأحياء: ${context.districts.join(", ")}`);
+      if (context.propertyType) contextParts.push(`نوع العقار: ${context.propertyType}`);
+      if (context.budgetMin) contextParts.push(`الميزانية من: ${context.budgetMin}`);
+      if (context.budgetMax) contextParts.push(`الميزانية إلى: ${context.budgetMax}`);
+      if (context.paymentMethod) contextParts.push(`طريقة الدفع: ${context.paymentMethod}`);
+      if (context.purchasePurpose) contextParts.push(`الغرض: ${context.purchasePurpose}`);
+      if (context.area) contextParts.push(`المساحة: ${context.area}`);
+      if (context.rooms) contextParts.push(`الغرف: ${context.rooms}`);
+      if (context.role) contextParts.push(`نوع العميل: ${context.role}`);
+      
+      if (contextParts.length > 0) {
+        contextMessage = `\n\n[معلومات سابقة من المحادثة - لا تسأل عنها مرة أخرى]:\n${contextParts.join("\n")}\n\n[الرسالة الجديدة]:\n`;
+      }
+    }
+    
+    const fullMessage = contextMessage + text;
+    
     // the newest OpenAI model is "gpt-4.1-mini" for cost efficiency with good Arabic support
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: text },
+        { role: "user", content: fullMessage },
       ],
       response_format: { type: "json_object" },
       max_completion_tokens: 1024,

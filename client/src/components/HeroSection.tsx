@@ -490,8 +490,8 @@ export default function HeroSection() {
   });
 
   const aiAnalysisMutation = useMutation({
-    mutationFn: async (text: string): Promise<AIAnalysisResult> => {
-      const res = await apiRequest("POST", "/api/intake/analyze", { text });
+    mutationFn: async ({ text, context }: { text: string; context?: Record<string, any> }): Promise<AIAnalysisResult> => {
+      const res = await apiRequest("POST", "/api/intake/analyze", { text, context });
       return res.json();
     },
   });
@@ -916,7 +916,23 @@ export default function HeroSection() {
     setIsTyping(true);
     
     try {
-      const aiResult = await aiAnalysisMutation.mutateAsync(userText);
+      // Build context from previously extracted data
+      const context = {
+        name: extractedData.name || undefined,
+        phone: extractedData.phone || undefined,
+        city: extractedData.city || undefined,
+        districts: extractedData.district ? [extractedData.district] : undefined,
+        propertyType: extractedData.propertyType || undefined,
+        budgetMin: extractedData.budgetMin ? parseInt(extractedData.budgetMin) : undefined,
+        budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : undefined,
+        paymentMethod: extractedData.paymentMethod || undefined,
+        purchasePurpose: extractedData.purchasePurpose || undefined,
+        area: extractedData.area ? parseInt(extractedData.area) : undefined,
+        rooms: extractedData.rooms ? parseInt(extractedData.rooms) : undefined,
+        role: mode,
+      };
+      
+      const aiResult = await aiAnalysisMutation.mutateAsync({ text: userText, context });
       
       // Convert AI result to merged data format
       let mergedData = { ...extractedData };
