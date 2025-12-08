@@ -99,7 +99,7 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
     <div
       ref={mapRef}
       className={`w-full rounded-lg overflow-hidden ${className}`}
-      style={{ minHeight: "200px", pointerEvents: "none" }}
+      style={{ minHeight: "200px" }}
       data-testid="saudi-map"
     />
   );
