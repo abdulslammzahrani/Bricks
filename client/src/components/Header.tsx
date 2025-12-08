@@ -41,13 +41,12 @@ export default function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" data-testid="button-login">
-            <LogIn className="ml-2 h-4 w-4" />
-            تسجيل الدخول
-          </Button>
-          <Button size="sm" data-testid="button-register">
-            إنشاء حساب
-          </Button>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm" data-testid="button-login">
+              <LogIn className="ml-2 h-4 w-4" />
+              تسجيل الدخول
+            </Button>
+          </Link>
         </div>
 
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -78,13 +77,12 @@ export default function Header() {
                 );
               })}
               <div className="border-t pt-4 mt-2 flex flex-col gap-2">
-                <Button variant="outline" className="w-full" data-testid="mobile-button-login">
-                  <LogIn className="ml-2 h-4 w-4" />
-                  تسجيل الدخول
-                </Button>
-                <Button className="w-full" data-testid="mobile-button-register">
-                  إنشاء حساب
-                </Button>
+                <Link href="/profile" onClick={() => setIsOpen(false)}>
+                  <Button variant="outline" className="w-full" data-testid="mobile-button-login">
+                    <LogIn className="ml-2 h-4 w-4" />
+                    تسجيل الدخول
+                  </Button>
+                </Link>
               </div>
             </div>
           </SheetContent>
