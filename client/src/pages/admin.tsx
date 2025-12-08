@@ -60,8 +60,15 @@ import {
   Send,
   History,
   PlayCircle,
-  StopCircle
+  StopCircle,
+  Megaphone,
+  Plus,
+  Trash2,
+  Power,
+  PowerOff,
+  ExternalLink
 } from "lucide-react";
+import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp } from "react-icons/si";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
 import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -122,6 +129,56 @@ interface EnrichedSendLog extends SendLog {
   propertyDetails: Array<{ id: string; city: string; district: string; price: number }>;
 }
 
+// Marketing setting type (matches API response - dates as strings)
+interface MarketingSetting {
+  id: string;
+  platform: "facebook" | "snapchat" | "tiktok" | "google" | "mailchimp";
+  pixelId: string | null;
+  apiKey: string | null;
+  accessToken: string | null;
+  audienceId: string | null;
+  conversionApiToken: string | null;
+  testEventCode: string | null;
+  dataCenter: string | null;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Platform display info
+const platformInfo: Record<string, { name: string; icon: typeof SiFacebook; color: string; description: string }> = {
+  facebook: { 
+    name: "فيسبوك", 
+    icon: SiFacebook, 
+    color: "text-blue-600",
+    description: "Facebook Pixel و Conversions API للتتبع والإعلانات"
+  },
+  snapchat: { 
+    name: "سناب شات", 
+    icon: SiSnapchat, 
+    color: "text-yellow-500",
+    description: "Snap Pixel للتتبع والإعلانات على سناب شات"
+  },
+  tiktok: { 
+    name: "تيك توك", 
+    icon: SiTiktok, 
+    color: "text-foreground",
+    description: "TikTok Pixel للتتبع والإعلانات على تيك توك"
+  },
+  google: { 
+    name: "قوقل", 
+    icon: SiGoogle, 
+    color: "text-red-500",
+    description: "Google Analytics و Google Ads للتتبع والإعلانات"
+  },
+  mailchimp: { 
+    name: "ميلشيمب", 
+    icon: SiMailchimp, 
+    color: "text-yellow-600",
+    description: "MailChimp للتسويق عبر البريد الإلكتروني"
+  },
+};
+
 // Sidebar menu items
 const menuItems = [
   { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
@@ -131,6 +188,7 @@ const menuItems = [
   { id: "matches", label: "المطابقات", icon: Handshake },
   { id: "analytics", label: "التحليلات", icon: TrendingUp },
   { id: "sending", label: "الإرسال", icon: Send },
+  { id: "marketing", label: "التسويق", icon: Megaphone },
 ];
 
 export default function AdminDashboard() {
@@ -184,6 +242,18 @@ export default function AdminDashboard() {
   const { data: sendLogs = [], refetch: refetchSendLogs } = useQuery<EnrichedSendLog[]>({
     queryKey: ["/api/admin/send-logs"],
   });
+
+  // Marketing settings
+  const { data: marketingSettings = [], refetch: refetchMarketing } = useQuery<MarketingSetting[]>({
+    queryKey: ["/api/admin/marketing"],
+  });
+
+  // New marketing platform state
+  const [newPlatform, setNewPlatform] = useState<string>("");
+  const [newPixelId, setNewPixelId] = useState("");
+  const [newApiKey, setNewApiKey] = useState("");
+  const [newAccessToken, setNewAccessToken] = useState("");
+  const [editingMarketing, setEditingMarketing] = useState<MarketingSetting | null>(null);
 
   const { data: topDistricts = [] } = useQuery<Array<{ district: string; count: number }>>({
     queryKey: ["/api/admin/analytics/top-districts", selectedCity],
@@ -265,6 +335,72 @@ export default function AdminDashboard() {
         description: error.message || "حدث خطأ أثناء الإرسال الجماعي",
         variant: "destructive",
       });
+    },
+  });
+
+  // Create or update marketing setting (uses PUT with platform in URL)
+  const createMarketingMutation = useMutation({
+    mutationFn: async (data: { platform: string; pixelId?: string; apiKey?: string; accessToken?: string; isEnabled?: boolean }) => {
+      return apiRequest("PUT", `/api/admin/marketing/${data.platform}`, {
+        isEnabled: data.isEnabled ?? true,
+        pixelId: data.pixelId,
+        apiKey: data.apiKey,
+        accessToken: data.accessToken,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "تم الإضافة", description: "تم إضافة منصة التسويق بنجاح" });
+      refetchMarketing();
+      setNewPlatform("");
+      setNewPixelId("");
+      setNewApiKey("");
+      setNewAccessToken("");
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في إضافة المنصة", variant: "destructive" });
+    },
+  });
+
+  // Update marketing setting
+  const updateMarketingMutation = useMutation({
+    mutationFn: async ({ platform, ...data }: { platform: string; pixelId?: string; apiKey?: string; accessToken?: string; isEnabled?: boolean }) => {
+      return apiRequest("PUT", `/api/admin/marketing/${platform}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "تم التحديث", description: "تم تحديث إعدادات المنصة" });
+      refetchMarketing();
+      setEditingMarketing(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في التحديث", variant: "destructive" });
+    },
+  });
+
+  // Delete marketing setting
+  const deleteMarketingMutation = useMutation({
+    mutationFn: async (platform: string) => {
+      return apiRequest("DELETE", `/api/admin/marketing/${platform}`);
+    },
+    onSuccess: () => {
+      toast({ title: "تم الحذف", description: "تم حذف منصة التسويق" });
+      refetchMarketing();
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في الحذف", variant: "destructive" });
+    },
+  });
+
+  // Toggle marketing setting status
+  const toggleMarketingMutation = useMutation({
+    mutationFn: async ({ platform, isEnabled }: { platform: string; isEnabled: boolean }) => {
+      return apiRequest("PUT", `/api/admin/marketing/${platform}`, { isEnabled });
+    },
+    onSuccess: () => {
+      toast({ title: "تم التحديث", description: "تم تغيير حالة المنصة" });
+      refetchMarketing();
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في التحديث", variant: "destructive" });
     },
   });
 
@@ -1275,6 +1411,348 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === "marketing" && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Megaphone className="h-5 w-5 text-primary" />
+                          إعدادات التسويق الرقمي
+                        </CardTitle>
+                        <CardDescription>
+                          إدارة أكواد التتبع ومنصات التسويق الرقمي
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => refetchMarketing()}
+                        data-testid="button-refresh-marketing"
+                      >
+                        <RefreshCw className="h-4 w-4 ml-2" />
+                        تحديث
+                      </Button>
+                    </div>
+                  </CardHeader>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plus className="h-5 w-5" />
+                      إضافة منصة تسويق
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">المنصة</label>
+                        <Select value={newPlatform} onValueChange={setNewPlatform}>
+                          <SelectTrigger data-testid="select-marketing-platform">
+                            <SelectValue placeholder="اختر المنصة" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(platformInfo)
+                              .filter(([key]) => !marketingSettings.some(s => s.platform === key))
+                              .map(([key, info]) => (
+                                <SelectItem key={key} value={key}>
+                                  <div className="flex items-center gap-2">
+                                    <info.icon className={`h-4 w-4 ${info.color}`} />
+                                    {info.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Pixel ID</label>
+                        <Input
+                          value={newPixelId}
+                          onChange={(e) => setNewPixelId(e.target.value)}
+                          placeholder="مثال: 123456789"
+                          dir="ltr"
+                          data-testid="input-pixel-id"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">API Key (اختياري)</label>
+                        <Input
+                          value={newApiKey}
+                          onChange={(e) => setNewApiKey(e.target.value)}
+                          placeholder="مفتاح API"
+                          dir="ltr"
+                          type="password"
+                          data-testid="input-api-key"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">Access Token (اختياري)</label>
+                        <Input
+                          value={newAccessToken}
+                          onChange={(e) => setNewAccessToken(e.target.value)}
+                          placeholder="رمز الوصول"
+                          dir="ltr"
+                          type="password"
+                          data-testid="input-access-token"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => createMarketingMutation.mutate({
+                        platform: newPlatform,
+                        pixelId: newPixelId || undefined,
+                        apiKey: newApiKey || undefined,
+                        accessToken: newAccessToken || undefined,
+                      })}
+                      disabled={!newPlatform || createMarketingMutation.isPending}
+                      data-testid="button-add-platform"
+                    >
+                      {createMarketingMutation.isPending ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 ml-2 animate-spin" />
+                          جاري الإضافة...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 ml-2" />
+                          إضافة المنصة
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      المنصات المتصلة ({marketingSettings.length})
+                    </CardTitle>
+                    <CardDescription>
+                      المنصات المضافة وإعداداتها - يمكنك تفعيل أو إيقاف كل منصة
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {marketingSettings.length > 0 ? (
+                      <div className="space-y-4">
+                        {marketingSettings.map((setting) => {
+                          const info = platformInfo[setting.platform];
+                          const Icon = info?.icon || Megaphone;
+                          return (
+                            <Card 
+                              key={setting.id} 
+                              className="p-4"
+                              data-testid={`card-marketing-${setting.platform}`}
+                            >
+                              <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between gap-4 flex-wrap">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg bg-muted`}>
+                                      <Icon className={`h-6 w-6 ${info?.color || ""}`} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium">{info?.name || setting.platform}</h4>
+                                      <p className="text-sm text-muted-foreground">{info?.description}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={setting.isEnabled ? "default" : "secondary"}>
+                                      {setting.isEnabled ? "مفعل" : "معطل"}
+                                    </Badge>
+                                    <Button
+                                      size="icon"
+                                      variant={setting.isEnabled ? "default" : "outline"}
+                                      onClick={() => toggleMarketingMutation.mutate({ 
+                                        platform: setting.platform, 
+                                        isEnabled: !setting.isEnabled 
+                                      })}
+                                      disabled={toggleMarketingMutation.isPending}
+                                      data-testid={`button-toggle-${setting.platform}`}
+                                    >
+                                      {setting.isEnabled ? (
+                                        <Power className="h-4 w-4" />
+                                      ) : (
+                                        <PowerOff className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="destructive"
+                                      onClick={() => deleteMarketingMutation.mutate(setting.platform)}
+                                      disabled={deleteMarketingMutation.isPending}
+                                      data-testid={`button-delete-${setting.platform}`}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {editingMarketing?.id === setting.id ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                                    <div>
+                                      <label className="text-sm text-muted-foreground mb-2 block">Pixel ID</label>
+                                      <Input
+                                        value={editingMarketing.pixelId || ""}
+                                        onChange={(e) => setEditingMarketing({ ...editingMarketing, pixelId: e.target.value })}
+                                        dir="ltr"
+                                        data-testid={`input-edit-pixel-${setting.platform}`}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-muted-foreground mb-2 block">API Key</label>
+                                      <Input
+                                        value={editingMarketing.apiKey || ""}
+                                        onChange={(e) => setEditingMarketing({ ...editingMarketing, apiKey: e.target.value })}
+                                        dir="ltr"
+                                        type="password"
+                                        data-testid={`input-edit-apikey-${setting.platform}`}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-muted-foreground mb-2 block">Access Token</label>
+                                      <Input
+                                        value={editingMarketing.accessToken || ""}
+                                        onChange={(e) => setEditingMarketing({ ...editingMarketing, accessToken: e.target.value })}
+                                        dir="ltr"
+                                        type="password"
+                                        data-testid={`input-edit-token-${setting.platform}`}
+                                      />
+                                    </div>
+                                    <div className="md:col-span-3 flex gap-2">
+                                      <Button
+                                        onClick={() => updateMarketingMutation.mutate({
+                                          platform: setting.platform,
+                                          pixelId: editingMarketing.pixelId || undefined,
+                                          apiKey: editingMarketing.apiKey || undefined,
+                                          accessToken: editingMarketing.accessToken || undefined,
+                                          isEnabled: setting.isEnabled,
+                                        })}
+                                        disabled={updateMarketingMutation.isPending}
+                                        data-testid={`button-save-${setting.platform}`}
+                                      >
+                                        {updateMarketingMutation.isPending ? "جاري الحفظ..." : "حفظ"}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setEditingMarketing(null)}
+                                      >
+                                        إلغاء
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-4 text-sm pt-2 border-t">
+                                    <div>
+                                      <span className="text-muted-foreground">Pixel ID: </span>
+                                      <span dir="ltr" className="font-mono">{setting.pixelId || "-"}</span>
+                                    </div>
+                                    {setting.apiKey && (
+                                      <div>
+                                        <span className="text-muted-foreground">API Key: </span>
+                                        <span className="font-mono">••••••</span>
+                                      </div>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setEditingMarketing(setting)}
+                                      data-testid={`button-edit-${setting.platform}`}
+                                    >
+                                      تعديل
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        لم تتم إضافة أي منصات تسويق بعد
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ExternalLink className="h-5 w-5" />
+                      روابط مفيدة
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <a 
+                        href="https://business.facebook.com/events_manager" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate"
+                      >
+                        <SiFacebook className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p className="font-medium">Facebook Events Manager</p>
+                          <p className="text-sm text-muted-foreground">إدارة الأحداث والبكسل</p>
+                        </div>
+                      </a>
+                      <a 
+                        href="https://ads.tiktok.com/marketing_api/docs" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate"
+                      >
+                        <SiTiktok className="h-6 w-6" />
+                        <div>
+                          <p className="font-medium">TikTok Ads Manager</p>
+                          <p className="text-sm text-muted-foreground">إدارة إعلانات تيك توك</p>
+                        </div>
+                      </a>
+                      <a 
+                        href="https://ads.snapchat.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate"
+                      >
+                        <SiSnapchat className="h-6 w-6 text-yellow-500" />
+                        <div>
+                          <p className="font-medium">Snapchat Ads Manager</p>
+                          <p className="text-sm text-muted-foreground">إدارة إعلانات سناب</p>
+                        </div>
+                      </a>
+                      <a 
+                        href="https://analytics.google.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate"
+                      >
+                        <SiGoogle className="h-6 w-6 text-red-500" />
+                        <div>
+                          <p className="font-medium">Google Analytics</p>
+                          <p className="text-sm text-muted-foreground">تحليلات قوقل</p>
+                        </div>
+                      </a>
+                      <a 
+                        href="https://mailchimp.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-lg border hover-elevate"
+                      >
+                        <SiMailchimp className="h-6 w-6 text-yellow-600" />
+                        <div>
+                          <p className="font-medium">MailChimp</p>
+                          <p className="text-sm text-muted-foreground">التسويق بالبريد</p>
+                        </div>
+                      </a>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
