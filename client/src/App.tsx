@@ -9,6 +9,7 @@ import BuyerFormPage from "@/pages/buyer-form";
 import SellerFormPage from "@/pages/seller-form";
 import AdminDashboard from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
+import InvestorPage from "@/pages/investor";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/buyer-form" component={BuyerFormPage} />
       <Route path="/seller-form" component={SellerFormPage} />
+      <Route path="/investor" component={InvestorPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />

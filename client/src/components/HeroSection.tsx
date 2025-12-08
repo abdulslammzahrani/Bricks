@@ -660,38 +660,30 @@ export default function HeroSection() {
             فقط أخبرنا ماذا تريد بكلماتك الخاصة، وسنفهم ونجد لك العقار المناسب
           </p>
 
-          {/* Mode Toggle */}
-          <div className="flex justify-center gap-2 mb-6 flex-wrap">
-            <Button
-              size="lg"
-              variant={mode === "buyer" ? "default" : "outline"}
-              onClick={() => handleModeSwitch("buyer")}
-              className="gap-2"
-              data-testid="button-mode-buyer"
-            >
-              <Users className="h-5 w-5" />
-              أبحث عن عقار
-            </Button>
-            <Button
-              size="lg"
-              variant={mode === "seller" ? "default" : "outline"}
-              onClick={() => handleModeSwitch("seller")}
-              className={`gap-2 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"}`}
-              data-testid="button-mode-seller"
-            >
-              <Building2 className="h-5 w-5" />
-              اعرض عقارك
-            </Button>
-            <Button
-              size="lg"
-              variant={mode === "investor" ? "default" : "outline"}
-              onClick={() => handleModeSwitch("investor")}
-              className={`gap-2 ${mode === "investor" ? "bg-amber-600 hover:bg-amber-700" : "border-amber-500 text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50"}`}
-              data-testid="button-investor"
-            >
-              <TrendingUp className="h-5 w-5" />
-              فرص للمستثمرين
-            </Button>
+          {/* Mode Toggle - Segmented Control for Buyer/Seller */}
+          <div className="flex justify-center gap-2 mb-6">
+            <div className="inline-flex rounded-lg border p-1 bg-muted/50">
+              <Button
+                size="lg"
+                variant={mode === "buyer" ? "default" : "ghost"}
+                onClick={() => handleModeSwitch("buyer")}
+                className="gap-2 rounded-md"
+                data-testid="button-mode-buyer"
+              >
+                <Users className="h-5 w-5" />
+                أبحث عن عقار
+              </Button>
+              <Button
+                size="lg"
+                variant={mode === "seller" ? "default" : "ghost"}
+                onClick={() => handleModeSwitch("seller")}
+                className={`gap-2 rounded-md ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                data-testid="button-mode-seller"
+              >
+                <Building2 className="h-5 w-5" />
+                اعرض عقارك
+              </Button>
+            </div>
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-2xl mb-8">

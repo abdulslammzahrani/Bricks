@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Home, Building2, User, LogIn } from "lucide-react";
+import { Menu, Home, Building2, User, LogIn, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function Header() {
@@ -41,6 +41,17 @@ export default function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <Link href="/investor">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              data-testid="button-investor"
+            >
+              <TrendingUp className="ml-2 h-4 w-4" />
+              للمستثمرين
+            </Button>
+          </Link>
           <Link href="/profile">
             <Button variant="ghost" size="sm" data-testid="button-login">
               <LogIn className="ml-2 h-4 w-4" />
@@ -77,6 +88,16 @@ export default function Header() {
                 );
               })}
               <div className="border-t pt-4 mt-2 flex flex-col gap-2">
+                <Link href="/investor" onClick={() => setIsOpen(false)}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-amber-500 text-amber-600"
+                    data-testid="mobile-button-investor"
+                  >
+                    <TrendingUp className="ml-2 h-4 w-4" />
+                    للمستثمرين
+                  </Button>
+                </Link>
                 <Link href="/profile" onClick={() => setIsOpen(false)}>
                   <Button variant="outline" className="w-full" data-testid="mobile-button-login">
                     <LogIn className="ml-2 h-4 w-4" />
