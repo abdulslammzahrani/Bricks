@@ -107,3 +107,38 @@ export const sendLogs = pgTable("send_logs", {
 export const insertSendLogSchema = createInsertSchema(sendLogs).omit({ id: true, sentAt: true });
 export type InsertSendLog = z.infer<typeof insertSendLogSchema>;
 export type SendLog = typeof sendLogs.$inferSelect;
+
+// Marketing integrations settings
+export const marketingSettings = pgTable("marketing_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  platform: text("platform").notNull().unique(), // snapchat, tiktok, facebook, google, mailchimp
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  pixelId: text("pixel_id"), // For pixel-based tracking (Snap, TikTok, Facebook, Google)
+  accessToken: text("access_token"), // API access token
+  apiKey: text("api_key"), // API key (MailChimp)
+  audienceId: text("audience_id"), // List/Audience ID (MailChimp)
+  conversionApiToken: text("conversion_api_token"), // Server-side conversion API
+  testEventCode: text("test_event_code"), // For testing events
+  dataCenter: text("data_center"), // MailChimp data center (us1, us2, etc.)
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketingSettingSchema = createInsertSchema(marketingSettings).omit({ id: true, updatedAt: true });
+export type InsertMarketingSetting = z.infer<typeof insertMarketingSettingSchema>;
+export type MarketingSetting = typeof marketingSettings.$inferSelect;
+
+// Marketing events log - tracks all marketing events sent
+export const marketingEvents = pgTable("marketing_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  platform: text("platform").notNull(), // snapchat, tiktok, facebook, google, mailchimp
+  eventName: text("event_name").notNull(), // PageView, Lead, Registration, etc.
+  eventData: jsonb("event_data"), // Event parameters
+  userId: varchar("user_id").references(() => users.id),
+  sessionId: text("session_id"),
+  status: text("status").notNull().default("sent"), // sent, failed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketingEventSchema = createInsertSchema(marketingEvents).omit({ id: true, createdAt: true });
+export type InsertMarketingEvent = z.infer<typeof insertMarketingEventSchema>;
+export type MarketingEvent = typeof marketingEvents.$inferSelect;
