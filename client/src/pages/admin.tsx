@@ -1087,80 +1087,78 @@ export default function AdminDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="grid grid-cols-12 gap-2 p-3 bg-muted/50 text-sm font-medium">
-                        <div className="col-span-2">الاسم</div>
-                        <div className="col-span-2">الواتساب</div>
-                        <div className="col-span-1">المدينة</div>
-                        <div className="col-span-2">الأحياء</div>
-                        <div className="col-span-1">النوع</div>
-                        <div className="col-span-2">الميزانية</div>
-                        <div className="col-span-1">الحالة</div>
-                        <div className="col-span-1">إجراء</div>
-                      </div>
-                      <ScrollArea className="h-[350px]">
-                        {clients.length > 0 ? (
-                          clients.map((client) => (
-                            <div 
+                    <ScrollArea className="h-[400px]">
+                      {clients.length > 0 ? (
+                        <div className="space-y-3">
+                          {clients.map((client) => (
+                            <Card 
                               key={client.id} 
-                              className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30"
+                              className="p-4"
                               data-testid={`row-client-${client.id}`}
                             >
-                              <div className="col-span-2 font-medium truncate">{client.userName}</div>
-                              <div className="col-span-2 text-sm" dir="ltr">{client.userPhone}</div>
-                              <div className="col-span-1">
-                                <Badge variant="secondary">{client.city}</Badge>
-                              </div>
-                              <div className="col-span-2 text-sm truncate">
-                                {client.districts?.slice(0, 2).join("، ") || "-"}
-                                {(client.districts?.length || 0) > 2 && ` +${(client.districts?.length || 0) - 2}`}
-                              </div>
-                              <div className="col-span-1">
-                                <Badge variant="outline">{propertyTypeLabels[client.propertyType] || client.propertyType}</Badge>
-                              </div>
-                              <div className="col-span-2 text-sm">
-                                {client.budgetMin ? formatCurrency(client.budgetMin) : "0"} - {client.budgetMax ? formatCurrency(client.budgetMax) : "-"}
-                              </div>
-                              <div className="col-span-1">
-                                <Button
-                                  size="sm"
-                                  variant={client.isActive ? "default" : "outline"}
-                                  className={client.isActive ? "bg-green-600" : ""}
-                                  onClick={() => toggleClientStatusMutation.mutate(client.id)}
-                                  disabled={toggleClientStatusMutation.isPending}
-                                  data-testid={`button-toggle-status-${client.id}`}
-                                >
+                              <div className="flex flex-col gap-3">
+                                <div className="flex items-start justify-between gap-2 flex-wrap">
+                                  <div>
+                                    <p className="font-medium">{client.userName}</p>
+                                    <p className="text-sm text-muted-foreground" dir="ltr">{client.userPhone}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant={client.isActive ? "default" : "outline"}
+                                      className={client.isActive ? "bg-green-600" : ""}
+                                      onClick={() => toggleClientStatusMutation.mutate(client.id)}
+                                      disabled={toggleClientStatusMutation.isPending}
+                                      data-testid={`button-toggle-status-${client.id}`}
+                                    >
+                                      {client.isActive ? (
+                                        <PlayCircle className="h-4 w-4" />
+                                      ) : (
+                                        <StopCircle className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() => sendToClientMutation.mutate(client.id)}
+                                      disabled={sendToClientMutation.isPending && sendingClientId === client.id}
+                                      data-testid={`button-send-${client.id}`}
+                                    >
+                                      {sendToClientMutation.isPending && sendingClientId === client.id ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Send className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="secondary">{client.city}</Badge>
+                                  <Badge variant="outline">{propertyTypeLabels[client.propertyType] || client.propertyType}</Badge>
                                   {client.isActive ? (
-                                    <PlayCircle className="h-4 w-4" />
+                                    <Badge className="bg-green-600">نشط</Badge>
                                   ) : (
-                                    <StopCircle className="h-4 w-4" />
+                                    <Badge variant="outline">متوقف</Badge>
                                   )}
-                                </Button>
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  <span>الأحياء: </span>
+                                  {client.districts?.join("، ") || "-"}
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground">الميزانية: </span>
+                                  <span className="font-medium">{client.budgetMin ? formatCurrency(client.budgetMin) : "0"} - {client.budgetMax ? formatCurrency(client.budgetMax) : "غير محدد"} ريال</span>
+                                </div>
                               </div>
-                              <div className="col-span-1">
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => sendToClientMutation.mutate(client.id)}
-                                  disabled={sendToClientMutation.isPending && sendingClientId === client.id}
-                                  data-testid={`button-send-${client.id}`}
-                                >
-                                  {sendToClientMutation.isPending && sendingClientId === client.id ? (
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Send className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-8 text-center text-muted-foreground">
-                            لا يوجد عملاء مسجلين
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          لا يوجد عملاء مسجلين
+                        </div>
+                      )}
+                    </ScrollArea>
                   </CardContent>
                 </Card>
 
@@ -1176,35 +1174,27 @@ export default function AdminDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="grid grid-cols-12 gap-2 p-3 bg-muted/50 text-sm font-medium">
-                        <div className="col-span-2">المدينة</div>
-                        <div className="col-span-2">الحي</div>
-                        <div className="col-span-2">النوع</div>
-                        <div className="col-span-2">السعر</div>
-                        <div className="col-span-2">الحالة</div>
-                        <div className="col-span-2">التوفر</div>
-                      </div>
-                      <ScrollArea className="h-[250px]">
-                        {properties.length > 0 ? (
-                          properties.map((prop) => (
-                            <div 
+                    <ScrollArea className="h-[300px]">
+                      {properties.length > 0 ? (
+                        <div className="space-y-3">
+                          {properties.map((prop) => (
+                            <Card 
                               key={prop.id} 
-                              className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30"
+                              className="p-4"
                               data-testid={`row-property-${prop.id}`}
                             >
-                              <div className="col-span-2">{prop.city}</div>
-                              <div className="col-span-2">{prop.district}</div>
-                              <div className="col-span-2">
-                                <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
-                              </div>
-                              <div className="col-span-2 font-medium text-primary">
-                                {formatCurrency(prop.price)} ريال
-                              </div>
-                              <div className="col-span-2">
-                                <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
-                              </div>
-                              <div className="col-span-2">
+                              <div className="flex items-start justify-between gap-3 flex-wrap">
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="secondary">{prop.city}</Badge>
+                                    <Badge variant="outline">{prop.district}</Badge>
+                                    <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
+                                    <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
+                                  </div>
+                                  <div className="text-lg font-bold text-primary">
+                                    {formatCurrency(prop.price)} ريال
+                                  </div>
+                                </div>
                                 <Button
                                   size="sm"
                                   variant={prop.isActive ? "default" : "destructive"}
@@ -1215,15 +1205,15 @@ export default function AdminDashboard() {
                                   {prop.isActive ? "متاح" : "غير متاح"}
                                 </Button>
                               </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-8 text-center text-muted-foreground">
-                            لا توجد عقارات
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </div>
+                            </Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          لا توجد عقارات
+                        </div>
+                      )}
+                    </ScrollArea>
                   </CardContent>
                 </Card>
 
