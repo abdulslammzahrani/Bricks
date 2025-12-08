@@ -84,6 +84,7 @@ export default function HeroSection() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingData, setPendingData] = useState<Record<string, string>>({});
+  const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string}>>([]);
 
   const exampleSegments = mode === "buyer" ? buyerExampleSegments : mode === "seller" ? sellerExampleSegments : investorExampleSegments;
   const fullExampleText = mode === "buyer" ? fullBuyerExampleText : mode === "seller" ? fullSellerExampleText : fullInvestorExampleText;
@@ -348,41 +349,41 @@ export default function HeroSection() {
     return amount;
   };
 
-  const generateConfirmationMessage = (data: Record<string, string>, currentMode: UserMode) => {
+  const generateConfirmationFields = (data: Record<string, string>, currentMode: UserMode) => {
     if (currentMode === "buyer") {
-      const lines = [
-        `الاسم: ${data.name}`,
-        `الجوال: ${data.phone}`,
-        `المدينة: ${data.city}`,
-        data.district ? `الحي: ${data.district}` : null,
-        `نوع العقار: ${data.propertyType}`,
-        data.budget ? `الميزانية: ${formatBudget(data.budget)}` : null,
-        data.paymentMethod ? `طريقة الدفع: ${data.paymentMethod === "cash" ? "كاش" : "تمويل بنكي"}` : null,
-      ].filter(Boolean);
-      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+      const fields = [
+        { label: "الاسم", value: data.name },
+        { label: "الجوال", value: data.phone },
+        { label: "المدينة", value: data.city },
+        data.district ? { label: "الحي", value: data.district } : null,
+        { label: "نوع العقار", value: data.propertyType },
+        data.budget ? { label: "الميزانية", value: formatBudget(data.budget) } : null,
+        data.paymentMethod ? { label: "طريقة الدفع", value: data.paymentMethod === "cash" ? "كاش" : "تمويل بنكي" } : null,
+      ].filter(Boolean) as Array<{label: string, value: string}>;
+      return fields;
     } else if (currentMode === "seller") {
-      const lines = [
-        `الاسم: ${data.name}`,
-        `الجوال: ${data.phone}`,
-        `المدينة: ${data.city}`,
-        `الحي: ${data.district}`,
-        `نوع العقار: ${data.propertyType}`,
-        `السعر: ${formatBudget(data.price)}`,
-        data.status ? `الحالة: ${data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء"}` : null,
-        `الموقع: تم تحديده على الخريطة`,
-        `الصور: ${uploadedFiles.length} صورة/فيديو`,
-      ].filter(Boolean);
-      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+      const fields = [
+        { label: "الاسم", value: data.name },
+        { label: "الجوال", value: data.phone },
+        { label: "المدينة", value: data.city },
+        { label: "الحي", value: data.district },
+        { label: "نوع العقار", value: data.propertyType },
+        { label: "السعر", value: formatBudget(data.price) },
+        data.status ? { label: "الحالة", value: data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء" } : null,
+        { label: "الموقع", value: "تم تحديده على الخريطة" },
+        { label: "الصور", value: `${uploadedFiles.length} صورة/فيديو` },
+      ].filter(Boolean) as Array<{label: string, value: string}>;
+      return fields;
     } else {
-      const lines = [
-        `الاسم: ${data.name}`,
-        `الجوال: ${data.phone}`,
-        `المدن المستهدفة: ${data.cities}`,
-        data.investmentTypes ? `نوع الاستثمار: ${data.investmentTypes}` : null,
-        (data.budgetMin && data.budgetMax) ? `الميزانية: من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` : null,
-        data.returnPreference ? `هدف الاستثمار: ${data.returnPreference}` : null,
-      ].filter(Boolean);
-      return lines.join("\n") + "\n\nإذا كانت المعلومات صحيحة اكتب \"موافق\" لاعتمادها";
+      const fields = [
+        { label: "الاسم", value: data.name },
+        { label: "الجوال", value: data.phone },
+        { label: "المدن المستهدفة", value: data.cities },
+        data.investmentTypes ? { label: "نوع الاستثمار", value: data.investmentTypes } : null,
+        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : null,
+        data.returnPreference ? { label: "هدف الاستثمار", value: data.returnPreference } : null,
+      ].filter(Boolean) as Array<{label: string, value: string}>;
+      return fields;
     }
   };
 
@@ -439,6 +440,7 @@ export default function HeroSection() {
     }
     setPendingConfirmation(false);
     setPendingData({});
+    setConfirmationFields([]);
   };
 
   const handleSubmit = () => {
@@ -493,10 +495,7 @@ export default function HeroSection() {
         if (hasRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
-          ]);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
           const missing: string[] = [];
           if (!mergedData.name) missing.push("الاسم");
@@ -513,10 +512,7 @@ export default function HeroSection() {
         if (hasRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
-          ]);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
           const missing: string[] = [];
           if (!mergedData.name) missing.push("الاسم");
@@ -538,10 +534,7 @@ export default function HeroSection() {
         if (hasRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: generateConfirmationMessage(mergedData, mode) }
-          ]);
+          setConfirmationFields(generateConfirmationFields(mergedData, mode));
         } else {
           const missing: string[] = [];
           if (!mergedData.name) missing.push("الاسم");
@@ -637,8 +630,8 @@ export default function HeroSection() {
             )}
 
             {/* Conversation area */}
-            {conversation.length > 0 && (
-              <div className="min-h-[120px] max-h-[200px] overflow-y-auto p-4 space-y-3 bg-muted/20">
+            {(conversation.length > 0 || pendingConfirmation) && (
+              <div className="min-h-[120px] max-h-[300px] overflow-y-auto p-4 space-y-3 bg-muted/20">
                 {conversation.map((msg, idx) => (
                   <div
                     key={idx}
@@ -655,6 +648,27 @@ export default function HeroSection() {
                     </div>
                   </div>
                 ))}
+                
+                {/* Confirmation Card */}
+                {pendingConfirmation && confirmationFields.length > 0 && (
+                  <div className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl rounded-tl-none bg-card border p-4" data-testid="confirmation-card">
+                      <p className="font-bold text-base mb-3 text-center">تأكيد البيانات</p>
+                      <div className="space-y-2">
+                        {confirmationFields.map((field, idx) => (
+                          <div key={idx} className="flex gap-2 text-sm">
+                            <span className="font-bold text-muted-foreground">{field.label}:</span>
+                            <span>{field.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4 pt-3 border-t text-center">
+                        إذا كانت المعلومات صحيحة اكتب <span className="font-bold text-primary">"موافق"</span> لاعتمادها
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 {isTyping && (
                   <div className="flex justify-end">
                     <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
