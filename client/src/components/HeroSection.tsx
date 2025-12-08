@@ -1163,79 +1163,90 @@ export default function HeroSection() {
     }
   };
 
-  // Voice recording functions
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        stream.getTracks().forEach(track => track.stop());
-        
-        // Transcribe the audio
-        setIsTranscribing(true);
-        setIsFullScreenChat(true);
-        
-        try {
-          const response = await fetch("/api/intake/transcribe", {
-            method: "POST",
-            headers: { "Content-Type": "audio/webm" },
-            body: audioBlob,
-          });
-          
-          const result = await response.json();
-          
-          if (result.success && result.text) {
-            // Set the transcribed text and submit it
-            setInputText(result.text);
-            if (textareaRef.current) {
-              textareaRef.current.textContent = result.text;
-            }
-            // Auto-submit the transcribed text
-            setTimeout(() => {
-              handleSubmitWithText(result.text);
-            }, 100);
-          } else {
-            toast({
-              title: "خطأ",
-              description: result.error || "فشل في تحويل الصوت لنص",
-              variant: "destructive",
-            });
-          }
-        } catch (error) {
-          toast({
-            title: "خطأ",
-            description: "فشل في إرسال الصوت",
-            variant: "destructive",
-          });
-        } finally {
-          setIsTranscribing(false);
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
+  // Voice recording using Web Speech API (browser-based, no server needed)
+  const startRecording = () => {
+    // Check if Web Speech API is supported
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
       toast({
-        title: "خطأ",
-        description: "لم نتمكن من الوصول للميكروفون. تأكد من إعطاء الإذن.",
+        title: "غير مدعوم",
+        description: "متصفحك لا يدعم التسجيل الصوتي. جرب Chrome أو Edge.",
         variant: "destructive",
       });
+      return;
     }
+    
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ar-SA"; // Arabic - Saudi Arabia
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    let finalTranscript = "";
+    
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setIsFullScreenChat(true);
+    };
+    
+    recognition.onresult = (event: any) => {
+      let interimTranscript = "";
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      
+      // Show interim results in the input field
+      const currentText = finalTranscript + interimTranscript;
+      setInputText(currentText);
+      if (textareaRef.current) {
+        textareaRef.current.textContent = currentText;
+      }
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+      
+      if (event.error === "not-allowed") {
+        toast({
+          title: "خطأ",
+          description: "لم نتمكن من الوصول للميكروفون. تأكد من إعطاء الإذن.",
+          variant: "destructive",
+        });
+      } else if (event.error === "no-speech") {
+        toast({
+          title: "تنبيه",
+          description: "لم يتم اكتشاف صوت. حاول مرة أخرى.",
+        });
+      }
+    };
+    
+    recognition.onend = () => {
+      setIsRecording(false);
+      
+      // Auto-submit if we got text
+      if (finalTranscript.trim()) {
+        setTimeout(() => {
+          handleSubmitWithText(finalTranscript.trim());
+        }, 100);
+      }
+    };
+    
+    // Store recognition instance for stopping later
+    (window as any).currentRecognition = recognition;
+    recognition.start();
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
+    const recognition = (window as any).currentRecognition;
+    if (recognition && isRecording) {
+      recognition.stop();
       setIsRecording(false);
     }
   };
