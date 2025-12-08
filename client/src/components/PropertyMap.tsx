@@ -79,7 +79,7 @@ export function PropertyMap({ properties }: PropertyMapProps) {
   }
 
   return (
-    <div className="h-64 md:h-80 rounded-lg overflow-hidden border">
+    <div className="h-64 md:h-80 rounded-lg overflow-hidden border relative z-0">
       <MapContainer
         center={defaultCenter}
         zoom={10}
