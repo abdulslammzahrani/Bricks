@@ -449,7 +449,7 @@ export default function HeroSection() {
   
   // Show mic tooltip when chat first expands
   useEffect(() => {
-    if (isExpanded && conversation.length <= 2) {
+    if (conversation.length >= 1 && conversation.length <= 2) {
       setShowMicTooltip(true);
       // Auto-hide after 6 seconds
       const timer = setTimeout(() => {
@@ -457,7 +457,7 @@ export default function HeroSection() {
       }, 6000);
       return () => clearTimeout(timer);
     }
-  }, [isExpanded, conversation.length]);
+  }, [conversation.length]);
 
   const buyerMutation = useMutation({
     mutationFn: async (data: any) => {
