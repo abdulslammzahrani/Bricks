@@ -3,7 +3,8 @@ import {
   buyerPreferences, type BuyerPreference, type InsertBuyerPreference,
   properties, type Property, type InsertProperty,
   matches, type Match, type InsertMatch,
-  contactRequests, type ContactRequest, type InsertContactRequest
+  contactRequests, type ContactRequest, type InsertContactRequest,
+  sendLogs, type SendLog, type InsertSendLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -23,14 +24,17 @@ export interface IStorage {
   updateBuyerPreference(id: string, pref: Partial<InsertBuyerPreference>): Promise<BuyerPreference | undefined>;
   deleteBuyerPreference(id: string): Promise<void>;
   getAllBuyerPreferences(): Promise<BuyerPreference[]>;
+  getAllBuyerPreferencesForAdmin(): Promise<BuyerPreference[]>;
 
   // Properties
   getProperty(id: string): Promise<Property | undefined>;
+  getPropertyForAdmin(id: string): Promise<Property | undefined>;
   getPropertiesBySeller(sellerId: string): Promise<Property[]>;
   createProperty(prop: InsertProperty): Promise<Property>;
   updateProperty(id: string, prop: Partial<InsertProperty>): Promise<Property | undefined>;
   deleteProperty(id: string): Promise<void>;
   getAllProperties(): Promise<Property[]>;
+  getAllPropertiesForAdmin(): Promise<Property[]>;
   incrementPropertyViews(id: string): Promise<void>;
 
   // Matches
@@ -55,6 +59,14 @@ export interface IStorage {
   getTopDistricts(city: string, limit?: number): Promise<{ district: string; count: number }[]>;
   getAverageBudgetByCity(): Promise<{ city: string; avgBudget: number }[]>;
   getDemandByPropertyType(): Promise<{ propertyType: string; count: number }[]>;
+
+  // Send Logs
+  createSendLog(log: InsertSendLog): Promise<SendLog>;
+  getSendLogs(): Promise<SendLog[]>;
+  getSendLogsByUser(userId: string): Promise<SendLog[]>;
+  getSendLogsByPreference(preferenceId: string): Promise<SendLog[]>;
+  updateSendLog(id: string, log: Partial<InsertSendLog>): Promise<SendLog | undefined>;
+  getPropertyIdsSentToPreference(preferenceId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -114,8 +126,17 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(buyerPreferences).where(eq(buyerPreferences.isActive, true));
   }
 
+  async getAllBuyerPreferencesForAdmin(): Promise<BuyerPreference[]> {
+    return db.select().from(buyerPreferences);
+  }
+
   // Properties
   async getProperty(id: string): Promise<Property | undefined> {
+    const [prop] = await db.select().from(properties).where(eq(properties.id, id));
+    return prop || undefined;
+  }
+
+  async getPropertyForAdmin(id: string): Promise<Property | undefined> {
     const [prop] = await db.select().from(properties).where(eq(properties.id, id));
     return prop || undefined;
   }
@@ -140,6 +161,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllProperties(): Promise<Property[]> {
     return db.select().from(properties).where(eq(properties.isActive, true));
+  }
+
+  async getAllPropertiesForAdmin(): Promise<Property[]> {
+    return db.select().from(properties);
   }
 
   async incrementPropertyViews(id: string): Promise<void> {
@@ -348,6 +373,47 @@ export class DatabaseStorage implements IStorage {
       propertyType: r.propertyType,
       count: Number(r.count),
     }));
+  }
+
+  // Send Logs
+  async createSendLog(log: InsertSendLog): Promise<SendLog> {
+    const [result] = await db.insert(sendLogs).values(log).returning();
+    return result;
+  }
+
+  async getSendLogs(): Promise<SendLog[]> {
+    return db.select().from(sendLogs).orderBy(desc(sendLogs.sentAt));
+  }
+
+  async getSendLogsByUser(userId: string): Promise<SendLog[]> {
+    return db.select().from(sendLogs).where(eq(sendLogs.userId, userId)).orderBy(desc(sendLogs.sentAt));
+  }
+
+  async getSendLogsByPreference(preferenceId: string): Promise<SendLog[]> {
+    return db.select().from(sendLogs).where(eq(sendLogs.preferenceId, preferenceId)).orderBy(desc(sendLogs.sentAt));
+  }
+
+  async updateSendLog(id: string, log: Partial<InsertSendLog>): Promise<SendLog | undefined> {
+    const [result] = await db.update(sendLogs).set(log).where(eq(sendLogs.id, id)).returning();
+    return result || undefined;
+  }
+
+  // Get all property IDs that have been sent to a specific preference
+  async getPropertyIdsSentToPreference(preferenceId: string): Promise<string[]> {
+    const logs = await db.select({ propertyIds: sendLogs.propertyIds })
+      .from(sendLogs)
+      .where(and(
+        eq(sendLogs.preferenceId, preferenceId),
+        eq(sendLogs.status, "sent")
+      ));
+    
+    const allIds: string[] = [];
+    logs.forEach(log => {
+      if (log.propertyIds) {
+        allIds.push(...log.propertyIds);
+      }
+    });
+    return Array.from(new Set(allIds)); // Return unique IDs
   }
 }
 

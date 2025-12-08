@@ -35,6 +35,10 @@ Preferred communication style: Simple, everyday language.
 - `/api/properties` - Property CRUD operations
 - `/api/admin/*` - Administrative analytics and management
 - `/api/admin/analytics/*` - Statistical data (top districts, budget analysis, property type demand)
+- `/api/admin/clients` - Get all clients (buyers) with their preferences for sending management
+- `/api/admin/clients/:preferenceId/send` - Manual send to a specific client
+- `/api/admin/send-all` - Bulk send to all active clients
+- `/api/admin/send-logs` - Get send history with enriched user/property data
 
 **Data Access Layer**: Storage abstraction (`server/storage.ts`) defining an `IStorage` interface with methods for users, buyer preferences, properties, matches, and contact requests. This abstraction enables future storage backend changes without modifying business logic.
 

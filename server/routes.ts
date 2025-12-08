@@ -1,9 +1,32 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema } from "@shared/schema";
+import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema, insertSendLogSchema } from "@shared/schema";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+
+// WhatsApp API Integration Point - Replace with actual implementation
+async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
+  // TODO: Integrate with WhatsApp Business API
+  // For now, simulate success for testing
+  console.log(`[WhatsApp] Sending to ${phone}:`, message);
+  return { success: true, response: "simulated_success" };
+}
+
+// Format property for WhatsApp message
+function formatPropertyMessage(property: { city: string; district: string; propertyType: string; price: number; id: string }): string {
+  const typeNames: Record<string, string> = {
+    apartment: "شقة",
+    villa: "فيلا",
+    land: "أرض",
+    building: "عمارة",
+  };
+  const formattedPrice = property.price >= 1000000 
+    ? `${(property.price / 1000000).toFixed(1)} مليون` 
+    : `${(property.price / 1000).toFixed(0)} ألف`;
+  
+  return `- ${typeNames[property.propertyType] || property.propertyType} في ${property.district}، ${property.city}\n  السعر: ${formattedPrice} ريال`;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -593,6 +616,316 @@ export async function registerRoutes(
     try {
       const requests = await storage.getAllContactRequests();
       res.json(requests);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ MATCHING & SENDING ROUTES ============
+
+  // Get all clients with their preferences for admin dashboard (including inactive)
+  app.get("/api/admin/clients", async (req, res) => {
+    try {
+      const preferences = await storage.getAllBuyerPreferencesForAdmin();
+      const users = await storage.getUsers("buyer");
+      
+      // Join preferences with user data
+      const clients = await Promise.all(preferences.map(async (pref) => {
+        const user = users.find(u => u.id === pref.userId);
+        return {
+          ...pref,
+          userName: user?.name || "غير معروف",
+          userPhone: user?.phone || "",
+          userEmail: user?.email || "",
+        };
+      }));
+      
+      res.json(clients);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get send logs
+  app.get("/api/admin/send-logs", async (req, res) => {
+    try {
+      const logs = await storage.getSendLogs();
+      
+      // Enrich with user and property data
+      const enrichedLogs = await Promise.all(logs.map(async (log) => {
+        const user = log.userId ? await storage.getUser(log.userId) : null;
+        const preference = log.preferenceId ? await storage.getBuyerPreference(log.preferenceId) : null;
+        
+        // Get property details (use admin method to include inactive properties)
+        const propertyDetails = await Promise.all(
+          (log.propertyIds || []).map(async (id) => {
+            const prop = await storage.getPropertyForAdmin(id);
+            return prop ? { id, city: prop.city, district: prop.district, price: prop.price } : null;
+          })
+        );
+        
+        return {
+          ...log,
+          userName: user?.name || "غير معروف",
+          userPhone: user?.phone || "",
+          preferenceCity: preference?.city || "",
+          propertyDetails: propertyDetails.filter(Boolean),
+        };
+      }));
+      
+      res.json(enrichedLogs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Find matching properties for a specific client preference (excluding previously sent)
+  app.get("/api/admin/clients/:preferenceId/matches", async (req, res) => {
+    try {
+      const { preferenceId } = req.params;
+      const preference = await storage.getBuyerPreference(preferenceId);
+      
+      if (!preference) {
+        return res.status(404).json({ error: "الرغبة غير موجودة" });
+      }
+
+      // Get all available properties
+      const allProperties = await storage.getAllProperties();
+      
+      // Get previously sent property IDs
+      const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preferenceId);
+      
+      // Filter matching properties
+      const matchingProperties = allProperties.filter(prop => {
+        // Must be same city
+        if (prop.city !== preference.city) return false;
+        
+        // District must be in preferred list (if specified)
+        if (preference.districts && preference.districts.length > 0) {
+          if (!preference.districts.includes(prop.district)) return false;
+        }
+        
+        // Property type must match
+        if (prop.propertyType !== preference.propertyType) return false;
+        
+        // Price must be within budget
+        if (preference.budgetMin && prop.price < preference.budgetMin) return false;
+        if (preference.budgetMax && prop.price > preference.budgetMax) return false;
+        
+        // Must not have been sent before
+        if (sentPropertyIds.includes(prop.id)) return false;
+        
+        // Must be active
+        if (!prop.isActive) return false;
+        
+        return true;
+      });
+      
+      res.json({
+        preference,
+        matchingProperties,
+        totalMatches: matchingProperties.length,
+        previouslySent: sentPropertyIds.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send matches to a specific client (manual send)
+  app.post("/api/admin/clients/:preferenceId/send", async (req, res) => {
+    try {
+      const { preferenceId } = req.params;
+      const { maxProperties = 5 } = req.body;
+      
+      const preference = await storage.getBuyerPreference(preferenceId);
+      if (!preference) {
+        return res.status(404).json({ error: "الرغبة غير موجودة" });
+      }
+      
+      const user = preference.userId ? await storage.getUser(preference.userId) : null;
+      if (!user) {
+        return res.status(404).json({ error: "المستخدم غير موجود" });
+      }
+
+      // Get matching properties
+      const allProperties = await storage.getAllProperties();
+      const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preferenceId);
+      
+      const matchingProperties = allProperties.filter(prop => {
+        if (prop.city !== preference.city) return false;
+        if (preference.districts && preference.districts.length > 0) {
+          if (!preference.districts.includes(prop.district)) return false;
+        }
+        if (prop.propertyType !== preference.propertyType) return false;
+        if (preference.budgetMin && prop.price < preference.budgetMin) return false;
+        if (preference.budgetMax && prop.price > preference.budgetMax) return false;
+        if (sentPropertyIds.includes(prop.id)) return false;
+        if (!prop.isActive) return false;
+        return true;
+      }).slice(0, maxProperties);
+
+      // Prepare message
+      let message: string;
+      let messageType: "matches" | "no_matches";
+      
+      if (matchingProperties.length > 0) {
+        const propertyList = matchingProperties.map(p => formatPropertyMessage(p)).join("\n\n");
+        message = `مرحباً ${user.name}،\n\nوجدنا لك ${matchingProperties.length} عقارات تناسب تفضيلاتك:\n\n${propertyList}\n\nتواصل معنا للمزيد من التفاصيل.\nتطابق - منصة العقارات الذكية`;
+        messageType = "matches";
+      } else {
+        message = `مرحباً ${user.name}،\n\nللأسف لا توجد عقارات جديدة تناسب تفضيلاتك حالياً.\nسنرسل لك إشعاراً فور توفر عقارات مناسبة.\n\nتطابق - منصة العقارات الذكية`;
+        messageType = "no_matches";
+      }
+
+      // Send via WhatsApp
+      const whatsappResult = await sendWhatsAppMessage(user.phone, message);
+
+      // Create send log
+      const sendLog = await storage.createSendLog({
+        preferenceId,
+        userId: user.id,
+        propertyIds: matchingProperties.map(p => p.id),
+        messageType,
+        status: whatsappResult.success ? "sent" : "failed",
+        whatsappResponse: whatsappResult.response || whatsappResult.error,
+      });
+
+      res.json({
+        success: whatsappResult.success,
+        sendLog,
+        propertiesSent: matchingProperties.length,
+        message: whatsappResult.success 
+          ? `تم إرسال ${matchingProperties.length} عقارات إلى ${user.name}` 
+          : "فشل في الإرسال",
+      });
+    } catch (error: any) {
+      console.error("Error sending matches:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send to all active clients (bulk send)
+  app.post("/api/admin/send-all", async (req, res) => {
+    try {
+      const { maxPropertiesPerClient = 5 } = req.body;
+      
+      const preferences = await storage.getAllBuyerPreferences();
+      const activePreferences = preferences.filter(p => p.isActive);
+      
+      const results = {
+        total: activePreferences.length,
+        successful: 0,
+        failed: 0,
+        noMatches: 0,
+        details: [] as Array<{ preferenceId: string; userName: string; status: string; propertiesSent: number }>,
+      };
+
+      for (const preference of activePreferences) {
+        try {
+          const user = preference.userId ? await storage.getUser(preference.userId) : null;
+          if (!user) continue;
+
+          const allProperties = await storage.getAllProperties();
+          const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preference.id);
+          
+          const matchingProperties = allProperties.filter(prop => {
+            if (prop.city !== preference.city) return false;
+            if (preference.districts && preference.districts.length > 0) {
+              if (!preference.districts.includes(prop.district)) return false;
+            }
+            if (prop.propertyType !== preference.propertyType) return false;
+            if (preference.budgetMin && prop.price < preference.budgetMin) return false;
+            if (preference.budgetMax && prop.price > preference.budgetMax) return false;
+            if (sentPropertyIds.includes(prop.id)) return false;
+            if (!prop.isActive) return false;
+            return true;
+          }).slice(0, maxPropertiesPerClient);
+
+          let message: string;
+          let messageType: "matches" | "no_matches";
+          
+          if (matchingProperties.length > 0) {
+            const propertyList = matchingProperties.map(p => formatPropertyMessage(p)).join("\n\n");
+            message = `مرحباً ${user.name}،\n\nوجدنا لك ${matchingProperties.length} عقارات تناسب تفضيلاتك:\n\n${propertyList}\n\nتواصل معنا للمزيد من التفاصيل.\nتطابق - منصة العقارات الذكية`;
+            messageType = "matches";
+          } else {
+            message = `مرحباً ${user.name}،\n\nللأسف لا توجد عقارات جديدة تناسب تفضيلاتك حالياً.\nسنرسل لك إشعاراً فور توفر عقارات مناسبة.\n\nتطابق - منصة العقارات الذكية`;
+            messageType = "no_matches";
+            results.noMatches++;
+          }
+
+          const whatsappResult = await sendWhatsAppMessage(user.phone, message);
+
+          await storage.createSendLog({
+            preferenceId: preference.id,
+            userId: user.id,
+            propertyIds: matchingProperties.map(p => p.id),
+            messageType,
+            status: whatsappResult.success ? "sent" : "failed",
+            whatsappResponse: whatsappResult.response || whatsappResult.error,
+          });
+
+          if (whatsappResult.success) {
+            results.successful++;
+          } else {
+            results.failed++;
+          }
+
+          results.details.push({
+            preferenceId: preference.id,
+            userName: user.name,
+            status: whatsappResult.success ? "sent" : "failed",
+            propertiesSent: matchingProperties.length,
+          });
+        } catch (err) {
+          results.failed++;
+          console.error(`Error sending to preference ${preference.id}:`, err);
+        }
+      }
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Error in bulk send:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Toggle client active status
+  app.patch("/api/admin/clients/:preferenceId/toggle-status", async (req, res) => {
+    try {
+      const { preferenceId } = req.params;
+      const preference = await storage.getBuyerPreference(preferenceId);
+      
+      if (!preference) {
+        return res.status(404).json({ error: "الرغبة غير موجودة" });
+      }
+
+      const updated = await storage.updateBuyerPreference(preferenceId, {
+        isActive: !preference.isActive,
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Toggle property availability
+  app.patch("/api/admin/properties/:propertyId/toggle-availability", async (req, res) => {
+    try {
+      const { propertyId } = req.params;
+      const property = await storage.getProperty(propertyId);
+      
+      if (!property) {
+        return res.status(404).json({ error: "العقار غير موجود" });
+      }
+
+      const updated = await storage.updateProperty(propertyId, {
+        isActive: !property.isActive,
+      });
+
+      res.json(updated);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

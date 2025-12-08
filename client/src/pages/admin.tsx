@@ -45,7 +45,9 @@ import {
   Handshake
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
-import type { User, BuyerPreference, Property, Match, ContactRequest } from "@shared/schema";
+import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog } from "@shared/schema";
+import { Send, History, PlayCircle, StopCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -87,13 +89,30 @@ const formatDate = (dateStr: string) => {
   });
 };
 
+// Client type with user info
+interface ClientWithUser extends BuyerPreference {
+  userName: string;
+  userPhone: string;
+  userEmail: string;
+}
+
+// Send log with enriched data
+interface EnrichedSendLog extends SendLog {
+  userName: string;
+  userPhone: string;
+  preferenceCity: string;
+  propertyDetails: Array<{ id: string; city: string; district: string; price: number }>;
+}
+
 export default function AdminDashboard() {
+  const { toast } = useToast();
   const [selectedCity, setSelectedCity] = useState("جدة");
   const [searchQuery, setSearchQuery] = useState("");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [sendingClientId, setSendingClientId] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
@@ -126,6 +145,16 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/contact-requests"],
   });
 
+  // Clients with preferences for sending
+  const { data: clients = [], refetch: refetchClients } = useQuery<ClientWithUser[]>({
+    queryKey: ["/api/admin/clients"],
+  });
+
+  // Send logs
+  const { data: sendLogs = [], refetch: refetchSendLogs } = useQuery<EnrichedSendLog[]>({
+    queryKey: ["/api/admin/send-logs"],
+  });
+
   const { data: topDistricts = [] } = useQuery<Array<{ district: string; count: number }>>({
     queryKey: ["/api/admin/analytics/top-districts", selectedCity],
   });
@@ -145,6 +174,67 @@ export default function AdminDashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    },
+  });
+
+  // Send to single client
+  const sendToClientMutation = useMutation({
+    mutationFn: async (preferenceId: string) => {
+      setSendingClientId(preferenceId);
+      return apiRequest("POST", `/api/admin/clients/${preferenceId}/send`, { maxProperties: 5 });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "تم الإرسال",
+        description: data.message || `تم إرسال العقارات بنجاح`,
+      });
+      refetchSendLogs();
+      refetchClients();
+      setSendingClientId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "فشل الإرسال",
+        description: error.message || "حدث خطأ أثناء الإرسال",
+        variant: "destructive",
+      });
+      setSendingClientId(null);
+    },
+  });
+
+  // Toggle client status
+  const toggleClientStatusMutation = useMutation({
+    mutationFn: async (preferenceId: string) => {
+      return apiRequest("PATCH", `/api/admin/clients/${preferenceId}/toggle-status`);
+    },
+    onSuccess: () => {
+      refetchClients();
+      toast({
+        title: "تم التحديث",
+        description: "تم تغيير حالة العميل",
+      });
+    },
+  });
+
+  // Bulk send to all
+  const bulkSendMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/admin/send-all", { maxPropertiesPerClient: 5 });
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "تم الإرسال الجماعي",
+        description: `تم الإرسال لـ ${data.successful} عميل من أصل ${data.total}`,
+      });
+      refetchSendLogs();
+      refetchClients();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "فشل الإرسال",
+        description: error.message || "حدث خطأ أثناء الإرسال الجماعي",
+        variant: "destructive",
+      });
     },
   });
 
@@ -326,6 +416,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="analytics" data-testid="tab-analytics">
                 <TrendingUp className="ml-2 h-4 w-4" />
                 التحليلات
+              </TabsTrigger>
+              <TabsTrigger value="sending" data-testid="tab-sending">
+                <Send className="ml-2 h-4 w-4" />
+                الإرسال
               </TabsTrigger>
             </TabsList>
 
@@ -924,6 +1018,256 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Sending Tab */}
+            <TabsContent value="sending" className="space-y-4">
+              {/* Bulk Send Button */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Send className="h-5 w-5 text-primary" />
+                        إرسال العقارات للعملاء
+                      </CardTitle>
+                      <CardDescription>
+                        إرسال العقارات المطابقة لجميع العملاء النشطين عبر واتساب
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      onClick={() => bulkSendMutation.mutate()} 
+                      disabled={bulkSendMutation.isPending}
+                      data-testid="button-bulk-send"
+                    >
+                      {bulkSendMutation.isPending ? (
+                        <>
+                          <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
+                          جاري الإرسال...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="ml-2 h-4 w-4" />
+                          إرسال للجميع
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* Clients Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    جدول العملاء ({clients.length})
+                  </CardTitle>
+                  <CardDescription>
+                    العملاء المسجلين وتفضيلاتهم - إرسال يدوي أو تغيير الحالة
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-12 gap-2 p-3 bg-muted/50 text-sm font-medium">
+                      <div className="col-span-2">الاسم</div>
+                      <div className="col-span-2">الواتساب</div>
+                      <div className="col-span-1">المدينة</div>
+                      <div className="col-span-2">الأحياء</div>
+                      <div className="col-span-1">النوع</div>
+                      <div className="col-span-2">الميزانية</div>
+                      <div className="col-span-1">الحالة</div>
+                      <div className="col-span-1">إجراء</div>
+                    </div>
+                    <ScrollArea className="h-[350px]">
+                      {clients.length > 0 ? (
+                        clients.map((client) => (
+                          <div 
+                            key={client.id} 
+                            className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30"
+                            data-testid={`row-client-${client.id}`}
+                          >
+                            <div className="col-span-2 font-medium truncate">{client.userName}</div>
+                            <div className="col-span-2 text-sm" dir="ltr">{client.userPhone}</div>
+                            <div className="col-span-1">
+                              <Badge variant="secondary">{client.city}</Badge>
+                            </div>
+                            <div className="col-span-2 text-sm truncate">
+                              {client.districts?.slice(0, 2).join("، ") || "-"}
+                              {(client.districts?.length || 0) > 2 && ` +${(client.districts?.length || 0) - 2}`}
+                            </div>
+                            <div className="col-span-1">
+                              <Badge variant="outline">{propertyTypeLabels[client.propertyType] || client.propertyType}</Badge>
+                            </div>
+                            <div className="col-span-2 text-sm">
+                              {client.budgetMin ? formatCurrency(client.budgetMin) : "0"} - {client.budgetMax ? formatCurrency(client.budgetMax) : "-"}
+                            </div>
+                            <div className="col-span-1">
+                              <Button
+                                size="sm"
+                                variant={client.isActive ? "default" : "outline"}
+                                className={client.isActive ? "bg-green-600 hover:bg-green-700" : ""}
+                                onClick={() => toggleClientStatusMutation.mutate(client.id)}
+                                disabled={toggleClientStatusMutation.isPending}
+                                data-testid={`button-toggle-status-${client.id}`}
+                              >
+                                {client.isActive ? (
+                                  <PlayCircle className="h-4 w-4" />
+                                ) : (
+                                  <StopCircle className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <div className="col-span-1">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => sendToClientMutation.mutate(client.id)}
+                                disabled={sendToClientMutation.isPending && sendingClientId === client.id}
+                                data-testid={`button-send-${client.id}`}
+                              >
+                                {sendToClientMutation.isPending && sendingClientId === client.id ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          لا يوجد عملاء مسجلين
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Properties Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    جدول العقارات ({properties.length})
+                  </CardTitle>
+                  <CardDescription>
+                    العقارات المتاحة للإرسال - تغيير التوفر
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-12 gap-2 p-3 bg-muted/50 text-sm font-medium">
+                      <div className="col-span-2">المدينة</div>
+                      <div className="col-span-2">الحي</div>
+                      <div className="col-span-2">النوع</div>
+                      <div className="col-span-2">السعر</div>
+                      <div className="col-span-2">الحالة</div>
+                      <div className="col-span-2">التوفر</div>
+                    </div>
+                    <ScrollArea className="h-[250px]">
+                      {properties.length > 0 ? (
+                        properties.map((prop) => (
+                          <div 
+                            key={prop.id} 
+                            className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30"
+                            data-testid={`row-property-${prop.id}`}
+                          >
+                            <div className="col-span-2">{prop.city}</div>
+                            <div className="col-span-2">{prop.district}</div>
+                            <div className="col-span-2">
+                              <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
+                            </div>
+                            <div className="col-span-2 font-medium text-primary">
+                              {formatCurrency(prop.price)} ريال
+                            </div>
+                            <div className="col-span-2">
+                              <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
+                            </div>
+                            <div className="col-span-2">
+                              <Button
+                                size="sm"
+                                variant={prop.isActive ? "default" : "destructive"}
+                                onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
+                                disabled={togglePropertyMutation.isPending}
+                                data-testid={`button-toggle-property-${prop.id}`}
+                              >
+                                {prop.isActive ? "متاح" : "غير متاح"}
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                          لا توجد عقارات
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Send Logs */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-5 w-5 text-primary" />
+                    سجل الإرسال ({sendLogs.length})
+                  </CardTitle>
+                  <CardDescription>
+                    سجل العمليات المرسلة عبر واتساب
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px]">
+                    {sendLogs.length > 0 ? (
+                      <div className="space-y-3">
+                        {sendLogs.map((log) => (
+                          <Card key={log.id} className="p-4" data-testid={`card-sendlog-${log.id}`}>
+                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                              <div className="space-y-2 flex-1">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="font-medium">{log.userName}</span>
+                                  <span className="text-sm text-muted-foreground" dir="ltr">{log.userPhone}</span>
+                                  <Badge variant={log.status === "sent" ? "default" : "destructive"}>
+                                    {log.status === "sent" ? "تم الإرسال" : log.status === "failed" ? "فشل" : "قيد الانتظار"}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Badge variant="outline">
+                                    {log.messageType === "matches" ? `${log.propertyIds?.length || 0} عقارات` : "لا توجد عقارات"}
+                                  </Badge>
+                                  {log.preferenceCity && (
+                                    <Badge variant="secondary">{log.preferenceCity}</Badge>
+                                  )}
+                                </div>
+                                {log.propertyDetails && Array.isArray(log.propertyDetails) && log.propertyDetails.length > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {log.propertyDetails.map((p, idx) => (
+                                      <span key={p?.id || idx}>
+                                        {p?.district || "-"} ({formatCurrency(p?.price || 0)})
+                                        {idx < log.propertyDetails.length - 1 ? "، " : ""}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-left text-sm text-muted-foreground">
+                                {log.sentAt && formatDate(log.sentAt.toString())}
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        لا توجد سجلات إرسال بعد
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>

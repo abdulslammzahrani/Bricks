@@ -88,3 +88,19 @@ export const contactRequests = pgTable("contact_requests", {
 export const insertContactRequestSchema = createInsertSchema(contactRequests).omit({ id: true });
 export type InsertContactRequest = z.infer<typeof insertContactRequestSchema>;
 export type ContactRequest = typeof contactRequests.$inferSelect;
+
+// Send logs - tracks WhatsApp messages sent to clients
+export const sendLogs = pgTable("send_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  preferenceId: varchar("preference_id").references(() => buyerPreferences.id),
+  userId: varchar("user_id").references(() => users.id),
+  propertyIds: text("property_ids").array().default(sql`'{}'::text[]`), // Array of property IDs sent
+  messageType: text("message_type").notNull().default("matches"), // matches, no_matches
+  status: text("status").notNull().default("pending"), // pending, sent, failed
+  sentAt: timestamp("sent_at").defaultNow(),
+  whatsappResponse: text("whatsapp_response"), // Store API response
+});
+
+export const insertSendLogSchema = createInsertSchema(sendLogs).omit({ id: true, sentAt: true });
+export type InsertSendLog = z.infer<typeof insertSendLogSchema>;
+export type SendLog = typeof sendLogs.$inferSelect;
