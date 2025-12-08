@@ -1582,7 +1582,7 @@ export default function HeroSection() {
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!inputText.trim() && !pendingConfirmation}
-                className={`rounded-full h-11 w-11 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : mode === "investor" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                className="rounded-full"
                 data-testid="button-send-fullscreen"
               >
                 <Send className="h-5 w-5" />
@@ -1641,7 +1641,7 @@ export default function HeroSection() {
                 size="lg"
                 variant={mode === "buyer" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-lg px-6 text-base"
+                className="gap-2 rounded-lg"
                 data-testid="button-mode-buyer"
               >
                 <Users className="h-5 w-5" />
@@ -1651,7 +1651,7 @@ export default function HeroSection() {
                 size="lg"
                 variant={mode === "seller" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("seller")}
-                className={`gap-2 rounded-lg px-6 text-base ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                className="gap-2 rounded-lg"
                 data-testid="button-mode-seller"
               >
                 <Building2 className="h-5 w-5" />
@@ -1833,7 +1833,7 @@ export default function HeroSection() {
                     onClick={handleSubmit}
                     disabled={buyerMutation.isPending || sellerMutation.isPending}
                     data-testid="button-send"
-                    className={`flex-shrink-0 ${mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}`}
+                    className="flex-shrink-0"
                   >
                     <Send className="h-5 w-5" />
                   </Button>
@@ -1856,7 +1856,7 @@ export default function HeroSection() {
                       onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
                       buttonVariant="outline"
                       buttonSize="icon"
-                      buttonClassName="flex-shrink-0 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                      buttonClassName="flex-shrink-0"
                     >
                       <Image className="h-5 w-5" />
                     </FileUploadButton>
@@ -1869,7 +1869,7 @@ export default function HeroSection() {
                       variant="outline"
                       size="icon"
                       onClick={() => setShowLocationPicker(true)}
-                      className={`flex-shrink-0 ${extractedData.latitude ? "border-green-500 bg-green-50 dark:bg-green-950 text-green-600" : "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"}`}
+                      className={`flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
                       data-testid="button-open-map"
                     >
                       <MapPin className="h-5 w-5" />
@@ -1926,7 +1926,6 @@ export default function HeroSection() {
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
                   <Button 
                     variant="default"
-                    className={mode === "seller" ? "bg-green-600 hover:bg-green-700" : ""}
                     onClick={() => window.location.href = "/profile"}
                     data-testid="button-go-profile"
                   >
@@ -1951,10 +1950,10 @@ export default function HeroSection() {
 
           {/* Saudi Arabia Map */}
           {!isComplete && !isFullScreenChat && (
-            <div className="mt-6 max-w-3xl mx-auto">
+            <div className="mt-8 max-w-3xl mx-auto">
               <SaudiMap 
                 markers={mapMarkers} 
-                className="h-48 md:h-64 shadow-lg border"
+                className="h-48 md:h-56 rounded-md border border-border/50 shadow-sm"
               />
             </div>
           )}
