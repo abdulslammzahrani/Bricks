@@ -250,36 +250,46 @@ export default function HeroSection() {
   };
 
   const handleSubmit = () => {
-    if (!inputText.trim()) return;
+    const hasInput = inputText.trim().length > 0;
     
-    const newData = mode === "buyer" ? extractBuyerInfo(inputText) : extractSellerInfo(inputText);
-    setExtractedData(newData);
+    let mergedData = { ...extractedData };
     
-    setConversation(prev => [
-      ...prev,
-      { type: "user", text: inputText }
-    ]);
-    
-    setInputText("");
-    if (textareaRef.current) {
-      textareaRef.current.textContent = "";
+    if (hasInput) {
+      const newData = mode === "buyer" ? extractBuyerInfo(inputText) : extractSellerInfo(inputText);
+      Object.keys(newData).forEach(key => {
+        if (newData[key]) {
+          mergedData[key] = newData[key];
+        }
+      });
+      setExtractedData(mergedData);
+      
+      setConversation(prev => [
+        ...prev,
+        { type: "user", text: inputText }
+      ]);
+      
+      setInputText("");
+      if (textareaRef.current) {
+        textareaRef.current.textContent = "";
+      }
     }
+    
     setIsTyping(true);
     
     setTimeout(() => {
       if (mode === "buyer") {
-        const hasRequired = newData.name && newData.phone && newData.city && newData.propertyType;
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType;
         if (hasRequired) {
           buyerMutation.mutate({
-            name: newData.name,
-            email: `${newData.phone}@temp.com`,
-            phone: newData.phone,
-            city: newData.city,
-            districts: newData.district ? [newData.district] : [],
-            propertyType: newData.propertyType === "شقة" ? "apartment" : newData.propertyType === "فيلا" ? "villa" : newData.propertyType === "أرض" ? "land" : "apartment",
+            name: mergedData.name,
+            email: `${mergedData.phone}@temp.com`,
+            phone: mergedData.phone,
+            city: mergedData.city,
+            districts: mergedData.district ? [mergedData.district] : [],
+            propertyType: mergedData.propertyType === "شقة" ? "apartment" : mergedData.propertyType === "فيلا" ? "villa" : mergedData.propertyType === "أرض" ? "land" : "apartment",
             budgetMin: 0,
-            budgetMax: parseInt(newData.budget || "0"),
-            paymentMethod: newData.paymentMethod || "cash",
+            budgetMax: parseInt(mergedData.budget || "0"),
+            paymentMethod: mergedData.paymentMethod || "cash",
           });
           setConversation(prev => [
             ...prev,
@@ -287,27 +297,27 @@ export default function HeroSection() {
           ]);
         } else {
           const missing: string[] = [];
-          if (!newData.name) missing.push("الاسم");
-          if (!newData.phone) missing.push("رقم الجوال");
-          if (!newData.city) missing.push("المدينة");
-          if (!newData.propertyType) missing.push("نوع العقار");
+          if (!mergedData.name) missing.push("الاسم");
+          if (!mergedData.phone) missing.push("رقم الجوال");
+          if (!mergedData.city) missing.push("المدينة");
+          if (!mergedData.propertyType) missing.push("نوع العقار");
           setConversation(prev => [
             ...prev,
             { type: "system", text: `شكراً! يرجى إضافة: ${missing.join("، ")}` }
           ]);
         }
       } else {
-        const hasRequired = newData.name && newData.phone && newData.city && newData.district && newData.propertyType && newData.price && uploadedFiles.length > 0;
+        const hasRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && mergedData.propertyType && mergedData.price && uploadedFiles.length > 0;
         if (hasRequired) {
           sellerMutation.mutate({
-            name: newData.name,
-            email: `${newData.phone}@temp.com`,
-            phone: newData.phone,
-            city: newData.city,
-            district: newData.district,
-            propertyType: newData.propertyType === "شقة" ? "apartment" : newData.propertyType === "فيلا" ? "villa" : newData.propertyType === "أرض" ? "land" : "apartment",
-            price: parseInt(newData.price),
-            status: newData.status || "ready",
+            name: mergedData.name,
+            email: `${mergedData.phone}@temp.com`,
+            phone: mergedData.phone,
+            city: mergedData.city,
+            district: mergedData.district,
+            propertyType: mergedData.propertyType === "شقة" ? "apartment" : mergedData.propertyType === "فيلا" ? "villa" : mergedData.propertyType === "أرض" ? "land" : "apartment",
+            price: parseInt(mergedData.price),
+            status: mergedData.status || "ready",
             images: uploadedFiles,
           });
           setConversation(prev => [
@@ -316,12 +326,12 @@ export default function HeroSection() {
           ]);
         } else {
           const missing: string[] = [];
-          if (!newData.name) missing.push("الاسم");
-          if (!newData.phone) missing.push("رقم الجوال");
-          if (!newData.city) missing.push("المدينة");
-          if (!newData.district) missing.push("الحي");
-          if (!newData.propertyType) missing.push("نوع العقار");
-          if (!newData.price) missing.push("السعر");
+          if (!mergedData.name) missing.push("الاسم");
+          if (!mergedData.phone) missing.push("رقم الجوال");
+          if (!mergedData.city) missing.push("المدينة");
+          if (!mergedData.district) missing.push("الحي");
+          if (!mergedData.propertyType) missing.push("نوع العقار");
+          if (!mergedData.price) missing.push("السعر");
           if (uploadedFiles.length === 0) missing.push("الصور أو الفيديوهات");
           setConversation(prev => [
             ...prev,
