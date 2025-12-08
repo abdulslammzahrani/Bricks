@@ -18,48 +18,6 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Building2 className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold" data-testid="logo-text">تطابق</span>
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location === item.href ? "text-primary" : "text-muted-foreground"
-              }`}
-              data-testid={`nav-link-${item.href.replace("/", "") || "home"}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-3">
-          <Link href="/investor">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-              data-testid="button-investor"
-            >
-              <TrendingUp className="ml-2 h-4 w-4" />
-              للمستثمرين
-            </Button>
-          </Link>
-          <Link href="/profile">
-            <Button variant="ghost" size="sm" data-testid="button-login">
-              <LogIn className="ml-2 h-4 w-4" />
-              تسجيل الدخول
-            </Button>
-          </Link>
-        </div>
-
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="md:hidden">
             <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
@@ -108,6 +66,48 @@ export default function Header() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <nav className="hidden md:flex items-center gap-6">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location === item.href ? "text-primary" : "text-muted-foreground"
+              }`}
+              data-testid={`nav-link-${item.href.replace("/", "") || "home"}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/investor">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              data-testid="button-investor"
+            >
+              <TrendingUp className="ml-2 h-4 w-4" />
+              للمستثمرين
+            </Button>
+          </Link>
+          <Link href="/profile">
+            <Button variant="ghost" size="sm" data-testid="button-login">
+              <LogIn className="ml-2 h-4 w-4" />
+              تسجيل الدخول
+            </Button>
+          </Link>
+        </div>
+
+        <Link href="/" className="flex items-center gap-2">
+          <span className="text-xl font-bold" data-testid="logo-text">تطابق</span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+            <Building2 className="h-5 w-5 text-primary-foreground" />
+          </div>
+        </Link>
       </div>
     </header>
   );
