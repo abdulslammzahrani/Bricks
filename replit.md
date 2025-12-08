@@ -51,11 +51,41 @@ Preferred communication style: Simple, everyday language.
 **Database**: PostgreSQL accessed through Drizzle ORM, with schema defined in `shared/schema.ts`.
 
 **Schema Design**:
-- **users**: Polymorphic table supporting buyer, seller, and admin roles with optional `accountType` (individual/developer/office) and `entityName` for sellers
+- **users**: Polymorphic table supporting buyer, seller, and admin roles with optional `accountType` (individual/developer/office) and `entityName` for sellers. Includes seller verification fields for REGA compliance (see Seller Verification section).
 - **buyerPreferences**: Captures buyer requirements including city, districts (array), property type, budget range, payment method, and purchase purpose
-- **properties**: Seller listings with type, location, price, area, rooms, and status fields
+- **properties**: Seller listings with type, location, price, area, rooms, status, and additional fields (bathrooms, furnishing, yearBuilt, amenities array)
 - **matches**: Junction table linking buyer preferences to properties with compatibility scoring
 - **contactRequests**: Tracks buyer-seller connection attempts
+
+### Seller Verification System (REGA Compliance)
+
+**Purpose**: Saudi Arabia's Real Estate General Authority (REGA) requires real estate advertisers to be licensed. The platform enforces regulatory compliance through seller verification.
+
+**User Schema Verification Fields**:
+- `isVerified`: Boolean flag indicating if seller is verified (displayed as "موثوق" badge)
+- `verificationStatus`: Workflow status - pending, in_review, approved, rejected, expired
+- `falLicenseNumber`: FAL license number from REGA (رقم رخصة فال)
+- `adLicenseNumber`: Advertisement license number (رقم ترخيص الإعلان)
+- `licenseIssueDate`: License issue date (تاريخ إصدار الترخيص)
+- `licenseExpiryDate`: License expiry date (تاريخ انتهاء الترخيص)
+- `commercialRegNumber`: Commercial registration number for companies (رقم السجل التجاري)
+- `nationalId`: National ID / Iqama number (رقم الهوية/الإقامة)
+- `city`: Office/headquarters city (مدينة المكتب)
+- `officeAddress`: Office address (عنوان المكتب)
+- `whatsappNumber`: WhatsApp contact number (رقم واتساب للتواصل)
+- `websiteUrl`: Website URL (الموقع الإلكتروني)
+
+**UI Display**:
+- Verified sellers show green "موثوق" badge with ShieldCheck icon on property detail page
+- License information section displays FAL license, ad license, expiry date, and commercial registration
+- Unverified sellers show amber warning notice "لم يتم التحقق من هذا المعلن بعد"
+- WhatsApp button appears if seller has whatsappNumber set
+
+**Test IDs**:
+- `badge-verified`: Verification badge
+- `text-fal-license`: FAL license number
+- `text-ad-license`: Advertisement license number
+- `button-whatsapp`: WhatsApp contact button
 
 **Unique Architectural Decisions**:
 - Districts stored as PostgreSQL text arrays for multi-district preferences

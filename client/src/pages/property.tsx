@@ -38,6 +38,9 @@ import {
   Droplets,
   X,
   ChevronRight,
+  ShieldCheck,
+  BadgeCheck,
+  ExternalLink,
 } from "lucide-react";
 
 interface PropertyWithSeller extends Property {
@@ -47,6 +50,15 @@ interface PropertyWithSeller extends Property {
     phone: string;
     accountType: string | null;
     entityName: string | null;
+    isVerified: boolean | null;
+    verificationStatus: string | null;
+    falLicenseNumber: string | null;
+    adLicenseNumber: string | null;
+    licenseIssueDate: string | null;
+    licenseExpiryDate: string | null;
+    commercialRegNumber: string | null;
+    city: string | null;
+    whatsappNumber: string | null;
   } | null;
 }
 
@@ -502,26 +514,96 @@ export default function PropertyPage() {
             {property.seller && (
               <Card className="sticky top-4">
                 <CardHeader className="pb-3">
-                  <h2 className="font-bold text-lg">العقار معلن من قبل</h2>
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="font-bold text-lg">العقار معلن من قبل</h2>
+                    {property.seller.isVerified && (
+                      <Badge className="bg-green-600 text-white gap-1" data-testid="badge-verified">
+                        <ShieldCheck className="h-3 w-3" />
+                        موثوق
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center relative">
                       <UserIcon className="h-7 w-7 text-primary" />
+                      {property.seller.isVerified && (
+                        <div className="absolute -bottom-1 -right-1 bg-green-600 rounded-full p-0.5">
+                          <BadgeCheck className="h-4 w-4 text-white" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="font-bold text-lg" data-testid="text-seller-name">{property.seller.name}</p>
                       {property.seller.entityName && (
                         <p className="text-sm text-muted-foreground">{property.seller.entityName}</p>
                       )}
-                      {property.seller.accountType && (
-                        <Badge variant="outline" className="mt-1">
-                          {property.seller.accountType === "individual" ? "فرد" : 
-                           property.seller.accountType === "developer" ? "مطور عقاري" : "مكتب عقاري"}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {property.seller.accountType && (
+                          <Badge variant="outline">
+                            {property.seller.accountType === "individual" ? "فرد" : 
+                             property.seller.accountType === "developer" ? "مطور عقاري" : "مكتب عقاري"}
+                          </Badge>
+                        )}
+                        {property.seller.city && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {property.seller.city}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* License Info */}
+                  {(property.seller.falLicenseNumber || property.seller.adLicenseNumber) && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2 text-sm">
+                        <p className="font-medium text-muted-foreground flex items-center gap-1">
+                          <ShieldCheck className="h-4 w-4 text-green-600" />
+                          معلومات ترخيص الإعلان
+                        </p>
+                        {property.seller.falLicenseNumber && (
+                          <div className="flex justify-between py-1">
+                            <span className="text-muted-foreground">رقم رخصة فال</span>
+                            <span className="font-medium" data-testid="text-fal-license">{property.seller.falLicenseNumber}</span>
+                          </div>
+                        )}
+                        {property.seller.adLicenseNumber && (
+                          <div className="flex justify-between py-1">
+                            <span className="text-muted-foreground">رقم ترخيص الإعلان</span>
+                            <span className="font-medium" data-testid="text-ad-license">{property.seller.adLicenseNumber}</span>
+                          </div>
+                        )}
+                        {property.seller.licenseExpiryDate && (
+                          <div className="flex justify-between py-1">
+                            <span className="text-muted-foreground">صالح حتى</span>
+                            <span className="font-medium">{property.seller.licenseExpiryDate}</span>
+                          </div>
+                        )}
+                        {property.seller.commercialRegNumber && (
+                          <div className="flex justify-between py-1">
+                            <span className="text-muted-foreground">السجل التجاري</span>
+                            <span className="font-medium">{property.seller.commercialRegNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Unverified Notice */}
+                  {!property.seller.isVerified && (
+                    <>
+                      <Separator />
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-center">
+                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                          لم يتم التحقق من هذا المعلن بعد
+                        </p>
+                      </div>
+                    </>
+                  )}
                   
                   <Separator />
                   
@@ -542,6 +624,14 @@ export default function PropertyPage() {
                         اتصال: {property.seller.phone}
                       </a>
                     </Button>
+                    {property.seller.whatsappNumber && (
+                      <Button variant="outline" className="w-full gap-2 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300" size="lg" asChild>
+                        <a href={`https://wa.me/${property.seller.whatsappNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" data-testid="button-whatsapp">
+                          <MessageCircle className="h-5 w-5" />
+                          واتساب
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

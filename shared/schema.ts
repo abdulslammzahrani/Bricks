@@ -12,6 +12,19 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("buyer"), // buyer, seller, admin
   accountType: text("account_type"), // individual, developer, office (for sellers)
   entityName: text("entity_name"), // company name for sellers
+  // Seller verification fields (REGA compliance)
+  isVerified: boolean("is_verified").default(false), // موثوق من الهيئة العامة للعقار
+  verificationStatus: text("verification_status").default("pending"), // pending, in_review, approved, rejected, expired
+  falLicenseNumber: text("fal_license_number"), // رقم رخصة فال
+  adLicenseNumber: text("ad_license_number"), // رقم ترخيص الإعلان
+  licenseIssueDate: text("license_issue_date"), // تاريخ إصدار الترخيص
+  licenseExpiryDate: text("license_expiry_date"), // تاريخ انتهاء الترخيص
+  commercialRegNumber: text("commercial_reg_number"), // رقم السجل التجاري (للشركات)
+  nationalId: text("national_id"), // رقم الهوية/الإقامة
+  city: text("city"), // مدينة المكتب/المقر
+  officeAddress: text("office_address"), // عنوان المكتب
+  whatsappNumber: text("whatsapp_number"), // رقم واتساب للتواصل
+  websiteUrl: text("website_url"), // الموقع الإلكتروني
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });

@@ -504,7 +504,7 @@ export async function registerRoutes(
       }
       await storage.incrementPropertyViews(req.params.id);
       
-      // Include seller info
+      // Include seller info with verification details
       let seller = null;
       if (property.sellerId) {
         const sellerData = await storage.getUser(property.sellerId);
@@ -515,6 +515,15 @@ export async function registerRoutes(
             phone: sellerData.phone,
             accountType: sellerData.accountType,
             entityName: sellerData.entityName,
+            isVerified: sellerData.isVerified,
+            verificationStatus: sellerData.verificationStatus,
+            falLicenseNumber: sellerData.falLicenseNumber,
+            adLicenseNumber: sellerData.adLicenseNumber,
+            licenseIssueDate: sellerData.licenseIssueDate,
+            licenseExpiryDate: sellerData.licenseExpiryDate,
+            commercialRegNumber: sellerData.commercialRegNumber,
+            city: sellerData.city,
+            whatsappNumber: sellerData.whatsappNumber,
           };
         }
       }
