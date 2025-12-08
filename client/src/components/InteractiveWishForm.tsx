@@ -51,8 +51,32 @@ const suggestions = [
   "ميزانيتي 800 ألف",
 ];
 
-// Full example text showing all required information
-const fullExampleText = "اسمي عبدالسلام محمد، رقم جوالي 0501234567، من جدة حي الروضة، أبحث عن شقة ثلاث غرف حمامين مساحة 120 متر، الشراء كاش";
+// Segments for typewriter with colors - each segment has text and optional color
+interface TypewriterSegment {
+  text: string;
+  color?: string; // tailwind color class
+  underline?: boolean;
+}
+
+const exampleSegments: TypewriterSegment[] = [
+  { text: "اسمي " },
+  { text: "عبدالسلام محمد", color: "text-orange-500", underline: true },
+  { text: " ، رقم جوالي " },
+  { text: "0501234567", color: "text-primary", underline: true },
+  { text: " ، من مدينة " },
+  { text: "جدة", color: "text-green-600", underline: true },
+  { text: " حي " },
+  { text: "الروضة", color: "text-green-600", underline: true },
+  { text: " ، أرغب بشراء " },
+  { text: "شقة", color: "text-blue-500", underline: true },
+  { text: " ثلاث غرف حمامين مساحة 120 متر ، الميزانية " },
+  { text: "800 ألف", color: "text-green-600", underline: true },
+  { text: " ، الشراء " },
+  { text: "كاش", color: "text-blue-500", underline: true },
+];
+
+// Plain text version for adding to input
+const fullExampleText = exampleSegments.map(s => s.text).join("");
 
 const propertyTypeMap: Record<string, string> = {
   "شقة": "apartment",
@@ -97,39 +121,53 @@ export default function InteractiveWishForm() {
   });
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [displayedText, setDisplayedText] = useState("");
-  const [isTypingExample, setIsTypingExample] = useState(true);
+  const [charIndex, setCharIndex] = useState(0);
 
   // Typewriter effect for the example text
   useEffect(() => {
     if (isComplete) return;
     
-    let currentIndex = 0;
-    setDisplayedText("");
-    setIsTypingExample(true);
+    const totalChars = fullExampleText.length;
     
-    const typeInterval = setInterval(() => {
-      if (currentIndex < fullExampleText.length) {
-        setDisplayedText(fullExampleText.slice(0, currentIndex + 1));
-        currentIndex++;
-      } else {
-        // Pause at the end, then restart
-        setIsTypingExample(false);
-        clearInterval(typeInterval);
-        
-        // Restart after 3 seconds pause
-        setTimeout(() => {
-          if (!isComplete) {
-            currentIndex = 0;
-            setDisplayedText("");
-            setIsTypingExample(true);
-          }
-        }, 3000);
-      }
-    }, 60); // Speed of typing
+    if (charIndex < totalChars) {
+      const timer = setTimeout(() => {
+        setCharIndex(prev => prev + 1);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      // Pause at the end, then restart
+      const restartTimer = setTimeout(() => {
+        setCharIndex(0);
+      }, 3000);
+      return () => clearTimeout(restartTimer);
+    }
+  }, [isComplete, charIndex]);
+
+  // Render colored segments up to charIndex
+  const renderTypedText = () => {
+    let charsRemaining = charIndex;
+    const elements: JSX.Element[] = [];
     
-    return () => clearInterval(typeInterval);
-  }, [isComplete, isTypingExample]);
+    for (let i = 0; i < exampleSegments.length && charsRemaining > 0; i++) {
+      const segment = exampleSegments[i];
+      const segmentLength = segment.text.length;
+      const charsToShow = Math.min(charsRemaining, segmentLength);
+      const displayText = segment.text.slice(0, charsToShow);
+      
+      elements.push(
+        <span 
+          key={i} 
+          className={`${segment.color || "text-foreground"} ${segment.underline ? "underline decoration-2" : ""}`}
+        >
+          {displayText}
+        </span>
+      );
+      
+      charsRemaining -= charsToShow;
+    }
+    
+    return elements;
+  };
 
   const registerMutation = useMutation({
     mutationFn: async (data: ExtractedData) => {
@@ -420,16 +458,15 @@ export default function InteractiveWishForm() {
           <div className="p-4 border-t bg-card">
             {!isComplete && (
               <>
-                {/* Typewriter example showing all required info */}
+                {/* Typewriter example showing all required info with colors */}
                 <div 
-                  className="mb-4 p-3 rounded-lg bg-muted/50 border border-dashed cursor-pointer hover-elevate"
+                  className="mb-4 p-4 rounded-lg bg-muted/30 cursor-pointer hover-elevate"
                   onClick={() => addSuggestion(fullExampleText)}
                   data-testid="button-typewriter-example"
                 >
-                  <p className="text-sm text-muted-foreground mb-1">مثال: اضغط لإضافة النص</p>
-                  <p className="text-base leading-relaxed min-h-[3rem]">
-                    <span className="text-foreground">{displayedText}</span>
-                    <span className="animate-pulse text-primary">|</span>
+                  <p className="text-lg leading-loose min-h-[4rem] text-center">
+                    {renderTypedText()}
+                    <span className="animate-pulse text-primary font-bold">|</span>
                   </p>
                 </div>
 
