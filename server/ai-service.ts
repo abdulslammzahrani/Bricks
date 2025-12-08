@@ -15,13 +15,17 @@ export interface IntakeAnalysisResult {
   data: {
     name: string | null;
     phone: string | null;
+    email: string | null;
     city: string | null;
     districts: string[];
     propertyType: string | null;
+    transactionType: string | null; // buy, rent (شراء أو تأجير)
     budgetMin: number | null;
     budgetMax: number | null;
     paymentMethod: string | null;
     purchasePurpose: string | null;
+    purchaseTimeline: string | null; // asap, within_month, within_3months, etc
+    clientType: string | null; // direct, broker (مباشر أو وسيط)
     area: number | null;
     rooms: number | null;
     floor: number | null;
@@ -67,31 +71,42 @@ const SYSTEM_PROMPT = `أنت "تطابق"، صديق ذكي ودود يساعد
 - طلب الجوال: "ممتاز! احتاج رقم جوالك عشان نقدر نتواصل معك لما نلاقي لك شي حلو"
 - طلب المدينة: "حلو! في أي مدينة تدور؟ الرياض، جدة، ولا مدينة ثانية؟"
 
-قواعد الاستخراج (مهم جداً):
-- الاسم: استخرج الاسم الكامل إذا ذُكر (أنا محمد، اسمي فهد، معك سارة)
-- الجوال: ابحث عن أرقام تبدأ بـ 05 (10 أرقام) - قد تكون مكتوبة بالعربي أو الإنجليزي
+البيانات المطلوبة (مهم جداً):
+1. الاسم (مطلوب): استخرج الاسم الكامل (أنا محمد، اسمي فهد، معك سارة)
+2. الجوال (مطلوب): أرقام تبدأ بـ 05 (10 أرقام) بالعربي أو الإنجليزي
+3. الايميل (اختياري): لو ذكر بريد إلكتروني استخرجه
+4. نوع العقار (مطلوب): شقة، فيلا، أرض، دور، دبلكس، عمارة، محل، مكتب، استراحة، مزرعة
+5. نوع المعاملة (مطلوب): شراء (buy) أو تأجير/إيجار (rent)
+6. الميزانية (مطلوب): من كم إلى كم ("500 ألف" = 500000، "مليون" = 1000000)
+7. وقت الشراء (مطلوب): متى يريد الشراء؟
+   - أسرع وقت/مستعجل/الحين = "asap"
+   - خلال شهر = "within_month"
+   - خلال 3 شهور = "within_3months"
+   - خلال 6 شهور = "within_6months"
+   - خلال سنة = "within_year"
+   - مرن/ما عندي وقت محدد = "flexible"
+8. نوع العميل (مطلوب): 
+   - مشتري/بائع مباشر = "direct"
+   - وسيط/سمسار/مكتب عقاري = "broker"
+
+قواعد الاستخراج:
 - المدينة: استخرج المدينة حتى لو ذُكرت بجانب كلمات أخرى. المدن السعودية:
-  الرياض، جدة، مكة، مكة المكرمة، المدينة، المدينة المنورة، الدمام، الخبر، الظهران، الجبيل،
-  الطائف، تبوك، أبها، خميس مشيط، جازان، نجران، الباحة، القصيم، بريدة، عنيزة،
-  الأحساء، الهفوف، حفر الباطن، ينبع، رابغ، القطيف، سكاكا، عرعر، حائل، بيشة
+  الرياض، جدة، مكة، المدينة، الدمام، الخبر، الظهران، الجبيل، الطائف، تبوك، أبها،
+  خميس مشيط، جازان، نجران، الباحة، القصيم، بريدة، عنيزة، الأحساء، الهفوف، حفر الباطن
   
-  مهم: لو كتب "جدة فيلا" أو "الرياض شقة" فهذا يعني المدينة جدة/الرياض ونوع العقار فيلا/شقة
   مثال: "جدة فيلا" → city: "جدة", propertyType: "فيلا"
-  مثال: "شقة بالرياض" → city: "الرياض", propertyType: "شقة"
-  مثال: "ابي فيلا جدة" → city: "جدة", propertyType: "فيلا"
+  مثال: "ابي شقة للايجار" → transactionType: "rent"
 
-- الأحياء: استخرج أسماء الأحياء كمصفوفة (الملقا، الياسمين، النرجس، الشاطئ، الحمراء، إلخ)
-- نوع العقار: شقة، فيلا، أرض، دور، دبلكس، عمارة، محل، مكتب، استراحة، مزرعة
-- الميزانية: حوّل للأرقام ("500 ألف" = 500000، "مليون" = 1000000، "مليون ونص" = 1500000)
+- الأحياء: استخرج أسماء الأحياء كمصفوفة
 - طريقة الدفع: كاش، تمويل، نقد، بنكي، أقساط
-- غرض الشراء: سكن، استثمار، تجاري، إيجار
+- غرض الشراء: سكن، استثمار، تجاري
 
-تصنيف العميل:
-- مشتري (buyer): يبحث عن عقار للشراء أو السكن
+تصنيف العميل (role):
+- مشتري (buyer): يبحث عن عقار للشراء أو الإيجار
 - بائع (seller): يعرض عقار للبيع (عندي، للبيع، أبيع)
-- مستثمر (investor): يبحث عن فرص استثمارية (عائد، إيجار، استثمار)
+- مستثمر (investor): يبحث عن فرص استثمارية (عائد، استثمار)
 
-مهم جداً: استخرج كل المعلومات المتاحة في النص حتى لو كانت مختصرة أو بدون ترتيب.
+مهم جداً: استخرج كل المعلومات المتاحة. لو ناقص شي، اطلبه بأسلوب ودي في assistantReply.
 
 أعد JSON فقط:
 {
@@ -100,13 +115,17 @@ const SYSTEM_PROMPT = `أنت "تطابق"، صديق ذكي ودود يساعد
   "role": "buyer" | "seller" | "investor" | null,
   "name": string | null,
   "phone": string | null,
+  "email": string | null,
   "city": string | null,
   "districts": string[],
   "propertyType": string | null,
+  "transactionType": "buy" | "rent" | null,
   "budgetMin": number | null,
   "budgetMax": number | null,
   "paymentMethod": string | null,
   "purchasePurpose": string | null,
+  "purchaseTimeline": "asap" | "within_month" | "within_3months" | "within_6months" | "within_year" | "flexible" | null,
+  "clientType": "direct" | "broker" | null,
   "area": number | null,
   "rooms": number | null,
   "floor": number | null,
@@ -118,13 +137,17 @@ const SYSTEM_PROMPT = `أنت "تطابق"، صديق ذكي ودود يساعد
 export interface ConversationContext {
   name?: string;
   phone?: string;
+  email?: string;
   city?: string;
   districts?: string[];
   propertyType?: string;
+  transactionType?: string;
   budgetMin?: number;
   budgetMax?: number;
   paymentMethod?: string;
   purchasePurpose?: string;
+  purchaseTimeline?: string;
+  clientType?: string;
   area?: number;
   rooms?: number;
   role?: string;
@@ -138,16 +161,20 @@ export async function analyzeIntakeWithAI(text: string, context?: ConversationCo
       const contextParts: string[] = [];
       if (context.name) contextParts.push(`الاسم: ${context.name}`);
       if (context.phone) contextParts.push(`الجوال: ${context.phone}`);
+      if (context.email) contextParts.push(`الايميل: ${context.email}`);
       if (context.city) contextParts.push(`المدينة: ${context.city}`);
       if (context.districts && context.districts.length > 0) contextParts.push(`الأحياء: ${context.districts.join(", ")}`);
       if (context.propertyType) contextParts.push(`نوع العقار: ${context.propertyType}`);
+      if (context.transactionType) contextParts.push(`نوع المعاملة: ${context.transactionType === 'buy' ? 'شراء' : 'تأجير'}`);
       if (context.budgetMin) contextParts.push(`الميزانية من: ${context.budgetMin}`);
       if (context.budgetMax) contextParts.push(`الميزانية إلى: ${context.budgetMax}`);
       if (context.paymentMethod) contextParts.push(`طريقة الدفع: ${context.paymentMethod}`);
       if (context.purchasePurpose) contextParts.push(`الغرض: ${context.purchasePurpose}`);
+      if (context.purchaseTimeline) contextParts.push(`وقت الشراء: ${context.purchaseTimeline}`);
+      if (context.clientType) contextParts.push(`نوع العميل: ${context.clientType === 'direct' ? 'مباشر' : 'وسيط'}`);
       if (context.area) contextParts.push(`المساحة: ${context.area}`);
       if (context.rooms) contextParts.push(`الغرف: ${context.rooms}`);
-      if (context.role) contextParts.push(`نوع العميل: ${context.role}`);
+      if (context.role) contextParts.push(`الدور: ${context.role}`);
       
       if (contextParts.length > 0) {
         contextMessage = `\n\n[معلومات سابقة من المحادثة - لا تسأل عنها مرة أخرى]:\n${contextParts.join("\n")}\n\n[الرسالة الجديدة]:\n`;
@@ -178,18 +205,15 @@ export async function analyzeIntakeWithAI(text: string, context?: ConversationCo
     const missingFields: string[] = [];
     if (!parsed.name) missingFields.push("الاسم");
     if (!parsed.phone) missingFields.push("رقم الجوال");
-    if (!parsed.city) missingFields.push("المدينة");
+    // Email is optional, so don't add to missing fields
+    if (!parsed.propertyType) missingFields.push("نوع العقار");
+    if (!parsed.transactionType) missingFields.push("شراء أو تأجير");
+    if (!parsed.budgetMin && !parsed.budgetMax) missingFields.push("الميزانية");
+    if (!parsed.purchaseTimeline) missingFields.push("وقت الشراء");
+    if (!parsed.clientType) missingFields.push("هل أنت وسيط أو مباشر");
 
-    // For buyers, check additional required fields
-    if (parsed.role === "buyer") {
-      if (!parsed.propertyType) missingFields.push("نوع العقار");
-      if (!parsed.budgetMin && !parsed.budgetMax) missingFields.push("الميزانية");
-    }
-
-    // For sellers, check property details
-    if (parsed.role === "seller") {
-      if (!parsed.propertyType) missingFields.push("نوع العقار");
-    }
+    // City is optional but helpful
+    // if (!parsed.city) missingFields.push("المدينة");
 
     return {
       success: true,
@@ -199,13 +223,17 @@ export async function analyzeIntakeWithAI(text: string, context?: ConversationCo
       data: {
         name: parsed.name,
         phone: parsed.phone,
+        email: parsed.email || null,
         city: parsed.city,
         districts: parsed.districts || [],
         propertyType: parsed.propertyType,
+        transactionType: parsed.transactionType || null,
         budgetMin: parsed.budgetMin,
         budgetMax: parsed.budgetMax,
         paymentMethod: parsed.paymentMethod,
         purchasePurpose: parsed.purchasePurpose,
+        purchaseTimeline: parsed.purchaseTimeline || null,
+        clientType: parsed.clientType || null,
         area: parsed.area,
         rooms: parsed.rooms,
         floor: parsed.floor,
@@ -227,13 +255,17 @@ function fallbackExtraction(text: string): IntakeAnalysisResult {
   const data: IntakeAnalysisResult["data"] = {
     name: null,
     phone: null,
+    email: null,
     city: null,
     districts: [],
     propertyType: null,
+    transactionType: null,
     budgetMin: null,
     budgetMax: null,
     paymentMethod: null,
     purchasePurpose: null,
+    purchaseTimeline: null,
+    clientType: null,
     area: null,
     rooms: null,
     floor: null,

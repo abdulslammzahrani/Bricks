@@ -25,12 +25,15 @@ export const buyerPreferences = pgTable("buyer_preferences", {
   city: text("city").notNull(),
   districts: text("districts").array().notNull().default(sql`'{}'::text[]`),
   propertyType: text("property_type").notNull(), // apartment, villa, building, land
+  transactionType: text("transaction_type").notNull().default("buy"), // buy, rent (شراء أو تأجير)
   rooms: text("rooms"),
   area: text("area"),
   budgetMin: integer("budget_min"),
   budgetMax: integer("budget_max"),
   paymentMethod: text("payment_method"), // cash, bank
   purpose: text("purpose"), // residence, investment
+  purchaseTimeline: text("purchase_timeline"), // asap, within_month, within_3months, within_6months, within_year, flexible
+  clientType: text("client_type").notNull().default("direct"), // direct, broker (مباشر أو وسيط)
   isActive: boolean("is_active").notNull().default(true),
 });
 
