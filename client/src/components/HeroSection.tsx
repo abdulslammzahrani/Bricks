@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -136,102 +136,150 @@ export default function HeroSection() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
     
-  // Live viewer counter for social proof (herd effect)
+  // Live counters for social proof (herd effect)
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
+  const [dealsToday, setDealsToday] = useState(0);
   
-  // Calculate requests based on time of day (0 at midnight, max 120 at 11:59 PM)
-  const calculateDailyRequests = () => {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    // Total minutes since midnight
-    const minutesSinceMidnight = hours * 60 + minutes;
-    // Max requests at end of day ~120, start at 0
-    // Growth rate varies - slower at night, faster during day
-    let baseRequests = 0;
-    if (hours >= 0 && hours < 6) {
-      // Night: very slow growth (0-7)
-      baseRequests = Math.floor(minutesSinceMidnight * 0.02);
-    } else if (hours >= 6 && hours < 12) {
-      // Morning: moderate growth (7-45)
-      baseRequests = 7 + Math.floor((minutesSinceMidnight - 360) * 0.1);
-    } else if (hours >= 12 && hours < 18) {
-      // Afternoon: peak growth (45-90)
-      baseRequests = 45 + Math.floor((minutesSinceMidnight - 720) * 0.125);
+  // Get month period multiplier (salary periods boost activity)
+  const getMonthPeriodMultiplier = () => {
+    const day = new Date().getDate();
+    // نزول الرواتب: 25-28 من الشهر (موظفين حكومة) و 1-5 (قطاع خاص)
+    if (day >= 25 && day <= 28) {
+      return 1.4; // ذروة - رواتب الحكومة
+    } else if (day >= 1 && day <= 5) {
+      return 1.3; // مرتفع - رواتب القطاع الخاص
+    } else if (day >= 6 && day <= 10) {
+      return 1.1; // متوسط-مرتفع - بعد الرواتب
+    } else if (day >= 20 && day <= 24) {
+      return 0.85; // منخفض - قبل الراتب
     } else {
-      // Evening: moderate growth (90-120)
-      baseRequests = 90 + Math.floor((minutesSinceMidnight - 1080) * 0.08);
+      return 1.0; // طبيعي
     }
-    // Add small random variation (0-3)
-    return baseRequests + Math.floor(Math.random() * 4);
   };
   
   // Calculate realistic viewer count based on Saudi real estate activity patterns
   const calculateRealtimeViewers = () => {
     const now = new Date();
     const hour = now.getHours();
-    const minutes = now.getMinutes();
+    const monthMultiplier = getMonthPeriodMultiplier();
     
     // Base range: 1300-6000
-    // Activity patterns for Saudi real estate market:
     let activityMultiplier = 0;
     
     if (hour >= 0 && hour < 4) {
-      // منتصف الليل - الفجر: نشاط منخفض جداً (1300-1800)
       activityMultiplier = 0.1 + (Math.random() * 0.1);
     } else if (hour >= 4 && hour < 6) {
-      // الفجر: نشاط منخفض جداً (1300-2000)
       activityMultiplier = 0.1 + (Math.random() * 0.15);
     } else if (hour >= 6 && hour < 9) {
-      // الصباح الباكر: نشاط منخفض-متوسط (1800-2800)
       activityMultiplier = 0.2 + (Math.random() * 0.15);
     } else if (hour >= 9 && hour < 12) {
-      // منتصف الصباح: نشاط متوسط (2500-3800)
       activityMultiplier = 0.35 + (Math.random() * 0.2);
     } else if (hour >= 12 && hour < 15) {
-      // الظهر-القيلولة: نشاط منخفض (2000-3000)
       activityMultiplier = 0.25 + (Math.random() * 0.15);
     } else if (hour >= 15 && hour < 18) {
-      // العصر: ذروة النشاط - أوقات المعاينات (4500-6000)
       activityMultiplier = 0.75 + (Math.random() * 0.25);
     } else if (hour >= 18 && hour < 20) {
-      // المغرب: نشاط متوسط-مرتفع (3500-5000)
       activityMultiplier = 0.55 + (Math.random() * 0.2);
     } else if (hour >= 20 && hour < 23) {
-      // العشاء: نشاط مرتفع - التصفح الإلكتروني (4000-5500)
       activityMultiplier = 0.65 + (Math.random() * 0.25);
     } else {
-      // 23-00: انخفاض تدريجي (2500-3500)
       activityMultiplier = 0.3 + (Math.random() * 0.2);
     }
     
-    // Calculate viewers: 1300 base + (4700 * multiplier)
-    const viewers = Math.floor(1300 + (4700 * activityMultiplier));
+    // Apply month period multiplier
+    const viewers = Math.floor((1300 + (4700 * activityMultiplier)) * monthMultiplier);
     return Math.max(1300, Math.min(6000, viewers));
   };
   
-  // Initialize and animate live viewer count
-  useEffect(() => {
-    // Initial values based on current time
-    setLiveViewers(calculateRealtimeViewers());
-    setRequestsToday(calculateDailyRequests());
+  // Calculate daily requests (150-300 range, linked to viewers)
+  const calculateDailyRequests = (currentViewers: number) => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutesSinceMidnight = hour * 60 + now.getMinutes();
+    const monthMultiplier = getMonthPeriodMultiplier();
     
-    // Fluctuate viewer count every 3-7 seconds with realistic variation
+    // Base calculation: grows through the day (0 at midnight → 300 at end of day)
+    let baseRequests = 0;
+    if (hour >= 0 && hour < 6) {
+      baseRequests = Math.floor(minutesSinceMidnight * 0.04);
+    } else if (hour >= 6 && hour < 12) {
+      baseRequests = 15 + Math.floor((minutesSinceMidnight - 360) * 0.2);
+    } else if (hour >= 12 && hour < 18) {
+      baseRequests = 90 + Math.floor((minutesSinceMidnight - 720) * 0.28);
+    } else {
+      baseRequests = 190 + Math.floor((minutesSinceMidnight - 1080) * 0.2);
+    }
+    
+    // Link to viewers: more viewers = slightly more requests
+    const viewerBoost = Math.floor((currentViewers - 1300) / 500) * 5;
+    
+    // Apply month multiplier and add variation
+    const requests = Math.floor((baseRequests + viewerBoost) * monthMultiplier) + Math.floor(Math.random() * 8);
+    return Math.max(150, Math.min(300, requests));
+  };
+  
+  // Calculate daily deals (linked to requests and month period)
+  const calculateDailyDeals = (currentRequests: number) => {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDate();
+    const monthMultiplier = getMonthPeriodMultiplier();
+    
+    // Conversion rate: ~3-8% of requests become deals
+    // Higher at salary periods, lower at month end
+    let conversionRate = 0.04 + (Math.random() * 0.03);
+    
+    // Adjust for time of day (deals happen more in afternoon/evening)
+    if (hour >= 15 && hour < 20) {
+      conversionRate *= 1.3; // Peak deal time - after viewings
+    } else if (hour >= 20 && hour < 23) {
+      conversionRate *= 1.1; // Evening deals
+    } else if (hour < 9) {
+      conversionRate *= 0.5; // Few deals early morning
+    }
+    
+    // Calculate base deals from requests
+    let deals = Math.floor(currentRequests * conversionRate * monthMultiplier);
+    
+    // Add time-based progression (deals accumulate through day)
+    const hourMultiplier = Math.min(1, hour / 18);
+    deals = Math.floor(deals * (0.3 + (hourMultiplier * 0.7)));
+    
+    // Range: 3-25 deals per day
+    return Math.max(3, Math.min(25, deals + Math.floor(Math.random() * 3)));
+  };
+  
+  // Initialize and animate counters
+  useEffect(() => {
+    // Initial values
+    const initialViewers = calculateRealtimeViewers();
+    const initialRequests = calculateDailyRequests(initialViewers);
+    const initialDeals = calculateDailyDeals(initialRequests);
+    
+    setLiveViewers(initialViewers);
+    setRequestsToday(initialRequests);
+    setDealsToday(initialDeals);
+    
+    // Fluctuate viewer count every 3-7 seconds
     const viewerInterval = setInterval(() => {
       const targetViewers = calculateRealtimeViewers();
       setLiveViewers(prev => {
-        // Smooth transition towards target with small random fluctuation
         const diff = targetViewers - prev;
-        const step = Math.floor(diff * 0.1) + (Math.floor(Math.random() * 81) - 40); // -40 to +40
+        const step = Math.floor(diff * 0.1) + (Math.floor(Math.random() * 81) - 40);
         const newValue = prev + step;
         return Math.max(1300, Math.min(6000, newValue));
       });
     }, 3000 + Math.random() * 4000);
     
-    // Update requests based on time every 30 seconds
+    // Update requests every 30 seconds (linked to current viewers)
     const requestInterval = setInterval(() => {
-      setRequestsToday(calculateDailyRequests());
+      setLiveViewers(currentViewers => {
+        const newRequests = calculateDailyRequests(currentViewers);
+        setRequestsToday(newRequests);
+        setDealsToday(calculateDailyDeals(newRequests));
+        return currentViewers;
+      });
     }, 30000);
     
     return () => {
@@ -1583,19 +1631,24 @@ export default function HeroSection() {
                 {/* Stats Bar + Typewriter (Top) */}
                 <div className="p-3 pb-2">
                   {/* Stats Bar - Integrated */}
-                  <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between gap-2 mb-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
                       <span className="relative flex h-1.5 w-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                       </span>
-                      <span className="font-medium text-foreground">{liveViewers}</span>
+                      <span className="font-medium text-foreground">{liveViewers.toLocaleString('ar-SA')}</span>
                       <span>يتصفحون</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <Zap className="h-3 w-3 text-amber-500" />
                       <span className="font-medium text-foreground">{requestsToday}</span>
-                      <span>طلب اليوم</span>
+                      <span>طلب</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span className="font-medium text-foreground">{dealsToday}</span>
+                      <span>صفقة</span>
                     </div>
                   </div>
                   
