@@ -136,186 +136,63 @@ export default function HeroSection() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
     
-  // Live counters for social proof (herd effect)
+  // Live counters for social proof (herd effect) - synced from server
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
   const [dealsToday, setDealsToday] = useState(0);
   
   // Animation states for counter changes
+  const [viewersAnimating, setViewersAnimating] = useState(false);
   const [requestsAnimating, setRequestsAnimating] = useState(false);
   const [dealsAnimating, setDealsAnimating] = useState(false);
+  const prevViewersRef = useRef(0);
   const prevRequestsRef = useRef(0);
   const prevDealsRef = useRef(0);
   
-  // Get month period multiplier (salary periods boost activity)
-  const getMonthPeriodMultiplier = () => {
-    const day = new Date().getDate();
-    // نزول الرواتب: 25-28 من الشهر (موظفين حكومة) و 1-5 (قطاع خاص)
-    if (day >= 25 && day <= 28) {
-      return 1.4; // ذروة - رواتب الحكومة
-    } else if (day >= 1 && day <= 5) {
-      return 1.3; // مرتفع - رواتب القطاع الخاص
-    } else if (day >= 6 && day <= 10) {
-      return 1.1; // متوسط-مرتفع - بعد الرواتب
-    } else if (day >= 20 && day <= 24) {
-      return 0.85; // منخفض - قبل الراتب
-    } else {
-      return 1.0; // طبيعي
-    }
-  };
-  
-  // Calculate realistic viewer count based on Saudi real estate activity patterns
-  const calculateRealtimeViewers = () => {
-    const now = new Date();
-    const hour = now.getHours();
-    const monthMultiplier = getMonthPeriodMultiplier();
-    
-    // Base range: 1300-6000
-    let activityMultiplier = 0;
-    
-    if (hour >= 0 && hour < 4) {
-      activityMultiplier = 0.1 + (Math.random() * 0.1);
-    } else if (hour >= 4 && hour < 6) {
-      activityMultiplier = 0.1 + (Math.random() * 0.15);
-    } else if (hour >= 6 && hour < 9) {
-      activityMultiplier = 0.2 + (Math.random() * 0.15);
-    } else if (hour >= 9 && hour < 12) {
-      activityMultiplier = 0.35 + (Math.random() * 0.2);
-    } else if (hour >= 12 && hour < 15) {
-      activityMultiplier = 0.25 + (Math.random() * 0.15);
-    } else if (hour >= 15 && hour < 18) {
-      activityMultiplier = 0.75 + (Math.random() * 0.25);
-    } else if (hour >= 18 && hour < 20) {
-      activityMultiplier = 0.55 + (Math.random() * 0.2);
-    } else if (hour >= 20 && hour < 23) {
-      activityMultiplier = 0.65 + (Math.random() * 0.25);
-    } else {
-      activityMultiplier = 0.3 + (Math.random() * 0.2);
-    }
-    
-    // Apply month period multiplier
-    const viewers = Math.floor((1300 + (4700 * activityMultiplier)) * monthMultiplier);
-    return Math.max(1300, Math.min(6000, viewers));
-  };
-  
-  // Calculate daily requests (150-300 range, linked to viewers)
-  const calculateDailyRequests = (currentViewers: number) => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutesSinceMidnight = hour * 60 + now.getMinutes();
-    const monthMultiplier = getMonthPeriodMultiplier();
-    
-    // Base calculation: grows through the day (0 at midnight → 300 at end of day)
-    let baseRequests = 0;
-    if (hour >= 0 && hour < 6) {
-      baseRequests = Math.floor(minutesSinceMidnight * 0.04);
-    } else if (hour >= 6 && hour < 12) {
-      baseRequests = 15 + Math.floor((minutesSinceMidnight - 360) * 0.2);
-    } else if (hour >= 12 && hour < 18) {
-      baseRequests = 90 + Math.floor((minutesSinceMidnight - 720) * 0.28);
-    } else {
-      baseRequests = 190 + Math.floor((minutesSinceMidnight - 1080) * 0.2);
-    }
-    
-    // Link to viewers: more viewers = slightly more requests
-    const viewerBoost = Math.floor((currentViewers - 1300) / 500) * 5;
-    
-    // Apply month multiplier and add variation
-    const requests = Math.floor((baseRequests + viewerBoost) * monthMultiplier) + Math.floor(Math.random() * 8);
-    return Math.max(150, Math.min(300, requests));
-  };
-  
-  // Calculate daily deals (linked to requests and month period)
-  const calculateDailyDeals = (currentRequests: number) => {
-    const now = new Date();
-    const hour = now.getHours();
-    const day = now.getDate();
-    const monthMultiplier = getMonthPeriodMultiplier();
-    
-    // Conversion rate: ~3-8% of requests become deals
-    // Higher at salary periods, lower at month end
-    let conversionRate = 0.04 + (Math.random() * 0.03);
-    
-    // Adjust for time of day (deals happen more in afternoon/evening)
-    if (hour >= 15 && hour < 20) {
-      conversionRate *= 1.3; // Peak deal time - after viewings
-    } else if (hour >= 20 && hour < 23) {
-      conversionRate *= 1.1; // Evening deals
-    } else if (hour < 9) {
-      conversionRate *= 0.5; // Few deals early morning
-    }
-    
-    // Calculate base deals from requests
-    let deals = Math.floor(currentRequests * conversionRate * monthMultiplier);
-    
-    // Add time-based progression (deals accumulate through day)
-    const hourMultiplier = Math.min(1, hour / 18);
-    deals = Math.floor(deals * (0.3 + (hourMultiplier * 0.7)));
-    
-    // Range: 3-25 deals per day
-    return Math.max(3, Math.min(25, deals + Math.floor(Math.random() * 3)));
-  };
-  
-  // Initialize and animate counters
-  useEffect(() => {
-    // Initial values
-    const initialViewers = calculateRealtimeViewers();
-    const initialRequests = calculateDailyRequests(initialViewers);
-    const initialDeals = calculateDailyDeals(initialRequests);
-    
-    setLiveViewers(initialViewers);
-    setRequestsToday(initialRequests);
-    setDealsToday(initialDeals);
-    
-    // Fluctuate viewer count every 3-7 seconds
-    const viewerInterval = setInterval(() => {
-      const targetViewers = calculateRealtimeViewers();
-      setLiveViewers(prev => {
-        const diff = targetViewers - prev;
-        const step = Math.floor(diff * 0.1) + (Math.floor(Math.random() * 81) - 40);
-        const newValue = prev + step;
-        return Math.max(1300, Math.min(6000, newValue));
-      });
-    }, 3000 + Math.random() * 4000);
-    
-    // Update requests every 20-40 seconds (separate from deals)
-    const requestInterval = setInterval(() => {
-      setLiveViewers(currentViewers => {
-        const newRequests = calculateDailyRequests(currentViewers);
+  // Fetch stats from server (same for all users)
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/stats/daily');
+      if (response.ok) {
+        const data = await response.json();
         
-        // Trigger animation if requests changed
-        if (newRequests !== prevRequestsRef.current) {
-          prevRequestsRef.current = newRequests;
+        // Trigger animations if values changed
+        if (data.viewers !== prevViewersRef.current && prevViewersRef.current !== 0) {
+          setViewersAnimating(true);
+          setTimeout(() => setViewersAnimating(false), 600);
+        }
+        if (data.requests !== prevRequestsRef.current && prevRequestsRef.current !== 0) {
           setRequestsAnimating(true);
           setTimeout(() => setRequestsAnimating(false), 600);
         }
-        
-        setRequestsToday(newRequests);
-        return currentViewers;
-      });
-    }, 20000 + Math.random() * 20000);
-    
-    // Update deals every 45-90 seconds (separate from requests, less frequent)
-    const dealsInterval = setInterval(() => {
-      setRequestsToday(currentRequests => {
-        const newDeals = calculateDailyDeals(currentRequests);
-        
-        // Trigger animation if deals changed
-        if (newDeals !== prevDealsRef.current) {
-          prevDealsRef.current = newDeals;
+        if (data.deals !== prevDealsRef.current && prevDealsRef.current !== 0) {
           setDealsAnimating(true);
           setTimeout(() => setDealsAnimating(false), 600);
         }
         
-        setDealsToday(newDeals);
-        return currentRequests;
-      });
-    }, 45000 + Math.random() * 45000);
+        prevViewersRef.current = data.viewers;
+        prevRequestsRef.current = data.requests;
+        prevDealsRef.current = data.deals;
+        
+        setLiveViewers(data.viewers);
+        setRequestsToday(data.requests);
+        setDealsToday(data.deals);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+  
+  // Initialize and poll stats from server
+  useEffect(() => {
+    // Fetch immediately
+    fetchStats();
+    
+    // Poll every 10 seconds (server handles deterministic calculation)
+    const statsInterval = setInterval(fetchStats, 10000);
     
     return () => {
-      clearInterval(viewerInterval);
-      clearInterval(requestInterval);
-      clearInterval(dealsInterval);
+      clearInterval(statsInterval);
     };
   }, []);
 

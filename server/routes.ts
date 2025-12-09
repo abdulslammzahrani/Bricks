@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
 import bcrypt from "bcryptjs";
+import { statsEngine } from "./stats-engine";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
@@ -34,6 +35,19 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // ============ STATS ROUTES ============
+  
+  // Get synchronized daily stats (same for all users)
+  app.get("/api/stats/daily", (req, res) => {
+    try {
+      const stats = statsEngine.getAllStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error getting stats:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // ============ OBJECT STORAGE ROUTES ============
 
