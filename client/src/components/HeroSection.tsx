@@ -440,6 +440,84 @@ export default function HeroSection() {
     return "";
   };
 
+  // Real-time extraction for live preview
+  const extractLiveData = (text: string): { found: Record<string, string>; missing: string[] } => {
+    const found: Record<string, string> = {};
+    const requiredFields = mode === "buyer" 
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية"]
+      : mode === "seller"
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "السعر"]
+      : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار", "رأس المال"];
+    
+    // Extract name - matches Arabic names (2-4 words starting text or after specific keywords)
+    const namePatterns = [
+      /^([أ-ي]{2,}(?:\s+[أ-ي]{2,}){0,3})/,
+      /(?:اسمي|انا|أنا)\s+([أ-ي]{2,}(?:\s+[أ-ي]{2,}){0,3})/i
+    ];
+    for (const pattern of namePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        found["الاسم"] = match[1].trim();
+        break;
+      }
+    }
+    
+    // Extract phone
+    const phoneMatch = text.match(/(05\d{8})/);
+    if (phoneMatch) {
+      found["رقم الجوال"] = phoneMatch[1];
+    }
+    
+    // Extract city
+    const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم", "الأحساء", "نجران", "جازان", "ينبع", "حائل", "الجبيل", "بريدة", "خميس مشيط", "الظهران", "القطيف"];
+    for (const city of cities) {
+      if (text.includes(city)) {
+        found["المدينة"] = city;
+        break;
+      }
+    }
+    
+    // Extract district/neighborhood
+    const districtMatch = text.match(/(?:حي|منطقة)\s+([أ-ي\s]{2,20}?)(?:\s|،|$)/i);
+    if (districtMatch) {
+      found["الحي"] = districtMatch[1].trim();
+    }
+    
+    // Extract property type
+    const propertyTypes = ["شقة", "فيلا", "دوبلكس", "أرض", "عمارة", "استوديو", "دور", "محل", "مكتب", "مستودع", "مزرعة"];
+    for (const type of propertyTypes) {
+      if (text.includes(type)) {
+        found["نوع العقار"] = type;
+        found["نوع الاستثمار"] = type;
+        break;
+      }
+    }
+    
+    // Extract budget/price
+    const budgetMatch = text.match(/(\d+(?:\.\d+)?)\s*(ألف|الف|مليون|ريال)?/);
+    if (budgetMatch) {
+      let amount = parseFloat(budgetMatch[1]);
+      let unit = "";
+      if (budgetMatch[2]?.includes("مليون")) {
+        unit = " مليون";
+      } else if (budgetMatch[2]?.includes("لف")) {
+        unit = " ألف";
+      } else if (amount >= 1000000) {
+        unit = "";
+      } else if (amount >= 1000) {
+        unit = " ألف";
+      }
+      found["الميزانية"] = budgetMatch[1] + unit;
+      found["السعر"] = budgetMatch[1] + unit;
+      found["رأس المال"] = budgetMatch[1] + unit;
+    }
+    
+    // Calculate missing fields
+    const missing = requiredFields.filter(field => !found[field]);
+    
+    return { found, missing };
+  };
+
   const extractBuyerInfo = (text: string) => {
     const data: Record<string, string> = { ...extractedData };
     const matchedPatterns: RegExp[] = [];
@@ -1428,31 +1506,58 @@ export default function HeroSection() {
               )}
               
               {/* Input field - auto-expanding textarea like WhatsApp */}
-              <textarea
-                ref={inputRef}
-                dir="rtl"
-                value={inputText}
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                  // Auto-resize textarea
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
-                className="flex-1 min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                rows={1}
-                data-testid="input-chat"
-              />
+              <div className="flex-1 flex flex-col">
+                {/* Live extraction preview */}
+                {inputText.trim().length > 0 && (() => {
+                  const { found, missing } = extractLiveData(inputText);
+                  const foundKeys = Object.keys(found);
+                  if (foundKeys.length === 0 && missing.length > 0) return null;
+                  return (
+                    <div className="text-xs text-right mb-1 px-1" dir="rtl">
+                      {foundKeys.length > 0 && (
+                        <span className="text-foreground">
+                          {foundKeys.map((key, i) => (
+                            <span key={key}>
+                              <span className="font-medium">{found[key]}</span>
+                              {i < foundKeys.length - 1 && " "}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                      {missing.length > 0 && (
+                        <span className="text-muted-foreground mr-1">
+                          (متبقي {missing.join(" و ")})
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+                <textarea
+                  ref={inputRef}
+                  dir="rtl"
+                  value={inputText}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    // Auto-resize textarea
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                  placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
+                  className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  rows={1}
+                  data-testid="input-chat"
+                />
+              </div>
             </div>
             {isRecording && (
               <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
@@ -1746,7 +1851,32 @@ export default function HeroSection() {
                     {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </Button>
                   
-                  <div className="flex-1">
+                  <div className="flex-1 flex flex-col">
+                    {/* Live extraction preview */}
+                    {inputText.trim().length > 0 && (() => {
+                      const { found, missing } = extractLiveData(inputText);
+                      const foundKeys = Object.keys(found);
+                      if (foundKeys.length === 0 && missing.length > 0) return null;
+                      return (
+                        <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
+                          {foundKeys.length > 0 && (
+                            <span className="text-foreground">
+                              {foundKeys.map((key, i) => (
+                                <span key={key}>
+                                  <span className="font-medium">{found[key]}</span>
+                                  {i < foundKeys.length - 1 && " "}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                          {missing.length > 0 && (
+                            <span className="text-muted-foreground mr-1">
+                              (متبقي {missing.join(" و ")})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <textarea
                       dir="rtl"
                       value={inputText}
