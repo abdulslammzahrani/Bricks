@@ -108,7 +108,6 @@ const formatFriendlyMessage = (
 
 export default function HeroSection() {
   const { toast } = useToast();
-  const textareaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
@@ -194,9 +193,13 @@ export default function HeroSection() {
 
   // Auto-scroll to bottom when conversation updates
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    // Use setTimeout to ensure DOM is updated before scrolling
+    const timer = setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [conversation, isTyping, pendingConfirmation]);
 
   // Lock body scroll when fullscreen chat is active
@@ -370,9 +373,6 @@ export default function HeroSection() {
     setConversation([]);
     setIsComplete(false);
     setExtractedData({});
-    if (textareaRef.current) {
-      textareaRef.current.textContent = "";
-    }
   };
 
   const renderTypedText = () => {
@@ -614,12 +614,6 @@ export default function HeroSection() {
   const addSuggestion = (suggestion: string) => {
     const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
     setInputText(newText);
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.textContent = newText;
-        textareaRef.current.focus();
-      }
-    }, 50);
   };
 
   const formatBudget = (amount: string) => {
@@ -775,9 +769,6 @@ export default function HeroSection() {
         { type: "user", text: userText }
       ]);
       setInputText("");
-      if (textareaRef.current) {
-        textareaRef.current.textContent = "";
-      }
       setIsTyping(true);
       setTimeout(() => {
         submitData(pendingData);
@@ -800,9 +791,6 @@ export default function HeroSection() {
     ]);
     
     setInputText("");
-    if (textareaRef.current) {
-      textareaRef.current.textContent = "";
-    }
     
     // Use AI analysis
     setIsAnalyzing(true);
@@ -1055,9 +1043,6 @@ export default function HeroSection() {
       // Show current text in input field
       const currentText = finalTranscript + interimTranscript;
       setInputText(currentText);
-      if (textareaRef.current) {
-        textareaRef.current.textContent = currentText;
-      }
       
       // Auto-analyze when we have new final text (after pause in speech)
       if (finalTranscript.trim() && finalTranscript.trim() !== lastProcessedText) {
@@ -1074,9 +1059,6 @@ export default function HeroSection() {
             
             // Clear input and submit for analysis (keeps recording active!)
             setInputText("");
-            if (textareaRef.current) {
-              textareaRef.current.textContent = "";
-            }
             
             // Submit for live analysis while still recording
             handleSubmitWithText(textToProcess);
@@ -1138,9 +1120,6 @@ export default function HeroSection() {
     ]);
     
     setInputText("");
-    if (textareaRef.current) {
-      textareaRef.current.textContent = "";
-    }
     
     setIsAnalyzing(true);
     setIsTyping(true);
@@ -1377,16 +1356,15 @@ export default function HeroSection() {
               )}
               
               {/* Input field */}
-              <div
-                ref={textareaRef}
-                contentEditable
+              <input
+                type="text"
                 dir="rtl"
-                onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 min-h-[40px] py-2 px-3 max-h-[120px] overflow-y-auto outline-none text-[15px] bg-transparent"
-                data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
-                data-empty={!inputText ? "true" : "false"}
-                style={{ wordBreak: "break-word" }}
+                placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
+                className="flex-1 min-h-[40px] py-2 px-3 outline-none text-[15px] bg-transparent"
+                autoComplete="off"
                 data-testid="input-chat-fullscreen"
               />
             </div>
@@ -1671,14 +1649,15 @@ export default function HeroSection() {
                   </Button>
                   
                   <div className="flex-1">
-                    <div
-                      ref={textareaRef}
-                      contentEditable
-                      className="min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-0"
-                      onInput={(e) => setInputText(e.currentTarget.textContent || "")}
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      data-placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
-                      data-empty={!inputText ? "true" : "false"}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
+                      className="w-full min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      autoComplete="off"
                       data-testid="input-interactive"
                     />
                   </div>
