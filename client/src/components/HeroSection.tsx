@@ -920,17 +920,24 @@ export default function HeroSection() {
         }
       }
       
-      // Check required fields based on mode - ALL fields must be complete!
+      // Check required fields based on mode - core fields only for simplicity
       if (mode === "buyer") {
-        // Required: name, phone, city, propertyType, budget, purchaseTimeline, clientType
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) && 
-          mergedData.purchaseTimeline && mergedData.clientType;
+        // Required for buyer: name, phone, city/district, propertyType, budget
+        const hasAllRequired = mergedData.name && mergedData.phone && 
+          (mergedData.city || mergedData.district) && 
+          mergedData.propertyType && 
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget);
         
         if (hasAllRequired) {
+          // Show confirmation card instead of registering directly
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
+          // Add confirmation message
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: formatFriendlyMessage("confirmation", mode, mergedData.name) }
+          ]);
         } else {
           // AI already asks follow-up questions, no need to add system message
           // The conversation continues naturally
@@ -976,16 +983,21 @@ export default function HeroSection() {
       });
       setExtractedData(mergedData);
       
-      // Check ALL required fields (fallback mode)
+      // Check core required fields (fallback mode)
       if (mode === "buyer") {
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) && 
-          mergedData.purchaseTimeline && mergedData.clientType;
+        const hasAllRequired = mergedData.name && mergedData.phone && 
+          (mergedData.city || mergedData.district) && 
+          mergedData.propertyType && 
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget);
         
         if (hasAllRequired) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: formatFriendlyMessage("confirmation", mode, mergedData.name) }
+          ]);
         }
         // No else - conversation continues naturally
       } else if (mode === "seller") {
