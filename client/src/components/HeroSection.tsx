@@ -167,19 +167,65 @@ export default function HeroSection() {
     return baseRequests + Math.floor(Math.random() * 4);
   };
   
+  // Calculate realistic viewer count based on Saudi real estate activity patterns
+  const calculateRealtimeViewers = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    
+    // Base range: 1300-6000
+    // Activity patterns for Saudi real estate market:
+    let activityMultiplier = 0;
+    
+    if (hour >= 0 && hour < 4) {
+      // منتصف الليل - الفجر: نشاط منخفض جداً (1300-1800)
+      activityMultiplier = 0.1 + (Math.random() * 0.1);
+    } else if (hour >= 4 && hour < 6) {
+      // الفجر: نشاط منخفض جداً (1300-2000)
+      activityMultiplier = 0.1 + (Math.random() * 0.15);
+    } else if (hour >= 6 && hour < 9) {
+      // الصباح الباكر: نشاط منخفض-متوسط (1800-2800)
+      activityMultiplier = 0.2 + (Math.random() * 0.15);
+    } else if (hour >= 9 && hour < 12) {
+      // منتصف الصباح: نشاط متوسط (2500-3800)
+      activityMultiplier = 0.35 + (Math.random() * 0.2);
+    } else if (hour >= 12 && hour < 15) {
+      // الظهر-القيلولة: نشاط منخفض (2000-3000)
+      activityMultiplier = 0.25 + (Math.random() * 0.15);
+    } else if (hour >= 15 && hour < 18) {
+      // العصر: ذروة النشاط - أوقات المعاينات (4500-6000)
+      activityMultiplier = 0.75 + (Math.random() * 0.25);
+    } else if (hour >= 18 && hour < 20) {
+      // المغرب: نشاط متوسط-مرتفع (3500-5000)
+      activityMultiplier = 0.55 + (Math.random() * 0.2);
+    } else if (hour >= 20 && hour < 23) {
+      // العشاء: نشاط مرتفع - التصفح الإلكتروني (4000-5500)
+      activityMultiplier = 0.65 + (Math.random() * 0.25);
+    } else {
+      // 23-00: انخفاض تدريجي (2500-3500)
+      activityMultiplier = 0.3 + (Math.random() * 0.2);
+    }
+    
+    // Calculate viewers: 1300 base + (4700 * multiplier)
+    const viewers = Math.floor(1300 + (4700 * activityMultiplier));
+    return Math.max(1300, Math.min(6000, viewers));
+  };
+  
   // Initialize and animate live viewer count
   useEffect(() => {
-    // Initial values - viewers range: 1300-6000
-    const baseViewers = 1300 + Math.floor(Math.random() * 4700);
-    setLiveViewers(baseViewers);
+    // Initial values based on current time
+    setLiveViewers(calculateRealtimeViewers());
     setRequestsToday(calculateDailyRequests());
     
-    // Fluctuate viewer count every 3-7 seconds
+    // Fluctuate viewer count every 3-7 seconds with realistic variation
     const viewerInterval = setInterval(() => {
+      const targetViewers = calculateRealtimeViewers();
       setLiveViewers(prev => {
-        const change = Math.floor(Math.random() * 201) - 100; // -100 to +100
-        const newValue = prev + change;
-        return Math.max(1300, Math.min(6000, newValue)); // Keep between 1300-6000
+        // Smooth transition towards target with small random fluctuation
+        const diff = targetViewers - prev;
+        const step = Math.floor(diff * 0.1) + (Math.floor(Math.random() * 81) - 40); // -40 to +40
+        const newValue = prev + step;
+        return Math.max(1300, Math.min(6000, newValue));
       });
     }, 3000 + Math.random() * 4000);
     
