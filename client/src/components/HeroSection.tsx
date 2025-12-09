@@ -1663,15 +1663,15 @@ export default function HeroSection() {
                       <span>يتصفحون</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-300 ${requestsAnimating ? 'scale-125 rotate-6' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-300 ${requestsAnimating ? 'scale-110 text-amber-600' : ''}`}>
+                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
                         {requestsToday.toLocaleString('ar-EG')}
                       </span>
                       <span>طلب</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-125 animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-300 ${dealsAnimating ? 'scale-110 text-green-600' : ''}`}>
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
                         {dealsToday.toLocaleString('ar-EG')}
                       </span>
                       <span>صفقة</span>
