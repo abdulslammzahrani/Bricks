@@ -1653,25 +1653,25 @@ export default function HeroSection() {
                 {/* Stats Bar + Typewriter (Top) */}
                 <div className="p-3 pb-2">
                   {/* Stats Bar - Integrated */}
-                  <div className="flex items-center justify-between gap-2 mb-2 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <span className="relative flex h-1.5 w-1.5">
+                      <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                       </span>
-                      <span className="font-medium text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
                       <span>يتصفحون</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <FileText className={`h-3 w-3 text-amber-500 transition-transform duration-300 ${requestsAnimating ? 'scale-125 rotate-6' : ''}`} />
-                      <span className={`font-medium text-foreground transition-all duration-300 ${requestsAnimating ? 'scale-110 text-amber-600' : ''}`}>
+                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-300 ${requestsAnimating ? 'scale-125 rotate-6' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-300 ${requestsAnimating ? 'scale-110 text-amber-600' : ''}`}>
                         {requestsToday.toLocaleString('ar-EG')}
                       </span>
                       <span>طلب</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Handshake className={`h-3 w-3 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-125 animate-pulse' : ''}`} />
-                      <span className={`font-medium text-foreground transition-all duration-300 ${dealsAnimating ? 'scale-110 text-green-600' : ''}`}>
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-125 animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-300 ${dealsAnimating ? 'scale-110 text-green-600' : ''}`}>
                         {dealsToday.toLocaleString('ar-EG')}
                       </span>
                       <span>صفقة</span>
