@@ -1467,7 +1467,8 @@ export default function HeroSection() {
             {(() => {
               const liveData = extractLiveData(inputText);
               // Check if essential data already saved OR currently typed
-              const savedEssentialData = !!(extractedData.name && extractedData.phone && extractedData.city && extractedData.district && extractedData.propertyType);
+              // Note: API returns 'districts' (array) not 'district'
+              const savedEssentialData = !!(extractedData.name && extractedData.phone && extractedData.city && (extractedData.district || extractedData.districts) && extractedData.propertyType);
               const typedEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
               const hasEssentialData = savedEssentialData || typedEssentialData;
               return (
