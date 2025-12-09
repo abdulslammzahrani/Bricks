@@ -1466,7 +1466,10 @@ export default function HeroSection() {
             )}
             {(() => {
               const liveData = extractLiveData(inputText);
-              const hasEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
+              // Check if essential data already saved OR currently typed
+              const savedEssentialData = !!(extractedData.name && extractedData.phone && extractedData.city && extractedData.district && extractedData.propertyType);
+              const typedEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
+              const hasEssentialData = savedEssentialData || typedEssentialData;
               return (
             <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5 max-w-3xl mx-auto">
               {/* Send button */}
@@ -1522,8 +1525,8 @@ export default function HeroSection() {
               
               {/* Input field - auto-expanding textarea like WhatsApp */}
               <div className="flex-1 flex flex-col">
-                {/* Live extraction preview */}
-                {inputText.trim().length > 0 && (
+                {/* Live extraction preview - only show when typing new data */}
+                {inputText.trim().length > 0 && !savedEssentialData && (
                   <div className="text-xs text-right mb-1 px-1" dir="rtl">
                     {liveData.found.length > 0 && (
                       <span className="text-foreground">
