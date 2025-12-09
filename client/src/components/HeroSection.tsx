@@ -192,26 +192,44 @@ export default function HeroSection() {
     };
   }, []);
 
-  // Auto-scroll to bottom when conversation updates and refocus input
+  // Track if user initiated a send (to know when to refocus)
+  const userSentMessage = useRef(false);
+  
+  // Auto-scroll to bottom when conversation updates - NO auto-focus (causes keyboard issues on mobile)
   useEffect(() => {
-    // Scroll to bottom
-    const scrollToBottom = () => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-      }
-    };
-    scrollToBottom();
-    const timer = setTimeout(scrollToBottom, 150);
-    
-    // Refocus input after AI response (when typing stops)
-    if (!isTyping && isFullScreenChat && !isComplete) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 200);
+    // Only scroll, don't auto-focus
+    if (messagesEndRef.current && conversation.length > 0) {
+      // Use requestAnimationFrame to avoid layout thrashing
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+      });
     }
     
-    return () => clearTimeout(timer);
-  }, [conversation, isTyping, pendingConfirmation, confirmationFields, isFullScreenChat, isComplete]);
+    // Only refocus if user manually sent a message (not on AI response)
+    if (userSentMessage.current && !isTyping && isFullScreenChat && !isComplete) {
+      userSentMessage.current = false;
+      // Delay focus to let keyboard settle
+      setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      }, 100);
+    }
+  }, [conversation, isTyping, isFullScreenChat, isComplete]);
+
+  // Set --vh variable for iOS viewport height fix
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
+    // Also update on orientation change
+    window.addEventListener('orientationchange', setVh);
+    return () => {
+      window.removeEventListener('resize', setVh);
+      window.removeEventListener('orientationchange', setVh);
+    };
+  }, []);
 
   // Lock body scroll when fullscreen chat is active - using overflow only (not position:fixed which breaks keyboard)
   useEffect(() => {
@@ -759,6 +777,9 @@ export default function HeroSection() {
     const hasInput = inputText.trim().length > 0;
     const userText = inputText.trim();
     
+    // Mark that user initiated this send (for refocus logic)
+    userSentMessage.current = true;
+    
     // Check if user is confirming
     if (pendingConfirmation && userText.includes("موافق")) {
       setConversation(prev => [
@@ -1193,7 +1214,10 @@ export default function HeroSection() {
     <>
       {/* Full-screen WhatsApp-like chat view - rendered as overlay */}
       {isFullScreenChat && (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div 
+        className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-background"
+        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+      >
         {/* Chat Header */}
         <div className={`flex items-center gap-3 p-4 border-b ${mode === "seller" ? "bg-green-600" : mode === "investor" ? "bg-amber-600" : "bg-primary"} text-primary-foreground`}>
           <Button
@@ -1405,7 +1429,10 @@ export default function HeroSection() {
 
       {/* Main landing section */}
       {!isFullScreenChat && (
-      <section className="relative min-h-[85vh] flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8">
+      <section 
+        className="relative flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8"
+        style={{ minHeight: 'calc(var(--vh, 1vh) * 85)' }}
+      >
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
           
