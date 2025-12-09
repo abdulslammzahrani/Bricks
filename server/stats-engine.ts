@@ -42,13 +42,17 @@ class StatsEngine {
     return 1.0;
   }
   
-  // Calculate viewers based on time of day
+  // Calculate viewers based on time of day (changes every 5 seconds, same for all users)
   getViewers(): number {
     const now = new Date();
     const hour = now.getHours();
     const minute = now.getMinutes();
+    const second = now.getSeconds();
     const seed = this.getDailySeed();
     const monthMultiplier = this.getMonthPeriodMultiplier();
+    
+    // Time slot: changes every 5 seconds (same for all users)
+    const timeSlot = Math.floor((hour * 3600 + minute * 60 + second) / 5);
     
     // Time-based activity multiplier
     let activityMultiplier = 0;
@@ -72,9 +76,9 @@ class StatsEngine {
       activityMultiplier = 0.35;
     }
     
-    // Add small deterministic variation based on minute
-    const minuteVariation = this.seededRandom(seed, hour * 60 + minute) * 0.1;
-    activityMultiplier += minuteVariation;
+    // Add deterministic variation based on time slot (changes every 5 sec, same for all)
+    const slotVariation = this.seededRandom(seed, timeSlot) * 0.15 - 0.075;
+    activityMultiplier += slotVariation;
     
     const viewers = Math.floor((1300 + (4700 * activityMultiplier)) * monthMultiplier);
     return Math.max(1300, Math.min(6000, viewers));
