@@ -822,10 +822,13 @@ export default function HeroSection() {
         city: extractedData.city || undefined,
         districts: extractedData.district ? [extractedData.district] : undefined,
         propertyType: extractedData.propertyType || undefined,
+        transactionType: extractedData.transactionType || undefined,
         budgetMin: extractedData.budgetMin ? parseInt(extractedData.budgetMin) : undefined,
         budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : undefined,
         paymentMethod: extractedData.paymentMethod || undefined,
         purchasePurpose: extractedData.purchasePurpose || undefined,
+        purchaseTimeline: extractedData.purchaseTimeline || undefined,
+        clientType: extractedData.clientType || undefined,
         area: extractedData.area ? parseInt(extractedData.area) : undefined,
         rooms: extractedData.rooms ? parseInt(extractedData.rooms) : undefined,
         role: mode,
@@ -887,10 +890,13 @@ export default function HeroSection() {
             mergedData.district = aiResult.data.districts[0];
           }
           if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
+          if (aiResult.data.transactionType) mergedData.transactionType = aiResult.data.transactionType;
           if (aiResult.data.budgetMax) mergedData.budget = aiResult.data.budgetMax.toString();
           if (aiResult.data.budgetMin) mergedData.budgetMin = aiResult.data.budgetMin.toString();
           if (aiResult.data.budgetMax) mergedData.budgetMax = aiResult.data.budgetMax.toString();
           if (aiResult.data.paymentMethod) mergedData.paymentMethod = aiResult.data.paymentMethod;
+          if (aiResult.data.purchaseTimeline) mergedData.purchaseTimeline = aiResult.data.purchaseTimeline;
+          if (aiResult.data.clientType) mergedData.clientType = aiResult.data.clientType;
           if (aiResult.data.additionalNotes) mergedData.additionalNotes = aiResult.data.additionalNotes;
           
           // For sellers
