@@ -197,12 +197,12 @@ export default function HeroSection() {
   
   // Auto-scroll to bottom when conversation updates - NO auto-focus (causes keyboard issues on mobile)
   useEffect(() => {
-    // Only scroll, don't auto-focus
-    if (messagesEndRef.current && conversation.length > 0) {
-      // Use requestAnimationFrame to avoid layout thrashing
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
-      });
+    // Scroll to bottom after each new message
+    if (messagesEndRef.current && (conversation.length > 0 || isTyping)) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 50);
     }
     
     // Only refocus if user manually sent a message (not on AI response)
@@ -211,7 +211,7 @@ export default function HeroSection() {
       // Delay focus to let keyboard settle
       setTimeout(() => {
         inputRef.current?.focus({ preventScroll: true });
-      }, 100);
+      }, 150);
     }
   }, [conversation, isTyping, isFullScreenChat, isComplete]);
 
@@ -1248,9 +1248,9 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* Messages Area - WhatsApp style */}
+        {/* Messages Area - WhatsApp style - min-h-0 is critical for flex scroll */}
         <div 
-          className="flex-1 overflow-y-auto p-4 space-y-3"
+          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
           style={{ 
             backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
           }}
