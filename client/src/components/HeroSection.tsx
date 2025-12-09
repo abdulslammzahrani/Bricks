@@ -1524,6 +1524,12 @@ export default function HeroSection() {
               
               {/* Input field - auto-expanding textarea like WhatsApp */}
               <div className="flex-1 flex flex-col">
+                {/* Helper hint - shows when input is empty */}
+                {inputText.trim().length === 0 && !hasEssentialData && !isRecording && (
+                  <div className="text-xs text-muted-foreground text-right mb-1 px-2" dir="rtl">
+                    لتجهيز طلبك اكتب: اسمك، رقم جوالك، المدينة، الحي، نوع العقار (فيلا/عمارة/شقة)، الميزانية، كاش أو تمويل، متى ترغب بالشراء
+                  </div>
+                )}
                 {/* Live extraction preview - only show when typing new data */}
                 {inputText.trim().length > 0 && !savedEssentialData && (
                   <div className="text-xs text-right mb-1 px-1" dir="rtl">
@@ -1560,7 +1566,7 @@ export default function HeroSection() {
                       handleSubmit();
                     }
                   }}
-                  placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
+                  placeholder={isRecording ? "جارٍ التسجيل..." : ""}
                   className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
                   autoComplete="off"
                   autoCorrect="off"
@@ -1870,6 +1876,12 @@ export default function HeroSection() {
                   </Button>
                   
                   <div className="flex-1 flex flex-col">
+                    {/* Helper hint - shows when input is empty */}
+                    {inputText.trim().length === 0 && !hasEssentialData && !isRecording && (
+                      <div className="text-sm text-muted-foreground text-right mb-2 px-2" dir="rtl">
+                        لتجهيز طلبك اكتب: اسمك، رقم جوالك، المدينة، الحي، نوع العقار (فيلا/عمارة/شقة)، الميزانية، كاش أو تمويل، متى ترغب بالشراء
+                      </div>
+                    )}
                     {/* Live extraction preview */}
                     {inputText.trim().length > 0 && (
                       <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
@@ -1904,7 +1916,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : ""}
                       className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
                       autoComplete="off"
                       autoCorrect="off"
