@@ -450,7 +450,7 @@ export default function HeroSection() {
   const extractLiveData = (text: string): { found: { key: string; value: string }[]; missing: string[] } => {
     const foundMap: Record<string, string> = {};
     const requiredFields = mode === "buyer" 
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية", "طريقة الدفع", "التوقيت"]
       : mode === "seller"
       ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
       : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار"];
@@ -509,6 +509,43 @@ export default function HeroSection() {
       if (text.includes(type)) {
         foundMap["نوع العقار"] = type;
         foundMap["نوع الاستثمار"] = type;
+        break;
+      }
+    }
+    
+    // Extract budget/price (for buyers)
+    const budgetMatch = normalizedText.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ريال|الف|ألف|مليون)?/);
+    if (budgetMatch) {
+      let budget = budgetMatch[1].replace(/,/g, '');
+      const fullMatch = normalizedText.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(الف|ألف|مليون)?/);
+      if (fullMatch && fullMatch[2]) {
+        if (fullMatch[2] === "مليون") {
+          budget = String(parseFloat(budget) * 1000000);
+        } else if (fullMatch[2] === "الف" || fullMatch[2] === "ألف") {
+          budget = String(parseFloat(budget) * 1000);
+        }
+      }
+      foundMap["الميزانية"] = budget + " ريال";
+    }
+    
+    // Extract payment method (cash or financing)
+    if (text.includes("كاش") || text.includes("نقد") || text.includes("نقدي") || text.includes("نقداً")) {
+      foundMap["طريقة الدفع"] = "كاش";
+    } else if (text.includes("تمويل") || text.includes("بنك") || text.includes("قرض") || text.includes("أقساط") || text.includes("اقساط")) {
+      foundMap["طريقة الدفع"] = "تمويل";
+    }
+    
+    // Extract timeline/timing
+    const timelinePatterns = [
+      { pattern: /فور[يا]?/, value: "فوري" },
+      { pattern: /خلال\s*(شهر|اسبوع|أسبوع|شهرين|ثلاثة أشهر|٣ أشهر|3 أشهر)/, value: "قريباً" },
+      { pattern: /قريب|عاجل|سريع/, value: "قريباً" },
+      { pattern: /خلال\s*سنة|هذا العام|هذه السنة/, value: "خلال سنة" },
+      { pattern: /بعد\s*(سنة|سنتين|عام|عامين)/, value: "مستقبلاً" },
+    ];
+    for (const { pattern, value } of timelinePatterns) {
+      if (pattern.test(text)) {
+        foundMap["التوقيت"] = value;
         break;
       }
     }
@@ -1524,12 +1561,6 @@ export default function HeroSection() {
               
               {/* Input field - auto-expanding textarea like WhatsApp */}
               <div className="flex-1 flex flex-col">
-                {/* Helper hint - shows when input is empty */}
-                {inputText.trim().length === 0 && !hasEssentialData && !isRecording && (
-                  <div className="text-xs text-muted-foreground text-right mb-1 px-2" dir="rtl">
-                    لتجهيز طلبك اكتب: اسمك، رقم جوالك، المدينة، الحي، نوع العقار (فيلا/عمارة/شقة)، الميزانية، كاش أو تمويل، متى ترغب بالشراء
-                  </div>
-                )}
                 {/* Live extraction preview - only show when typing new data */}
                 {inputText.trim().length > 0 && !savedEssentialData && (
                   <div className="text-xs text-right mb-1 px-1" dir="rtl">
@@ -1545,7 +1576,7 @@ export default function HeroSection() {
                     )}
                     {liveData.missing.length > 0 && (
                       <span className="text-muted-foreground mr-1">
-                        (متبقي {liveData.missing.join(" و ")})
+                        (متبقي {liveData.missing.join(" - ")})
                       </span>
                     )}
                   </div>
@@ -1566,7 +1597,7 @@ export default function HeroSection() {
                       handleSubmit();
                     }
                   }}
-                  placeholder={isRecording ? "جارٍ التسجيل..." : ""}
+                  placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
                   className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
                   autoComplete="off"
                   autoCorrect="off"
@@ -1876,12 +1907,6 @@ export default function HeroSection() {
                   </Button>
                   
                   <div className="flex-1 flex flex-col">
-                    {/* Helper hint - shows when input is empty */}
-                    {inputText.trim().length === 0 && !hasEssentialData && !isRecording && (
-                      <div className="text-sm text-muted-foreground text-right mb-2 px-2" dir="rtl">
-                        لتجهيز طلبك اكتب: اسمك، رقم جوالك، المدينة، الحي، نوع العقار (فيلا/عمارة/شقة)، الميزانية، كاش أو تمويل، متى ترغب بالشراء
-                      </div>
-                    )}
                     {/* Live extraction preview */}
                     {inputText.trim().length > 0 && (
                       <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
@@ -1897,7 +1922,7 @@ export default function HeroSection() {
                         )}
                         {liveData.missing.length > 0 && (
                           <span className="text-muted-foreground mr-1">
-                            (متبقي {liveData.missing.join(" و ")})
+                            (متبقي {liveData.missing.join(" - ")})
                           </span>
                         )}
                       </div>
@@ -1916,7 +1941,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : ""}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
                       className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
                       autoComplete="off"
                       autoCorrect="off"
