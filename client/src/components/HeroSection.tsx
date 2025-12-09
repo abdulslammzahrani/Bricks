@@ -111,7 +111,7 @@ export default function HeroSection() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
@@ -1427,22 +1427,30 @@ export default function HeroSection() {
                 </Button>
               )}
               
-              {/* Input field */}
-              <input
+              {/* Input field - auto-expanding textarea like WhatsApp */}
+              <textarea
                 ref={inputRef}
-                type="text"
                 dir="rtl"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
-                className="flex-1 min-h-[40px] py-2 px-3 outline-none text-[15px] bg-transparent"
+                onChange={(e) => {
+                  setInputText(e.target.value);
+                  // Auto-resize textarea
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
+                className="flex-1 min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                enterKeyHint="send"
-                inputMode="text"
+                rows={1}
                 data-testid="input-chat"
               />
             </div>
@@ -1739,20 +1747,27 @@ export default function HeroSection() {
                   </Button>
                   
                   <div className="flex-1">
-                    <input
-                      type="text"
+                    <textarea
                       dir="rtl"
                       value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
-                      className="w-full min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      onChange={(e) => {
+                        setInputText(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSubmit();
+                        }
+                      }}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
+                      className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
                       autoComplete="off"
                       autoCorrect="off"
                       autoCapitalize="off"
                       spellCheck={false}
-                      enterKeyHint="send"
-                      inputMode="text"
+                      rows={1}
                       data-testid="input-interactive"
                     />
                   </div>
