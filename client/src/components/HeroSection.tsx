@@ -169,17 +169,17 @@ export default function HeroSection() {
   
   // Initialize and animate live viewer count
   useEffect(() => {
-    // Initial values
-    const baseViewers = 45 + Math.floor(Math.random() * 30);
+    // Initial values - viewers range: 1300-6000
+    const baseViewers = 1300 + Math.floor(Math.random() * 4700);
     setLiveViewers(baseViewers);
     setRequestsToday(calculateDailyRequests());
     
     // Fluctuate viewer count every 3-7 seconds
     const viewerInterval = setInterval(() => {
       setLiveViewers(prev => {
-        const change = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        const change = Math.floor(Math.random() * 201) - 100; // -100 to +100
         const newValue = prev + change;
-        return Math.max(35, Math.min(95, newValue)); // Keep between 35-95
+        return Math.max(1300, Math.min(6000, newValue)); // Keep between 1300-6000
       });
     }, 3000 + Math.random() * 4000);
     
