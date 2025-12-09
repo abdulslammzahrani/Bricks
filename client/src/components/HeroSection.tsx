@@ -1484,22 +1484,20 @@ export default function HeroSection() {
                 <Send className="h-4 w-4" />
               </Button>
               
-              {/* Microphone button - hide when essential data complete */}
-              {!hasEssentialData && (
-                <Button
-                  size="icon"
-                  variant={isRecording ? "destructive" : "ghost"}
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isTranscribing}
-                  className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                  data-testid="button-voice-record"
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
-              )}
+              {/* Microphone button - always visible */}
+              <Button
+                size="icon"
+                variant={isRecording ? "destructive" : "ghost"}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isTranscribing}
+                className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                data-testid="button-voice-record"
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
               
-              {/* Upload button for sellers - hide when essential data complete */}
-              {mode === "seller" && !hasEssentialData && (
+              {/* Upload button for sellers - always visible */}
+              {mode === "seller" && (
                 <FileUploadButton
                   onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
                   buttonVariant="ghost"
@@ -1510,8 +1508,8 @@ export default function HeroSection() {
                 </FileUploadButton>
               )}
               
-              {/* Location picker button for sellers - hide when essential data complete */}
-              {mode === "seller" && !hasEssentialData && (
+              {/* Location picker button for sellers - always visible */}
+              {mode === "seller" && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -1859,19 +1857,17 @@ export default function HeroSection() {
                     <Send className="h-5 w-5" />
                   </Button>
                   
-                  {/* Voice recording button - hide when essential data complete */}
-                  {!hasEssentialData && (
-                    <Button
-                      size="icon"
-                      variant={isRecording ? "destructive" : "outline"}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={isTranscribing}
-                      className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                      data-testid="button-voice-record-landing"
-                    >
-                      {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                    </Button>
-                  )}
+                  {/* Voice recording button - always visible */}
+                  <Button
+                    size="icon"
+                    variant={isRecording ? "destructive" : "outline"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isTranscribing}
+                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                    data-testid="button-voice-record-landing"
+                  >
+                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
                   
                   <div className="flex-1 flex flex-col">
                     {/* Live extraction preview */}
