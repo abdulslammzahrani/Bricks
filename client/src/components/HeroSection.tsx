@@ -109,6 +109,7 @@ const formatFriendlyMessage = (
 export default function HeroSection() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
   const [charIndex, setCharIndex] = useState(0);
@@ -191,40 +192,33 @@ export default function HeroSection() {
     };
   }, []);
 
-  // Auto-scroll to bottom when conversation updates
+  // Auto-scroll to bottom when conversation updates and refocus input
   useEffect(() => {
-    // Use requestAnimationFrame for better timing
+    // Scroll to bottom
     const scrollToBottom = () => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
       }
     };
-    // Call immediately and after a short delay for reliability
     scrollToBottom();
     const timer = setTimeout(scrollToBottom, 150);
+    
+    // Refocus input after AI response (when typing stops)
+    if (!isTyping && isFullScreenChat && !isComplete) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 200);
+    }
+    
     return () => clearTimeout(timer);
-  }, [conversation, isTyping, pendingConfirmation, confirmationFields]);
+  }, [conversation, isTyping, pendingConfirmation, confirmationFields, isFullScreenChat, isComplete]);
 
-  // Lock body scroll when fullscreen chat is active
+  // Lock body scroll when fullscreen chat is active - using overflow only (not position:fixed which breaks keyboard)
   useEffect(() => {
     if (isFullScreenChat) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
-      // Lock body scroll
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.left = '0';
-      document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
-      
       return () => {
-        // Restore scroll when closing
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
         document.body.style.overflow = '';
-        window.scrollTo(0, scrollY);
       };
     }
   }, [isFullScreenChat]);
@@ -1360,6 +1354,7 @@ export default function HeroSection() {
               
               {/* Input field */}
               <input
+                ref={inputRef}
                 type="text"
                 dir="rtl"
                 value={inputText}
