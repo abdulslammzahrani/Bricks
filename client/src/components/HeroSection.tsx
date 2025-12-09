@@ -1188,10 +1188,35 @@ export default function HeroSection() {
     }
   };
 
-  // Full-screen WhatsApp-like chat view
-  if (isFullScreenChat) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+  // Shared input component to avoid re-mounting
+  const chatInput = (
+    <input
+      ref={inputRef}
+      type="text"
+      dir="rtl"
+      value={inputText}
+      onChange={(e) => setInputText(e.target.value)}
+      onKeyDown={handleKeyDown}
+      placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
+      className="flex-1 min-h-[40px] py-2 px-3 outline-none text-[15px] bg-transparent"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      enterKeyHint="send"
+      inputMode="text"
+      data-testid="input-chat"
+    />
+  );
+
+  return (
+    <>
+      {/* Full-screen WhatsApp-like chat view - rendered as overlay */}
+      <div 
+        className={`fixed inset-0 z-50 flex flex-col bg-background transition-transform duration-200 ${
+          isFullScreenChat ? 'translate-y-0' : 'translate-y-full pointer-events-none'
+        }`}
+      >
         {/* Chat Header */}
         <div className={`flex items-center gap-3 p-4 border-b ${mode === "seller" ? "bg-green-600" : mode === "investor" ? "bg-amber-600" : "bg-primary"} text-primary-foreground`}>
           <Button
@@ -1353,23 +1378,7 @@ export default function HeroSection() {
               )}
               
               {/* Input field */}
-              <input
-                ref={inputRef}
-                type="text"
-                dir="rtl"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
-                className="flex-1 min-h-[40px] py-2 px-3 outline-none text-[15px] bg-transparent"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                enterKeyHint="send"
-                inputMode="text"
-                data-testid="input-chat-fullscreen"
-              />
+              {chatInput}
             </div>
             {isRecording && (
               <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
@@ -1399,11 +1408,9 @@ export default function HeroSection() {
           </div>
         )}
       </div>
-    );
-  }
 
-  return (
-    <section className="relative min-h-[85vh] flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8">
+      {/* Main landing section */}
+      <section className="relative min-h-[85vh] flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8">
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           
@@ -1750,5 +1757,6 @@ export default function HeroSection() {
         }}
       />
     </section>
+    </>
   );
 }
