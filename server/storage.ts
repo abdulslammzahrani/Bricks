@@ -20,6 +20,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByPhone(phone: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
   getUsers(role?: string): Promise<User[]>;
 
   // Buyer Preferences
@@ -133,6 +134,11 @@ export class DatabaseStorage implements IStorage {
       return db.select().from(users).where(eq(users.role, role));
     }
     return db.select().from(users);
+  }
+
+  async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
+    return user || undefined;
   }
 
   // Buyer Preferences

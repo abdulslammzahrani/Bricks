@@ -11,6 +11,7 @@ import { LocationPicker } from "./LocationPicker";
 import { SaudiMap } from "./SaudiMap";
 import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
+import { useLocation } from "wouter";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -108,6 +109,7 @@ const formatFriendlyMessage = (
 
 export default function HeroSection() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
@@ -713,27 +715,52 @@ export default function HeroSection() {
     }
   };
 
-  const submitData = (data: Record<string, string>) => {
+  const submitData = async (data: Record<string, string>) => {
     if (mode === "buyer") {
       // Use AI-extracted budgetMin/Max if available
       const budgetMinVal = data.budgetMin ? parseInt(data.budgetMin) : 0;
       const budgetMaxVal = data.budgetMax ? parseInt(data.budgetMax) : (data.budget ? parseInt(data.budget) : 0);
       
-      buyerMutation.mutate({
-        name: data.name,
-        email: `${data.phone}@temp.com`,
-        phone: data.phone,
-        city: data.city,
-        districts: data.district ? [data.district] : [],
-        propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
-        budgetMin: budgetMinVal,
-        budgetMax: budgetMaxVal,
-        paymentMethod: data.paymentMethod || "cash",
-      });
-      setConversation(prev => [
-        ...prev,
-        { type: "system", text: formatFriendlyMessage("success", "buyer", data.name) }
-      ]);
+      try {
+        // Use auto-register endpoint which creates user with password
+        const response = await apiRequest("POST", "/api/auth/auto-register", {
+          name: data.name,
+          phone: data.phone,
+          email: data.email || `${data.phone}@tatabuk.sa`,
+          city: data.city,
+          districts: data.district ? [data.district] : [],
+          propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
+          budgetMin: budgetMinVal,
+          budgetMax: budgetMaxVal,
+          paymentMethod: data.paymentMethod || "cash",
+          transactionType: data.transactionType || "buy",
+        });
+        
+        const result = await response.json();
+        
+        if (result.success && result.user) {
+          // Store only user ID in localStorage (no credentials)
+          localStorage.setItem("tatabuk_user_id", result.user.id);
+          
+          // Show success message (password sent via SMS in production)
+          setConversation(prev => [
+            ...prev,
+            { type: "system", text: `تم تسجيل طلبك بنجاح يا ${data.name.split(" ")[0]}! رقم جوالك هو اسم المستخدم. سنرسل لك رسالة SMS بكلمة المرور. جاري تحويلك لصفحتك الخاصة...` }
+          ]);
+          
+          // Redirect to dashboard after 2 seconds
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 2000);
+        }
+      } catch (error: any) {
+        console.error("Auto-register error:", error);
+        toast({
+          title: "خطأ في التسجيل",
+          description: error.message || "حدث خطأ، حاول مرة ثانية",
+          variant: "destructive",
+        });
+      }
     } else if (mode === "seller") {
       sellerMutation.mutate({
         name: data.name,

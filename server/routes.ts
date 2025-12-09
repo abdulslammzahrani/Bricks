@@ -5,6 +5,7 @@ import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, in
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
+import bcrypt from "bcryptjs";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
@@ -132,7 +133,7 @@ export async function registerRoutes(
 
   // ============ AUTH ROUTES ============
 
-  // Simple login with phone/password
+  // Login with phone/password (using bcrypt)
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { phone, password } = req.body;
@@ -141,21 +142,168 @@ export async function registerRoutes(
         return res.status(400).json({ error: "رقم الجوال وكلمة المرور مطلوبان" });
       }
 
-      // Find user by phone (password is the phone number)
+      // Find user by phone
       const user = await storage.getUserByPhone(phone);
       
       if (!user) {
         return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
       }
 
-      // Simple password check (password = phone number)
-      if (password !== phone) {
-        return res.status(401).json({ error: "كلمة المرور غير صحيحة" });
+      // Check password with bcrypt
+      if (user.passwordHash) {
+        const isValid = await bcrypt.compare(password, user.passwordHash);
+        if (!isValid) {
+          return res.status(401).json({ error: "كلمة المرور غير صحيحة" });
+        }
+      } else {
+        // Legacy: if no hash, password = phone
+        if (password !== phone) {
+          return res.status(401).json({ error: "كلمة المرور غير صحيحة" });
+        }
       }
 
-      res.json({ user });
+      // Return user with requiresPasswordReset flag
+      res.json({ 
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          requiresPasswordReset: user.requiresPasswordReset ?? true,
+        }
+      });
     } catch (error: any) {
       console.error("Login error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get current user session
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const userId = req.headers["x-user-id"] as string;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مسجل الدخول" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ error: "المستخدم غير موجود" });
+      }
+      res.json({ 
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          requiresPasswordReset: user.requiresPasswordReset ?? true,
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Change password
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      const { userId, currentPassword, newPassword } = req.body;
+      
+      if (!userId || !newPassword) {
+        return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "المستخدم غير موجود" });
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      // Update user with new password and clear reset flag
+      await storage.updateUser(userId, {
+        passwordHash,
+        requiresPasswordReset: false,
+      });
+
+      res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
+    } catch (error: any) {
+      console.error("Change password error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Auto-register buyer with password (phone = temp password)
+  app.post("/api/auth/auto-register", async (req, res) => {
+    try {
+      const { name, phone, email, city, districts, propertyType, budgetMin, budgetMax, paymentMethod, transactionType } = req.body;
+
+      // Validate required fields
+      if (!name || !phone || !city || !propertyType) {
+        return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
+      }
+
+      // Check if user exists by phone
+      let user = await storage.getUserByPhone(phone);
+      
+      if (!user) {
+        // Hash phone as temporary password
+        const passwordHash = await bcrypt.hash(phone, 10);
+        
+        // Generate email if not provided
+        const userEmail = email || `${phone}@tatabuk.sa`;
+        
+        user = await storage.createUser({
+          email: userEmail,
+          phone: phone.trim(),
+          name: name.trim(),
+          role: "buyer",
+          passwordHash,
+          requiresPasswordReset: true,
+        });
+      }
+
+      // Create buyer preference
+      const preference = await storage.createBuyerPreference({
+        userId: user.id,
+        city,
+        districts: Array.isArray(districts) ? districts : [],
+        propertyType,
+        transactionType: transactionType || "buy",
+        budgetMin: budgetMin ? parseInt(String(budgetMin), 10) : null,
+        budgetMax: budgetMax ? parseInt(String(budgetMax), 10) : null,
+        paymentMethod: paymentMethod || null,
+        isActive: true,
+      });
+
+      // Find matches
+      await storage.findMatchesForPreference(preference.id);
+
+      // Return user with auto-login info
+      res.json({ 
+        success: true,
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          requiresPasswordReset: true,
+        },
+        preference,
+        credentials: {
+          username: phone,
+          tempPassword: phone,
+        }
+      });
+    } catch (error: any) {
+      console.error("Auto-register error:", error);
       res.status(500).json({ error: error.message });
     }
   });

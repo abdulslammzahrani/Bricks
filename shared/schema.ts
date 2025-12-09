@@ -9,6 +9,8 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   phone: text("phone").notNull(),
   name: text("name").notNull(),
+  passwordHash: text("password_hash"), // كلمة المرور المشفرة
+  requiresPasswordReset: boolean("requires_password_reset").default(true), // يتطلب تغيير كلمة المرور
   role: text("role").notNull().default("buyer"), // buyer, seller, admin
   accountType: text("account_type"), // individual, developer, office (for sellers)
   entityName: text("entity_name"), // company name for sellers
@@ -25,6 +27,7 @@ export const users = pgTable("users", {
   officeAddress: text("office_address"), // عنوان المكتب
   whatsappNumber: text("whatsapp_number"), // رقم واتساب للتواصل
   websiteUrl: text("website_url"), // الموقع الإلكتروني
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });

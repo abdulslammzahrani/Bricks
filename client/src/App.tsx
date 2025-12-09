@@ -12,6 +12,7 @@ import ProfilePage from "@/pages/profile";
 import InvestorPage from "@/pages/investor";
 import PropertyPage from "@/pages/property";
 import StaticPageView from "@/pages/static-page";
+import Dashboard from "@/pages/dashboard";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/investor" component={InvestorPage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/property/:id" component={PropertyPage} />
       <Route path="/faq" component={StaticPageView} />
       <Route path="/privacy" component={StaticPageView} />
