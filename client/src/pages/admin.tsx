@@ -108,17 +108,23 @@ const formatCurrency = (value: number) => {
   return value.toString();
 };
 
-// Convert phone number to Arabic numerals
+// Convert phone number to Arabic numerals with last 3 digits masked
 const toArabicPhone = (phone: string) => {
+  if (!phone) return '';
   const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  return phone.replace(/[0-9]/g, (d) => arabicNumerals[parseInt(d)]);
+  // Convert all digits to Arabic first
+  const arabicPhone = phone.replace(/[0-9]/g, (d) => arabicNumerals[parseInt(d)]);
+  // Mask last 3 characters
+  if (arabicPhone.length > 3) {
+    return arabicPhone.slice(0, -3) + '***';
+  }
+  return arabicPhone;
 };
 
-// Mask budget for privacy (show only range indicator)
+// Mask budget for privacy
 const maskBudget = (min?: number | null, max?: number | null) => {
   if (!min && !max) return "غير محدد";
-  // Show asterisks instead of actual values
-  return "****";
+  return "**";
 };
 
 const formatDate = (dateStr: string) => {
