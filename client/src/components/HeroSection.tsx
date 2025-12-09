@@ -920,13 +920,15 @@ export default function HeroSection() {
         }
       }
       
-      // Check required fields based on mode - core fields only for simplicity
+      // Check required fields based on mode - 6 fields required
       if (mode === "buyer") {
-        // Required for buyer: name, phone, city/district, propertyType, budget
+        // Required: name, phone, city, district (mandatory), propertyType, budget, paymentMethod
+        const hasDistrict = mergedData.district || (mergedData.districts && mergedData.districts.length > 0);
         const hasAllRequired = mergedData.name && mergedData.phone && 
-          (mergedData.city || mergedData.district) && 
+          mergedData.city && hasDistrict && 
           mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget);
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) &&
+          mergedData.paymentMethod;
         
         if (hasAllRequired) {
           // Show confirmation card instead of registering directly
@@ -983,12 +985,14 @@ export default function HeroSection() {
       });
       setExtractedData(mergedData);
       
-      // Check core required fields (fallback mode)
+      // Check core required fields (fallback mode) - 6 fields required
       if (mode === "buyer") {
+        const hasDistrict = mergedData.district || (mergedData.districts && mergedData.districts.length > 0);
         const hasAllRequired = mergedData.name && mergedData.phone && 
-          (mergedData.city || mergedData.district) && 
+          mergedData.city && hasDistrict && 
           mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget);
+          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) &&
+          mergedData.paymentMethod;
         
         if (hasAllRequired) {
           setPendingConfirmation(true);
