@@ -138,9 +138,9 @@ export async function analyzeIntakeWithAI(text: string, context?: ConversationCo
     
     const fullMessage = contextMessage + text;
     
-    // Using GPT-4o-mini for cost efficiency with good Arabic understanding
+    // Using GPT-4o for maximum accuracy and Arabic understanding
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: fullMessage },
