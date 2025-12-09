@@ -108,6 +108,19 @@ const formatCurrency = (value: number) => {
   return value.toString();
 };
 
+// Convert phone number to Arabic numerals
+const toArabicPhone = (phone: string) => {
+  const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return phone.replace(/[0-9]/g, (d) => arabicNumerals[parseInt(d)]);
+};
+
+// Mask budget for privacy (show only range indicator)
+const maskBudget = (min?: number | null, max?: number | null) => {
+  if (!min && !max) return "غير محدد";
+  // Show asterisks instead of actual values
+  return "****";
+};
+
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString("ar-SA", {
@@ -786,7 +799,7 @@ export default function AdminDashboard() {
                           <div key={user.id} className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30">
                             <div className="col-span-3 font-medium truncate">{user.name}</div>
                             <div className="col-span-3 text-sm text-muted-foreground truncate">{user.email}</div>
-                            <div className="col-span-2 text-sm" dir="ltr">{user.phone}</div>
+                            <div className="col-span-2 text-sm" dir="rtl">{toArabicPhone(user.phone || '')}</div>
                             <div className="col-span-2">
                               <Badge variant={user.role === "buyer" ? "default" : "secondary"}>
                                 {user.role === "buyer" ? "مشتري" : user.role === "seller" ? "بائع" : "مدير"}
@@ -823,7 +836,7 @@ export default function AdminDashboard() {
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <Phone className="h-4 w-4 text-muted-foreground" />
-                                        <span dir="ltr">{user.phone}</span>
+                                        <span dir="rtl">{toArabicPhone(user.phone || '')}</span>
                                       </div>
                                       {user.accountType && (
                                         <div className="flex items-center gap-2">
@@ -887,9 +900,9 @@ export default function AdminDashboard() {
                                         <Users className="h-3 w-3" />
                                         {user.name}
                                       </span>
-                                      <span className="flex items-center gap-1" dir="ltr">
+                                      <span className="flex items-center gap-1" dir="rtl">
                                         <Phone className="h-3 w-3" />
-                                        {user.phone}
+                                        {toArabicPhone(user.phone || '')}
                                       </span>
                                     </div>
                                   )}
@@ -902,7 +915,7 @@ export default function AdminDashboard() {
                                   {(pref.budgetMin || pref.budgetMax) && (
                                     <div className="text-sm">
                                       <span className="text-muted-foreground">الميزانية: </span>
-                                      {pref.budgetMin ? formatCurrency(pref.budgetMin) : "0"} - {pref.budgetMax ? formatCurrency(pref.budgetMax) : "غير محدد"} ريال
+                                      {maskBudget(pref.budgetMin, pref.budgetMax)}
                                     </div>
                                   )}
                                   {pref.rooms && (
@@ -979,9 +992,9 @@ export default function AdminDashboard() {
                                         <Users className="h-3 w-3" />
                                         {seller.name}
                                       </span>
-                                      <span className="flex items-center gap-1" dir="ltr">
+                                      <span className="flex items-center gap-1" dir="rtl">
                                         <Phone className="h-3 w-3" />
-                                        {seller.phone}
+                                        {toArabicPhone(seller.phone || '')}
                                       </span>
                                     </div>
                                   )}
@@ -1287,7 +1300,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="text-sm">
                                   <span className="text-muted-foreground">الميزانية: </span>
-                                  <span className="font-medium">{client.budgetMin ? formatCurrency(client.budgetMin) : "0"} - {client.budgetMax ? formatCurrency(client.budgetMax) : "غير محدد"} ريال</span>
+                                  <span className="font-medium">{maskBudget(client.budgetMin, client.budgetMax)}</span>
                                 </div>
                               </div>
                             </Card>
