@@ -450,7 +450,7 @@ export default function HeroSection() {
   const extractLiveData = (text: string): { found: { key: string; value: string }[]; missing: string[] } => {
     const foundMap: Record<string, string> = {};
     const requiredFields = mode === "buyer" 
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية", "طريقة الدفع", "التوقيت"]
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية", "طريقة الدفع", "توقيت الشراء"]
       : mode === "seller"
       ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
       : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار"];
@@ -545,7 +545,7 @@ export default function HeroSection() {
     ];
     for (const { pattern, value } of timelinePatterns) {
       if (pattern.test(text)) {
-        foundMap["التوقيت"] = value;
+        foundMap["توقيت الشراء"] = value;
         break;
       }
     }
