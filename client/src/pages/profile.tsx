@@ -672,15 +672,22 @@ export default function ProfilePage() {
 
           {/* Dashboard Stats */}
           <div className="p-6 bg-gradient-to-l from-primary/5 to-transparent">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-6">
               {/* Card 1 - Preferences */}
               <div 
-                className="relative cursor-pointer group pt-4 pe-4 overflow-visible"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("preferences")}
                 data-testid="stat-card-preferences"
+                style={{paddingTop: '16px', paddingLeft: '16px'}}
               >
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-muted border border-border rounded-xl -z-20" style={{transform: 'translate(12px, -8px)'}} />
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-card border border-border rounded-xl -z-10" style={{transform: 'translate(6px, -4px)'}} />
+                <div 
+                  className="absolute rounded-xl bg-gray-200 dark:bg-gray-700 shadow-sm"
+                  style={{top: 0, right: 0, bottom: '16px', left: '16px'}}
+                />
+                <div 
+                  className="absolute rounded-xl bg-gray-100 dark:bg-gray-600 shadow-sm"
+                  style={{top: '8px', right: 0, bottom: '8px', left: '8px'}}
+                />
                 <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -696,12 +703,19 @@ export default function ProfilePage() {
               
               {/* Card 2 - Properties */}
               <div 
-                className="relative cursor-pointer group pt-4 pe-4 overflow-visible"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("properties")}
                 data-testid="stat-card-properties"
+                style={{paddingTop: '16px', paddingLeft: '16px'}}
               >
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-muted border border-border rounded-xl -z-20" style={{transform: 'translate(12px, -8px)'}} />
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-card border border-border rounded-xl -z-10" style={{transform: 'translate(6px, -4px)'}} />
+                <div 
+                  className="absolute rounded-xl bg-gray-200 dark:bg-gray-700 shadow-sm"
+                  style={{top: 0, right: 0, bottom: '16px', left: '16px'}}
+                />
+                <div 
+                  className="absolute rounded-xl bg-gray-100 dark:bg-gray-600 shadow-sm"
+                  style={{top: '8px', right: 0, bottom: '8px', left: '8px'}}
+                />
                 <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -717,12 +731,19 @@ export default function ProfilePage() {
               
               {/* Card 3 - Matches */}
               <div 
-                className="relative cursor-pointer group pt-4 pe-4 overflow-visible"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("matches")}
                 data-testid="stat-card-matches"
+                style={{paddingTop: '16px', paddingLeft: '16px'}}
               >
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-muted border border-border rounded-xl -z-20" style={{transform: 'translate(12px, -8px)'}} />
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-card border border-border rounded-xl -z-10" style={{transform: 'translate(6px, -4px)'}} />
+                <div 
+                  className="absolute rounded-xl bg-gray-200 dark:bg-gray-700 shadow-sm"
+                  style={{top: 0, right: 0, bottom: '16px', left: '16px'}}
+                />
+                <div 
+                  className="absolute rounded-xl bg-gray-100 dark:bg-gray-600 shadow-sm"
+                  style={{top: '8px', right: 0, bottom: '8px', left: '8px'}}
+                />
                 <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -738,12 +759,19 @@ export default function ProfilePage() {
               
               {/* Card 4 - Messages */}
               <div 
-                className="relative cursor-pointer group pt-4 pe-4 overflow-visible"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("messages")}
                 data-testid="stat-card-messages"
+                style={{paddingTop: '16px', paddingLeft: '16px'}}
               >
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-muted border border-border rounded-xl -z-20" style={{transform: 'translate(12px, -8px)'}} />
-                <div className="absolute top-0 left-0 right-4 bottom-4 bg-card border border-border rounded-xl -z-10" style={{transform: 'translate(6px, -4px)'}} />
+                <div 
+                  className="absolute rounded-xl bg-gray-200 dark:bg-gray-700 shadow-sm"
+                  style={{top: 0, right: 0, bottom: '16px', left: '16px'}}
+                />
+                <div 
+                  className="absolute rounded-xl bg-gray-100 dark:bg-gray-600 shadow-sm"
+                  style={{top: '8px', right: 0, bottom: '8px', left: '8px'}}
+                />
                 <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
