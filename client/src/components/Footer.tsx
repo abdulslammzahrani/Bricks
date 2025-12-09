@@ -38,21 +38,6 @@ export default function Footer() {
                   الرئيسية
                 </Link>
               </li>
-              <li>
-                <Link href="/buyer-form" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-buyer">
-                  سجل رغبتك
-                </Link>
-              </li>
-              <li>
-                <Link href="/seller-form" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-seller">
-                  اعرض عقارك
-                </Link>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-about">
-                  عن المنصة
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -60,24 +45,19 @@ export default function Footer() {
             <h3 className="font-bold mb-4">الدعم</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-faq">
+                <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-faq">
                   الأسئلة الشائعة
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-privacy">
+                <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-privacy">
                   سياسة الخصوصية
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-terms">
+                <Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-terms">
                   الشروط والأحكام
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors" data-testid="footer-link-contact">
-                  تواصل معنا
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

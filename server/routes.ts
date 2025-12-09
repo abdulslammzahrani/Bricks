@@ -1282,5 +1282,55 @@ export async function registerRoutes(
     }
   });
 
+  // ============ STATIC PAGES ROUTES ============
+
+  // Get static page by slug (public)
+  app.get("/api/pages/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const page = await storage.getStaticPage(slug);
+      
+      if (!page || !page.isPublished) {
+        return res.status(404).json({ error: "Page not found" });
+      }
+      
+      res.json(page);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all static pages (admin)
+  app.get("/api/admin/pages", async (req, res) => {
+    try {
+      const pages = await storage.getAllStaticPages();
+      res.json(pages);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create or update static page (admin)
+  app.post("/api/admin/pages", async (req, res) => {
+    try {
+      const { slug, titleAr, contentAr, isPublished } = req.body;
+      
+      if (!slug || !titleAr || !contentAr) {
+        return res.status(400).json({ error: "slug, titleAr, and contentAr are required" });
+      }
+      
+      const page = await storage.upsertStaticPage({
+        slug,
+        titleAr,
+        contentAr,
+        isPublished: isPublished !== false,
+      });
+      
+      res.json(page);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

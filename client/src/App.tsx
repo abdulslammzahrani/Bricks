@@ -11,6 +11,7 @@ import AdminDashboard from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import InvestorPage from "@/pages/investor";
 import PropertyPage from "@/pages/property";
+import StaticPageView from "@/pages/static-page";
 
 function Router() {
   return (
@@ -22,6 +23,9 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/property/:id" component={PropertyPage} />
+      <Route path="/faq" component={StaticPageView} />
+      <Route path="/privacy" component={StaticPageView} />
+      <Route path="/terms" component={StaticPageView} />
       <Route component={NotFound} />
     </Switch>
   );

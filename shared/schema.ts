@@ -192,3 +192,17 @@ export const messages = pgTable("messages", {
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, sentAt: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Static pages - FAQ, Privacy Policy, Terms (editable from admin)
+export const staticPages = pgTable("static_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(), // faq, privacy, terms
+  titleAr: text("title_ar").notNull(), // Arabic title
+  contentAr: text("content_ar").notNull(), // Arabic content (HTML)
+  isPublished: boolean("is_published").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertStaticPageSchema = createInsertSchema(staticPages).omit({ id: true, updatedAt: true });
+export type InsertStaticPage = z.infer<typeof insertStaticPageSchema>;
+export type StaticPage = typeof staticPages.$inferSelect;

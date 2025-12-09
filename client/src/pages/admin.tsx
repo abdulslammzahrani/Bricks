@@ -66,11 +66,14 @@ import {
   Trash2,
   Power,
   PowerOff,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Save
 } from "lucide-react";
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp } from "react-icons/si";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
-import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog } from "@shared/schema";
+import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, StaticPage } from "@shared/schema";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -189,6 +192,7 @@ const menuItems = [
   { id: "analytics", label: "التحليلات", icon: TrendingUp },
   { id: "sending", label: "الإرسال", icon: Send },
   { id: "marketing", label: "التسويق", icon: Megaphone },
+  { id: "pages", label: "الصفحات التعريفية", icon: FileText },
 ];
 
 export default function AdminDashboard() {
@@ -1757,9 +1761,237 @@ export default function AdminDashboard() {
                 </Card>
               </div>
             )}
+
+            {/* Static Pages Section */}
+            {activeSection === "pages" && (
+              <StaticPagesSection />
+            )}
           </main>
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+// Static Pages Management Component
+function StaticPagesSection() {
+  const { toast } = useToast();
+  const [editingPage, setEditingPage] = useState<string | null>(null);
+  const [pageData, setPageData] = useState<Record<string, { titleAr: string; contentAr: string; isPublished: boolean }>>({
+    faq: { titleAr: "الأسئلة الشائعة", contentAr: "", isPublished: true },
+    privacy: { titleAr: "سياسة الخصوصية", contentAr: "", isPublished: true },
+    terms: { titleAr: "الشروط والأحكام", contentAr: "", isPublished: true },
+  });
+
+  const { data: pages = [], isLoading } = useQuery<StaticPage[]>({
+    queryKey: ["/api/admin/pages"],
+  });
+
+  // Update local state when pages are loaded
+  useState(() => {
+    if (pages.length > 0) {
+      const newData: Record<string, { titleAr: string; contentAr: string; isPublished: boolean }> = { ...pageData };
+      pages.forEach(page => {
+        newData[page.slug] = {
+          titleAr: page.titleAr,
+          contentAr: page.contentAr,
+          isPublished: page.isPublished,
+        };
+      });
+      setPageData(newData);
+    }
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: { slug: string; titleAr: string; contentAr: string; isPublished: boolean }) => {
+      return apiRequest("POST", "/api/admin/pages", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pages"] });
+      toast({ title: "تم الحفظ", description: "تم حفظ الصفحة بنجاح" });
+      setEditingPage(null);
+    },
+    onError: () => {
+      toast({ title: "خطأ", description: "فشل في حفظ الصفحة", variant: "destructive" });
+    },
+  });
+
+  const pageLabels: Record<string, string> = {
+    faq: "الأسئلة الشائعة",
+    privacy: "سياسة الخصوصية",
+    terms: "الشروط والأحكام",
+  };
+
+  const defaultContent: Record<string, string> = {
+    faq: `<h2>ما هي منصة تطابق؟</h2>
+<p>تطابق هي منصة مطابقة عقارية ذكية تربط بين المشترين والبائعين في السوق العقاري السعودي.</p>
+
+<h2>كيف يمكنني تسجيل رغبتي العقارية؟</h2>
+<p>يمكنك تسجيل رغبتك العقارية من خلال الصفحة الرئيسية عبر المحادثة الذكية مع مساعدنا الآلي.</p>
+
+<h2>هل الخدمة مجانية؟</h2>
+<p>نعم، تسجيل الرغبات العقارية مجاني تماماً.</p>
+
+<h2>كيف سأعرف بالعقارات المطابقة؟</h2>
+<p>سنرسل لك إشعارات أسبوعية عبر الواتساب بالعقارات التي تتطابق مع متطلباتك.</p>`,
+    privacy: `<h2>سياسة الخصوصية</h2>
+<p>نحن في تطابق نقدر خصوصيتك ونلتزم بحماية بياناتك الشخصية.</p>
+
+<h3>البيانات التي نجمعها</h3>
+<ul>
+<li>الاسم ورقم الهاتف</li>
+<li>تفضيلات العقار (المدينة، النوع، الميزانية)</li>
+<li>بيانات التواصل</li>
+</ul>
+
+<h3>كيف نستخدم بياناتك</h3>
+<p>نستخدم بياناتك فقط لمطابقتك بالعقارات المناسبة وإرسال الإشعارات ذات الصلة.</p>
+
+<h3>حماية البيانات</h3>
+<p>نستخدم أحدث تقنيات التشفير لحماية بياناتك.</p>`,
+    terms: `<h2>الشروط والأحكام</h2>
+
+<h3>القبول</h3>
+<p>باستخدامك لمنصة تطابق، فإنك توافق على هذه الشروط والأحكام.</p>
+
+<h3>الخدمات</h3>
+<p>نقدم خدمة مطابقة عقارية تربط بين الباحثين عن عقارات والبائعين.</p>
+
+<h3>المسؤولية</h3>
+<p>المنصة ليست طرفاً في أي صفقة عقارية وتقتصر مسؤوليتها على تقديم خدمة المطابقة.</p>
+
+<h3>الاستخدام</h3>
+<p>يجب استخدام المنصة لأغراض مشروعة فقط ووفقاً لأنظمة المملكة العربية السعودية.</p>`,
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center py-12"><RefreshCw className="h-6 w-6 animate-spin" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">الصفحات التعريفية</h2>
+        <p className="text-muted-foreground">تعديل صفحات الأسئلة الشائعة وسياسة الخصوصية والشروط والأحكام</p>
+      </div>
+
+      <div className="grid gap-6">
+        {["faq", "privacy", "terms"].map((slug) => {
+          const page = pages.find(p => p.slug === slug);
+          const isEditing = editingPage === slug;
+          const currentData = pageData[slug] || { titleAr: pageLabels[slug], contentAr: "", isPublished: true };
+
+          return (
+            <Card key={slug}>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg">{pageLabels[slug]}</CardTitle>
+                    <CardDescription>/{slug}</CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {page ? (
+                    <Badge variant="secondary">محفوظة</Badge>
+                  ) : (
+                    <Badge variant="outline">جديدة</Badge>
+                  )}
+                  {!isEditing ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (!pageData[slug]?.contentAr) {
+                          setPageData(prev => ({
+                            ...prev,
+                            [slug]: {
+                              titleAr: page?.titleAr || pageLabels[slug],
+                              contentAr: page?.contentAr || defaultContent[slug],
+                              isPublished: page?.isPublished ?? true,
+                            }
+                          }));
+                        }
+                        setEditingPage(slug);
+                      }}
+                      data-testid={`button-edit-${slug}`}
+                    >
+                      تعديل
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        onClick={() => {
+                          saveMutation.mutate({
+                            slug,
+                            ...currentData,
+                          });
+                        }}
+                        disabled={saveMutation.isPending}
+                        data-testid={`button-save-${slug}`}
+                      >
+                        <Save className="h-4 w-4 ml-1" />
+                        حفظ
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setEditingPage(null)}
+                      >
+                        إلغاء
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              {isEditing && (
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">عنوان الصفحة</label>
+                    <Input
+                      value={currentData.titleAr}
+                      onChange={(e) => setPageData(prev => ({
+                        ...prev,
+                        [slug]: { ...currentData, titleAr: e.target.value }
+                      }))}
+                      placeholder="عنوان الصفحة"
+                      data-testid={`input-title-${slug}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">محتوى الصفحة (HTML)</label>
+                    <Textarea
+                      value={currentData.contentAr}
+                      onChange={(e) => setPageData(prev => ({
+                        ...prev,
+                        [slug]: { ...currentData, contentAr: e.target.value }
+                      }))}
+                      placeholder="محتوى الصفحة بصيغة HTML"
+                      className="min-h-[300px] font-mono text-sm"
+                      dir="ltr"
+                      data-testid={`textarea-content-${slug}`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`published-${slug}`}
+                      checked={currentData.isPublished}
+                      onChange={(e) => setPageData(prev => ({
+                        ...prev,
+                        [slug]: { ...currentData, isPublished: e.target.checked }
+                      }))}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor={`published-${slug}`} className="text-sm">منشورة</label>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }

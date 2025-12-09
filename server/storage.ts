@@ -8,7 +8,8 @@ import {
   marketingSettings, type MarketingSetting, type InsertMarketingSetting,
   marketingEvents, type MarketingEvent, type InsertMarketingEvent,
   conversations, type Conversation, type InsertConversation,
-  messages, type Message, type InsertMessage
+  messages, type Message, type InsertMessage,
+  staticPages, type StaticPage, type InsertStaticPage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -98,6 +99,11 @@ export interface IStorage {
   getMessagesByConversation(conversationId: string): Promise<Message[]>;
   createMessage(msg: InsertMessage): Promise<Message>;
   markMessagesAsRead(conversationId: string, userId: string): Promise<void>;
+
+  // Static Pages
+  getStaticPage(slug: string): Promise<StaticPage | undefined>;
+  getAllStaticPages(): Promise<StaticPage[]>;
+  upsertStaticPage(page: InsertStaticPage): Promise<StaticPage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -597,6 +603,30 @@ export class DatabaseStorage implements IStorage {
         eq(messages.conversationId, conversationId),
         sql`${messages.senderId} != ${userId}`
       ));
+  }
+
+  // Static Pages
+  async getStaticPage(slug: string): Promise<StaticPage | undefined> {
+    const [page] = await db.select().from(staticPages).where(eq(staticPages.slug, slug));
+    return page;
+  }
+
+  async getAllStaticPages(): Promise<StaticPage[]> {
+    return db.select().from(staticPages).orderBy(staticPages.slug);
+  }
+
+  async upsertStaticPage(page: InsertStaticPage): Promise<StaticPage> {
+    const existing = await this.getStaticPage(page.slug);
+    if (existing) {
+      const [updated] = await db.update(staticPages)
+        .set({ ...page, updatedAt: new Date() })
+        .where(eq(staticPages.slug, page.slug))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(staticPages).values(page).returning();
+      return created;
+    }
   }
 }
 
