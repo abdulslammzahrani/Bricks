@@ -672,16 +672,16 @@ export default function ProfilePage() {
 
           {/* Dashboard Stats */}
           <div className="p-6 bg-gradient-to-l from-primary/5 to-transparent">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mb-6 pt-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-6">
               {/* Card 1 - Preferences */}
               <div 
-                className="relative cursor-pointer group pt-2 pb-4"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("preferences")}
                 data-testid="stat-card-preferences"
               >
-                <div className="absolute inset-x-2 top-0 bottom-2 bg-card border border-border rounded-md rotate-6 shadow-sm" />
-                <div className="absolute inset-x-1 top-1 bottom-1 bg-card border border-border rounded-md -rotate-3 shadow-sm" />
-                <Card className="relative p-6 shadow-md transition-all duration-200 group-hover:-translate-y-2 group-hover:shadow-lg">
+                <div className="absolute inset-0 bg-muted/50 border border-border rounded-lg translate-x-3 -translate-y-3" />
+                <div className="absolute inset-0 bg-muted/70 border border-border rounded-lg translate-x-1.5 -translate-y-1.5" />
+                <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-1">رغباتي</p>
@@ -696,13 +696,13 @@ export default function ProfilePage() {
               
               {/* Card 2 - Properties */}
               <div 
-                className="relative cursor-pointer group pt-2 pb-4"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("properties")}
                 data-testid="stat-card-properties"
               >
-                <div className="absolute inset-x-2 top-0 bottom-2 bg-card border border-border rounded-md -rotate-6 shadow-sm" />
-                <div className="absolute inset-x-1 top-1 bottom-1 bg-card border border-border rounded-md rotate-3 shadow-sm" />
-                <Card className="relative p-6 shadow-md transition-all duration-200 group-hover:-translate-y-2 group-hover:shadow-lg">
+                <div className="absolute inset-0 bg-muted/50 border border-border rounded-lg translate-x-3 -translate-y-3" />
+                <div className="absolute inset-0 bg-muted/70 border border-border rounded-lg translate-x-1.5 -translate-y-1.5" />
+                <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-1">عروضي</p>
@@ -717,13 +717,13 @@ export default function ProfilePage() {
               
               {/* Card 3 - Matches */}
               <div 
-                className="relative cursor-pointer group pt-2 pb-4"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("matches")}
                 data-testid="stat-card-matches"
               >
-                <div className="absolute inset-x-2 top-0 bottom-2 bg-card border border-border rounded-md rotate-5 shadow-sm" />
-                <div className="absolute inset-x-1 top-1 bottom-1 bg-card border border-border rounded-md -rotate-2 shadow-sm" />
-                <Card className="relative p-6 shadow-md transition-all duration-200 group-hover:-translate-y-2 group-hover:shadow-lg">
+                <div className="absolute inset-0 bg-muted/50 border border-border rounded-lg translate-x-3 -translate-y-3" />
+                <div className="absolute inset-0 bg-muted/70 border border-border rounded-lg translate-x-1.5 -translate-y-1.5" />
+                <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-1">المتطابقة</p>
@@ -738,13 +738,13 @@ export default function ProfilePage() {
               
               {/* Card 4 - Messages */}
               <div 
-                className="relative cursor-pointer group pt-2 pb-4"
+                className="relative cursor-pointer group"
                 onClick={() => handleTabChange("messages")}
                 data-testid="stat-card-messages"
               >
-                <div className="absolute inset-x-2 top-0 bottom-2 bg-card border border-border rounded-md -rotate-5 shadow-sm" />
-                <div className="absolute inset-x-1 top-1 bottom-1 bg-card border border-border rounded-md rotate-2 shadow-sm" />
-                <Card className="relative p-6 shadow-md transition-all duration-200 group-hover:-translate-y-2 group-hover:shadow-lg">
+                <div className="absolute inset-0 bg-muted/50 border border-border rounded-lg translate-x-3 -translate-y-3" />
+                <div className="absolute inset-0 bg-muted/70 border border-border rounded-lg translate-x-1.5 -translate-y-1.5" />
+                <Card className="relative p-6 shadow-lg transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-1">الرسائل</p>
