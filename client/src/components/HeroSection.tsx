@@ -1464,6 +1464,10 @@ export default function HeroSection() {
                 <span>جارٍ تحويل الصوت لنص...</span>
               </div>
             )}
+            {(() => {
+              const liveData = extractLiveData(inputText);
+              const hasEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
+              return (
             <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5 max-w-3xl mx-auto">
               {/* Send button */}
               <Button
@@ -1476,20 +1480,22 @@ export default function HeroSection() {
                 <Send className="h-4 w-4" />
               </Button>
               
-              {/* Microphone button */}
-              <Button
-                size="icon"
-                variant={isRecording ? "destructive" : "ghost"}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing}
-                className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                data-testid="button-voice-record"
-              >
-                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
+              {/* Microphone button - hide when essential data complete */}
+              {!hasEssentialData && (
+                <Button
+                  size="icon"
+                  variant={isRecording ? "destructive" : "ghost"}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isTranscribing}
+                  className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                  data-testid="button-voice-record"
+                >
+                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
               
-              {/* Upload button for sellers */}
-              {mode === "seller" && (
+              {/* Upload button for sellers - hide when essential data complete */}
+              {mode === "seller" && !hasEssentialData && (
                 <FileUploadButton
                   onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
                   buttonVariant="ghost"
@@ -1500,8 +1506,8 @@ export default function HeroSection() {
                 </FileUploadButton>
               )}
               
-              {/* Location picker button for sellers */}
-              {mode === "seller" && (
+              {/* Location picker button for sellers - hide when essential data complete */}
+              {mode === "seller" && !hasEssentialData && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -1517,29 +1523,25 @@ export default function HeroSection() {
               {/* Input field - auto-expanding textarea like WhatsApp */}
               <div className="flex-1 flex flex-col">
                 {/* Live extraction preview */}
-                {inputText.trim().length > 0 && (() => {
-                  const { found, missing } = extractLiveData(inputText);
-                  if (found.length === 0 && missing.length > 0) return null;
-                  return (
-                    <div className="text-xs text-right mb-1 px-1" dir="rtl">
-                      {found.length > 0 && (
-                        <span className="text-foreground">
-                          {found.map((item, i) => (
-                            <span key={item.key}>
-                              <span className="font-medium">{item.value}</span>
-                              {i < found.length - 1 && " "}
-                            </span>
-                          ))}
-                        </span>
-                      )}
-                      {missing.length > 0 && (
-                        <span className="text-muted-foreground mr-1">
-                          (متبقي {missing.join(" و ")})
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
+                {inputText.trim().length > 0 && (
+                  <div className="text-xs text-right mb-1 px-1" dir="rtl">
+                    {liveData.found.length > 0 && (
+                      <span className="text-foreground">
+                        {liveData.found.map((item, i) => (
+                          <span key={item.key}>
+                            <span className="font-medium">{item.value}</span>
+                            {i < liveData.found.length - 1 && " "}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    {liveData.missing.length > 0 && (
+                      <span className="text-muted-foreground mr-1">
+                        (متبقي {liveData.missing.join(" و ")})
+                      </span>
+                    )}
+                  </div>
+                )}
                 <textarea
                   ref={inputRef}
                   dir="rtl"
@@ -1556,7 +1558,7 @@ export default function HeroSection() {
                       handleSubmit();
                     }
                   }}
-                  placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
+                  placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار...")}
                   className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
                   autoComplete="off"
                   autoCorrect="off"
@@ -1567,6 +1569,8 @@ export default function HeroSection() {
                 />
               </div>
             </div>
+              );
+            })()}
             {isRecording && (
               <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
                 جارٍ التسجيل... اضغط مرة أخرى للإيقاف
@@ -1836,6 +1840,10 @@ export default function HeroSection() {
                   </div>
                 )}
                 
+                {(() => {
+                  const liveData = extractLiveData(inputText);
+                  const hasEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
+                  return (
                 <div className="flex items-start gap-3">
                   <Button
                     size="icon"
@@ -1847,43 +1855,41 @@ export default function HeroSection() {
                     <Send className="h-5 w-5" />
                   </Button>
                   
-                  {/* Voice recording button */}
-                  <Button
-                    size="icon"
-                    variant={isRecording ? "destructive" : "outline"}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isTranscribing}
-                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                    data-testid="button-voice-record-landing"
-                  >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                  </Button>
+                  {/* Voice recording button - hide when essential data complete */}
+                  {!hasEssentialData && (
+                    <Button
+                      size="icon"
+                      variant={isRecording ? "destructive" : "outline"}
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={isTranscribing}
+                      className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                      data-testid="button-voice-record-landing"
+                    >
+                      {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                    </Button>
+                  )}
                   
                   <div className="flex-1 flex flex-col">
                     {/* Live extraction preview */}
-                    {inputText.trim().length > 0 && (() => {
-                      const { found, missing } = extractLiveData(inputText);
-                      if (found.length === 0 && missing.length > 0) return null;
-                      return (
-                        <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
-                          {found.length > 0 && (
-                            <span className="text-foreground">
-                              {found.map((item, i) => (
-                                <span key={item.key}>
-                                  <span className="font-medium">{item.value}</span>
-                                  {i < found.length - 1 && " "}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-                          {missing.length > 0 && (
-                            <span className="text-muted-foreground mr-1">
-                              (متبقي {missing.join(" و ")})
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {inputText.trim().length > 0 && (
+                      <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
+                        {liveData.found.length > 0 && (
+                          <span className="text-foreground">
+                            {liveData.found.map((item, i) => (
+                              <span key={item.key}>
+                                <span className="font-medium">{item.value}</span>
+                                {i < liveData.found.length - 1 && " "}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                        {liveData.missing.length > 0 && (
+                          <span className="text-muted-foreground mr-1">
+                            (متبقي {liveData.missing.join(" و ")})
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <textarea
                       dir="rtl"
                       value={inputText}
@@ -1898,7 +1904,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار..."}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار...")}
                       className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
                       autoComplete="off"
                       autoCorrect="off"
@@ -1909,6 +1915,8 @@ export default function HeroSection() {
                     />
                   </div>
                 </div>
+                  );
+                })()}
                 
                 {isRecording && (
                   <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
