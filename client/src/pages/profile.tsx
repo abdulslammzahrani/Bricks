@@ -672,70 +672,90 @@ export default function ProfilePage() {
 
           {/* Dashboard Stats */}
           <div className="p-6 bg-gradient-to-l from-primary/5 to-transparent">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-              <Card 
-                className="p-6 hover-elevate cursor-pointer" 
-                onClick={() => handleTabChange("preferences")} 
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-6">
+              {/* Card 1 - Preferences */}
+              <div 
+                className="relative cursor-pointer group"
+                onClick={() => handleTabChange("preferences")}
                 data-testid="stat-card-preferences"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">رغباتي</p>
-                    <p className="text-3xl font-bold" data-testid="count-preferences">{preferencesCount}</p>
+                <div className="absolute inset-0 bg-card border rounded-md rotate-3 translate-y-1 opacity-40" />
+                <div className="absolute inset-0 bg-card border rounded-md -rotate-2 translate-y-0.5 opacity-60" />
+                <Card className="relative p-6 hover-elevate transition-transform group-hover:-translate-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">رغباتي</p>
+                      <p className="text-3xl font-bold" data-testid="count-preferences">{preferencesCount}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Heart className="h-6 w-6 text-primary" />
+                    </div>
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Heart className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </div>
               
-              <Card 
-                className="p-6 hover-elevate cursor-pointer" 
-                onClick={() => handleTabChange("properties")} 
+              {/* Card 2 - Properties */}
+              <div 
+                className="relative cursor-pointer group"
+                onClick={() => handleTabChange("properties")}
                 data-testid="stat-card-properties"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">عروضي</p>
-                    <p className="text-3xl font-bold" data-testid="count-properties">{propertiesCount}</p>
+                <div className="absolute inset-0 bg-card border rounded-md -rotate-3 translate-y-1 opacity-40" />
+                <div className="absolute inset-0 bg-card border rounded-md rotate-2 translate-y-0.5 opacity-60" />
+                <Card className="relative p-6 hover-elevate transition-transform group-hover:-translate-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">عروضي</p>
+                      <p className="text-3xl font-bold" data-testid="count-properties">{propertiesCount}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                      <Building2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
-                    <Building2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </div>
               
-              <Card 
-                className="p-6 hover-elevate cursor-pointer" 
-                onClick={() => handleTabChange("matches")} 
+              {/* Card 3 - Matches */}
+              <div 
+                className="relative cursor-pointer group"
+                onClick={() => handleTabChange("matches")}
                 data-testid="stat-card-matches"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">المتطابقة</p>
-                    <p className="text-3xl font-bold" data-testid="count-matches">0</p>
+                <div className="absolute inset-0 bg-card border rounded-md rotate-2 translate-y-1 opacity-40" />
+                <div className="absolute inset-0 bg-card border rounded-md -rotate-1 translate-y-0.5 opacity-60" />
+                <Card className="relative p-6 hover-elevate transition-transform group-hover:-translate-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">المتطابقة</p>
+                      <p className="text-3xl font-bold" data-testid="count-matches">0</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                      <Zap className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    </div>
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Zap className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </div>
               
-              <Card 
-                className="p-6 hover-elevate cursor-pointer" 
-                onClick={() => handleTabChange("messages")} 
+              {/* Card 4 - Messages */}
+              <div 
+                className="relative cursor-pointer group"
+                onClick={() => handleTabChange("messages")}
                 data-testid="stat-card-messages"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">الرسائل</p>
-                    <p className="text-3xl font-bold" data-testid="count-messages">0</p>
+                <div className="absolute inset-0 bg-card border rounded-md -rotate-2 translate-y-1 opacity-40" />
+                <div className="absolute inset-0 bg-card border rounded-md rotate-1 translate-y-0.5 opacity-60" />
+                <Card className="relative p-6 hover-elevate transition-transform group-hover:-translate-y-1">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">الرسائل</p>
+                      <p className="text-3xl font-bold" data-testid="count-messages">0</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                      <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
                   </div>
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </div>
             </div>
             
             {/* Quick Actions Bar */}
