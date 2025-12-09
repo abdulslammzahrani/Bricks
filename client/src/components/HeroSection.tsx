@@ -1637,17 +1637,17 @@ export default function HeroSection() {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                       </span>
-                      <span className="font-medium text-foreground">{liveViewers.toLocaleString('ar-SA')}</span>
+                      <span className="font-medium text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
                       <span>يتصفحون</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Zap className="h-3 w-3 text-amber-500" />
-                      <span className="font-medium text-foreground">{requestsToday}</span>
+                      <span className="font-medium text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
                       <span>طلب</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3 text-green-500" />
-                      <span className="font-medium text-foreground">{dealsToday}</span>
+                      <span className="font-medium text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
                       <span>صفقة</span>
                     </div>
                   </div>
