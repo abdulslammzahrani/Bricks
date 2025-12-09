@@ -131,7 +131,7 @@ function generateBuyerExample(id: number): Example {
         ...(neighborhood2 ? [{ text: " أو " }, { text: neighborhood2, color: "#22c55e", underline: true }] : []),
         ...(rooms ? [{ text: ` ، ${rooms}` }] : []),
         { text: " ، الميزانية " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " " },
         { text: payment, color: "#3b82f6", underline: true },
         { text: " - " },
@@ -139,7 +139,7 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `أبحث عن ${propertyType} في ${city.name} حي ${neighborhood}${neighborhood2 ? ` أو ${neighborhood2}` : ""}${rooms ? ` ، ${rooms}` : ""} ، الميزانية ${budget.text} ${payment} - ${name}${lastName} ${phone}`
+      fullText: `أبحث عن ${propertyType} في ${city.name} حي ${neighborhood}${neighborhood2 ? ` أو ${neighborhood2}` : ""}${rooms ? ` ، ${rooms}` : ""} ، الميزانية ** ${payment} - ${name}${lastName} ${phone}`
     }),
     () => ({
       segments: [
@@ -150,7 +150,7 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: " ، معي " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " " },
         { text: payment, color: "#3b82f6", underline: true },
         { text: " .. " },
@@ -158,7 +158,7 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `محتاج ${propertyType} في ${city.name} ${neighborhood} ، معي ${budget.text} ${payment} .. ${name}${lastName} ${phone}`
+      fullText: `محتاج ${propertyType} في ${city.name} ${neighborhood} ، معي ** ${payment} .. ${name}${lastName} ${phone}`
     }),
     () => ({
       segments: [
@@ -169,13 +169,13 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: "؟ الميزانية لين " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " - " },
         { text: name, color: "#f97316", underline: true },
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `يا شباب مين يوصلني ${propertyType} في ${city.name} ${neighborhood}؟ الميزانية لين ${budget.text} - ${name} ${phone}`
+      fullText: `يا شباب مين يوصلني ${propertyType} في ${city.name} ${neighborhood}؟ الميزانية لين ** - ${name} ${phone}`
     }),
     () => ({
       segments: [
@@ -187,7 +187,7 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: " ، السعر ما يتجاوز " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " " },
         { text: payment, color: "#3b82f6", underline: true },
         { text: " - " },
@@ -195,7 +195,7 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `ودي ب${propertyType}${rooms ? ` ${rooms}` : ""} في ${city.name} ${neighborhood} ، السعر ما يتجاوز ${budget.text} ${payment} - ${name} ${phone}`
+      fullText: `ودي ب${propertyType}${rooms ? ` ${rooms}` : ""} في ${city.name} ${neighborhood} ، السعر ما يتجاوز ** ${payment} - ${name} ${phone}`
     }),
     () => ({
       segments: [
@@ -210,9 +210,9 @@ function generateBuyerExample(id: number): Example {
         { text: " " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: " ، معي " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
       ],
-      fullText: `السلام عليكم ، أنا ${name}${lastName} ${phone} ، أدور ${propertyType} في ${city.name} ${neighborhood} ، معي ${budget.text}`
+      fullText: `السلام عليكم ، أنا ${name}${lastName} ${phone} ، أدور ${propertyType} في ${city.name} ${neighborhood} ، معي **`
     }),
   ];
   
@@ -246,13 +246,13 @@ function generateSellerExample(id: number): Example {
         { text: ` ، ${rooms}` },
         ...(feature ? [{ text: ` ${feature}` }] : []),
         { text: ` ، مساحة ${area} ، السعر ` },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " - " },
         { text: name + lastName, color: "#f97316", underline: true },
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `عندي ${propertyType} للبيع في ${city.name} ${neighborhood} ، ${rooms}${feature ? ` ${feature}` : ""} ، مساحة ${area} ، السعر ${budget.text} - ${name}${lastName} ${phone}`
+      fullText: `عندي ${propertyType} للبيع في ${city.name} ${neighborhood} ، ${rooms}${feature ? ` ${feature}` : ""} ، مساحة ${area} ، السعر ** - ${name}${lastName} ${phone}`
     }),
     () => ({
       segments: [
@@ -263,13 +263,13 @@ function generateSellerExample(id: number): Example {
         { text: " حي " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: ` ، ${rooms} ، تشطيب ممتاز ، ` },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " قابل للتفاوض .. " },
         { text: name, color: "#f97316", underline: true },
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `للبيع ${propertyType} في ${city.name} حي ${neighborhood} ، ${rooms} ، تشطيب ممتاز ، ${budget.text} قابل للتفاوض .. ${name} ${phone}`
+      fullText: `للبيع ${propertyType} في ${city.name} حي ${neighborhood} ، ${rooms} ، تشطيب ممتاز ، ** قابل للتفاوض .. ${name} ${phone}`
     }),
     () => ({
       segments: [
@@ -281,13 +281,13 @@ function generateSellerExample(id: number): Example {
         { text: ` ، ${rooms}` },
         ...(feature ? [{ text: ` ${feature}` }] : []),
         { text: " ، " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " - المالك " },
         { text: name, color: "#f97316", underline: true },
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `${propertyType} جديد للبيع في ${city.name} ${neighborhood} ، ${rooms}${feature ? ` ${feature}` : ""} ، ${budget.text} - المالك ${name} ${phone}`
+      fullText: `${propertyType} جديد للبيع في ${city.name} ${neighborhood} ، ${rooms}${feature ? ` ${feature}` : ""} ، ** - المالك ${name} ${phone}`
     }),
     () => ({
       segments: [
@@ -298,13 +298,13 @@ function generateSellerExample(id: number): Example {
         { text: " " },
         { text: neighborhood, color: "#22c55e", underline: true },
         { text: ` ، ${rooms} ، مساحة ${area} ، ` },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " .. " },
         { text: name + lastName, color: "#f97316", underline: true },
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `للبيع المستعجل ${propertyType} في ${city.name} ${neighborhood} ، ${rooms} ، مساحة ${area} ، ${budget.text} .. ${name}${lastName} ${phone}`
+      fullText: `للبيع المستعجل ${propertyType} في ${city.name} ${neighborhood} ، ${rooms} ، مساحة ${area} ، ** .. ${name}${lastName} ${phone}`
     }),
   ];
   
@@ -334,7 +334,7 @@ function generateInvestorExample(id: number): Example {
         { text: " أو " },
         { text: city2.name, color: "#22c55e", underline: true },
         { text: " ، رأس المال " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " ، أبي عائد " },
         { text: returnRate, color: "#d97706", underline: true },
         { text: " - " },
@@ -342,7 +342,7 @@ function generateInvestorExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `مستثمر أبحث عن ${propertyType} في ${city.name} أو ${city2.name} ، رأس المال ${budget.text} ، أبي عائد ${returnRate} - ${name}${lastName} ${phone}`
+      fullText: `مستثمر أبحث عن ${propertyType} في ${city.name} أو ${city2.name} ، رأس المال ** ، أبي عائد ${returnRate} - ${name}${lastName} ${phone}`
     }),
     () => ({
       segments: [
@@ -351,7 +351,7 @@ function generateInvestorExample(id: number): Example {
         { text: " في " },
         { text: city.name, color: "#22c55e", underline: true },
         { text: " ، الميزانية " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " ، العائد المطلوب " },
         { text: returnRate, color: "#d97706", underline: true },
         { text: " - " },
@@ -359,7 +359,7 @@ function generateInvestorExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `مهتم ب${propertyType} في ${city.name} ، الميزانية ${budget.text} ، العائد المطلوب ${returnRate} - ${name} ${phone}`
+      fullText: `مهتم ب${propertyType} في ${city.name} ، الميزانية ** ، العائد المطلوب ${returnRate} - ${name} ${phone}`
     }),
     () => ({
       segments: [
@@ -368,7 +368,7 @@ function generateInvestorExample(id: number): Example {
         { text: " ب" },
         { text: city.name, color: "#22c55e", underline: true },
         { text: " ، معي " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " ، أبي عائد لا يقل عن " },
         { text: returnRate, color: "#d97706", underline: true },
         { text: " .. " },
@@ -376,12 +376,12 @@ function generateInvestorExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `أبحث عن فرصة استثمارية في ${propertyType} ب${city.name} ، معي ${budget.text} ، أبي عائد لا يقل عن ${returnRate} .. ${name}${lastName} ${phone}`
+      fullText: `أبحث عن فرصة استثمارية في ${propertyType} ب${city.name} ، معي ** ، أبي عائد لا يقل عن ${returnRate} .. ${name}${lastName} ${phone}`
     }),
     () => ({
       segments: [
         { text: "عندي سيولة " },
-        { text: budget.text, color: "#22c55e", underline: true },
+        { text: "**", color: "#22c55e", underline: true },
         { text: " وأبي " },
         { text: propertyType, color: "#d97706", underline: true },
         { text: " مؤجر في " },
@@ -393,7 +393,7 @@ function generateInvestorExample(id: number): Example {
         { text: " " },
         { text: phone, color: "#f97316", underline: true },
       ],
-      fullText: `عندي سيولة ${budget.text} وأبي ${propertyType} مؤجر في ${city.name} ، العائد المتوقع ${returnRate} - ${name} ${phone}`
+      fullText: `عندي سيولة ** وأبي ${propertyType} مؤجر في ${city.name} ، العائد المتوقع ${returnRate} - ${name} ${phone}`
     }),
   ];
   
