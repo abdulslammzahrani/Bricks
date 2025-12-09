@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, CheckCircle2 } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, FileText, Handshake } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -141,6 +141,12 @@ export default function HeroSection() {
   const [requestsToday, setRequestsToday] = useState(0);
   const [dealsToday, setDealsToday] = useState(0);
   
+  // Animation states for counter changes
+  const [requestsAnimating, setRequestsAnimating] = useState(false);
+  const [dealsAnimating, setDealsAnimating] = useState(false);
+  const prevRequestsRef = useRef(0);
+  const prevDealsRef = useRef(0);
+  
   // Get month period multiplier (salary periods boost activity)
   const getMonthPeriodMultiplier = () => {
     const day = new Date().getDate();
@@ -276,8 +282,24 @@ export default function HeroSection() {
     const requestInterval = setInterval(() => {
       setLiveViewers(currentViewers => {
         const newRequests = calculateDailyRequests(currentViewers);
+        const newDeals = calculateDailyDeals(newRequests);
+        
+        // Trigger animation if requests changed
+        if (newRequests !== prevRequestsRef.current) {
+          prevRequestsRef.current = newRequests;
+          setRequestsAnimating(true);
+          setTimeout(() => setRequestsAnimating(false), 600);
+        }
+        
+        // Trigger animation if deals changed
+        if (newDeals !== prevDealsRef.current) {
+          prevDealsRef.current = newDeals;
+          setDealsAnimating(true);
+          setTimeout(() => setDealsAnimating(false), 600);
+        }
+        
         setRequestsToday(newRequests);
-        setDealsToday(calculateDailyDeals(newRequests));
+        setDealsToday(newDeals);
         return currentViewers;
       });
     }, 30000);
@@ -1641,13 +1663,17 @@ export default function HeroSection() {
                       <span>يتصفحون</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Zap className="h-3 w-3 text-amber-500" />
-                      <span className="font-medium text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                      <FileText className={`h-3 w-3 text-amber-500 transition-transform duration-300 ${requestsAnimating ? 'scale-125 rotate-6' : ''}`} />
+                      <span className={`font-medium text-foreground transition-all duration-300 ${requestsAnimating ? 'scale-110 text-amber-600' : ''}`}>
+                        {requestsToday.toLocaleString('ar-EG')}
+                      </span>
                       <span>طلب</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                      <span className="font-medium text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
+                      <Handshake className={`h-3 w-3 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-125 animate-pulse' : ''}`} />
+                      <span className={`font-medium text-foreground transition-all duration-300 ${dealsAnimating ? 'scale-110 text-green-600' : ''}`}>
+                        {dealsToday.toLocaleString('ar-EG')}
+                      </span>
                       <span>صفقة</span>
                     </div>
                   </div>
