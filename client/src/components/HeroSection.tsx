@@ -193,14 +193,17 @@ export default function HeroSection() {
 
   // Auto-scroll to bottom when conversation updates
   useEffect(() => {
-    // Use setTimeout to ensure DOM is updated before scrolling
-    const timer = setTimeout(() => {
+    // Use requestAnimationFrame for better timing
+    const scrollToBottom = () => {
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
       }
-    }, 100);
+    };
+    // Call immediately and after a short delay for reliability
+    scrollToBottom();
+    const timer = setTimeout(scrollToBottom, 150);
     return () => clearTimeout(timer);
-  }, [conversation, isTyping, pendingConfirmation]);
+  }, [conversation, isTyping, pendingConfirmation, confirmationFields]);
 
   // Lock body scroll when fullscreen chat is active
   useEffect(() => {
@@ -1365,6 +1368,11 @@ export default function HeroSection() {
                 placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                 className="flex-1 min-h-[40px] py-2 px-3 outline-none text-[15px] bg-transparent"
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                enterKeyHint="send"
+                inputMode="text"
                 data-testid="input-chat-fullscreen"
               />
             </div>
@@ -1658,6 +1666,11 @@ export default function HeroSection() {
                       placeholder={isRecording ? "جارٍ التسجيل..." : "اكتب رغبتك العقارية هنا..."}
                       className="w-full min-h-[50px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50"
                       autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      enterKeyHint="send"
+                      inputMode="text"
                       data-testid="input-interactive"
                     />
                   </div>
