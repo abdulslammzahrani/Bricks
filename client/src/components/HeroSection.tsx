@@ -440,14 +440,23 @@ export default function HeroSection() {
     return "";
   };
 
+  // Convert Arabic numerals to English
+  const arabicToEnglish = (str: string): string => {
+    const arabicNumerals = '٠١٢٣٤٥٦٧٨٩';
+    return str.replace(/[٠-٩]/g, d => String(arabicNumerals.indexOf(d)));
+  };
+
   // Real-time extraction for live preview
-  const extractLiveData = (text: string): { found: Record<string, string>; missing: string[] } => {
-    const found: Record<string, string> = {};
+  const extractLiveData = (text: string): { found: { key: string; value: string }[]; missing: string[] } => {
+    const foundMap: Record<string, string> = {};
     const requiredFields = mode === "buyer" 
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية"]
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
       : mode === "seller"
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "السعر"]
-      : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار", "رأس المال"];
+      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
+      : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار"];
+    
+    // Normalize text - convert Arabic numbers to English for matching
+    const normalizedText = arabicToEnglish(text);
     
     // Extract name - matches Arabic names (2-4 words starting text or after specific keywords)
     const namePatterns = [
@@ -457,63 +466,63 @@ export default function HeroSection() {
     for (const pattern of namePatterns) {
       const match = text.match(pattern);
       if (match) {
-        found["الاسم"] = match[1].trim();
+        foundMap["الاسم"] = match[1].trim();
         break;
       }
     }
     
-    // Extract phone
-    const phoneMatch = text.match(/(05\d{8})/);
+    // Extract phone - support both Arabic and English numerals
+    const phoneMatch = normalizedText.match(/(05\d{8})/);
     if (phoneMatch) {
-      found["رقم الجوال"] = phoneMatch[1];
+      foundMap["رقم الجوال"] = phoneMatch[1];
     }
     
     // Extract city
     const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم", "الأحساء", "نجران", "جازان", "ينبع", "حائل", "الجبيل", "بريدة", "خميس مشيط", "الظهران", "القطيف"];
     for (const city of cities) {
       if (text.includes(city)) {
-        found["المدينة"] = city;
+        foundMap["المدينة"] = city;
         break;
       }
     }
     
-    // Extract district/neighborhood
-    const districtMatch = text.match(/(?:حي|منطقة)\s+([أ-ي\s]{2,20}?)(?:\s|،|$)/i);
+    // Extract district/neighborhood - common districts
+    const commonDistricts = ["الصفا", "النزهة", "العليا", "الملز", "السليمانية", "الروضة", "النسيم", "الشفا", "العزيزية", "الحمراء", "المروج", "الياسمين", "الرمال", "النخيل", "الورود", "الفيحاء", "السلامة", "الربوة", "المرسلات", "الفيصلية", "الخالدية", "البوادي", "الزهراء", "السامر", "المحمدية", "الشاطئ", "الكورنيش", "الروابي", "اشبيليا", "غرناطة", "قرطبة", "الملقا", "حطين", "العارض", "النرجس", "طويق", "لبن", "السعادة", "الدار البيضاء"];
+    
+    // First try pattern matching
+    const districtMatch = text.match(/(?:حي|منطقة)\s+([أ-ي\u0621-\u064A\s]{2,20}?)(?:\s|،|$)/i);
     if (districtMatch) {
-      found["الحي"] = districtMatch[1].trim();
+      foundMap["الحي"] = districtMatch[1].trim();
+    } else {
+      // Then try direct match from common districts
+      for (const district of commonDistricts) {
+        if (text.includes(district)) {
+          foundMap["الحي"] = district;
+          break;
+        }
+      }
     }
     
     // Extract property type
     const propertyTypes = ["شقة", "فيلا", "دوبلكس", "أرض", "عمارة", "استوديو", "دور", "محل", "مكتب", "مستودع", "مزرعة"];
     for (const type of propertyTypes) {
       if (text.includes(type)) {
-        found["نوع العقار"] = type;
-        found["نوع الاستثمار"] = type;
+        foundMap["نوع العقار"] = type;
+        foundMap["نوع الاستثمار"] = type;
         break;
       }
     }
     
-    // Extract budget/price
-    const budgetMatch = text.match(/(\d+(?:\.\d+)?)\s*(ألف|الف|مليون|ريال)?/);
-    if (budgetMatch) {
-      let amount = parseFloat(budgetMatch[1]);
-      let unit = "";
-      if (budgetMatch[2]?.includes("مليون")) {
-        unit = " مليون";
-      } else if (budgetMatch[2]?.includes("لف")) {
-        unit = " ألف";
-      } else if (amount >= 1000000) {
-        unit = "";
-      } else if (amount >= 1000) {
-        unit = " ألف";
+    // Build found array in display order (only relevant fields for current mode)
+    const found: { key: string; value: string }[] = [];
+    for (const field of requiredFields) {
+      if (foundMap[field]) {
+        found.push({ key: field, value: foundMap[field] });
       }
-      found["الميزانية"] = budgetMatch[1] + unit;
-      found["السعر"] = budgetMatch[1] + unit;
-      found["رأس المال"] = budgetMatch[1] + unit;
     }
     
     // Calculate missing fields
-    const missing = requiredFields.filter(field => !found[field]);
+    const missing = requiredFields.filter(field => !foundMap[field]);
     
     return { found, missing };
   };
@@ -1510,16 +1519,15 @@ export default function HeroSection() {
                 {/* Live extraction preview */}
                 {inputText.trim().length > 0 && (() => {
                   const { found, missing } = extractLiveData(inputText);
-                  const foundKeys = Object.keys(found);
-                  if (foundKeys.length === 0 && missing.length > 0) return null;
+                  if (found.length === 0 && missing.length > 0) return null;
                   return (
                     <div className="text-xs text-right mb-1 px-1" dir="rtl">
-                      {foundKeys.length > 0 && (
+                      {found.length > 0 && (
                         <span className="text-foreground">
-                          {foundKeys.map((key, i) => (
-                            <span key={key}>
-                              <span className="font-medium">{found[key]}</span>
-                              {i < foundKeys.length - 1 && " "}
+                          {found.map((item, i) => (
+                            <span key={item.key}>
+                              <span className="font-medium">{item.value}</span>
+                              {i < found.length - 1 && " "}
                             </span>
                           ))}
                         </span>
@@ -1855,16 +1863,15 @@ export default function HeroSection() {
                     {/* Live extraction preview */}
                     {inputText.trim().length > 0 && (() => {
                       const { found, missing } = extractLiveData(inputText);
-                      const foundKeys = Object.keys(found);
-                      if (foundKeys.length === 0 && missing.length > 0) return null;
+                      if (found.length === 0 && missing.length > 0) return null;
                       return (
                         <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
-                          {foundKeys.length > 0 && (
+                          {found.length > 0 && (
                             <span className="text-foreground">
-                              {foundKeys.map((key, i) => (
-                                <span key={key}>
-                                  <span className="font-medium">{found[key]}</span>
-                                  {i < foundKeys.length - 1 && " "}
+                              {found.map((item, i) => (
+                                <span key={item.key}>
+                                  <span className="font-medium">{item.value}</span>
+                                  {i < found.length - 1 && " "}
                                 </span>
                               ))}
                             </span>
