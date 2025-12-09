@@ -1,14 +1,46 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import MemoryStore from "memorystore";
 
 const app = express();
 const httpServer = createServer(app);
 
+// Session store with memorystore for development
+const MemoryStoreSession = MemoryStore(session);
+
+// Configure session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "tatabuk-dev-secret-key-2024",
+    resave: false,
+    saveUninitialized: false,
+    store: new MemoryStoreSession({
+      checkPeriod: 86400000, // prune expired entries every 24h
+    }),
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: "lax",
+    },
+    name: "tatabuk.sid",
+  })
+);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
+  }
+}
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+    userName?: string;
+    userRole?: string;
   }
 }
 

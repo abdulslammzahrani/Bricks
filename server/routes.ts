@@ -162,6 +162,11 @@ export async function registerRoutes(
         }
       }
 
+      // Set session
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+      req.session.userRole = user.role;
+
       // Return user with requiresPasswordReset flag
       res.json({ 
         user: {
@@ -182,7 +187,7 @@ export async function registerRoutes(
   // Get current user session
   app.get("/api/auth/me", async (req, res) => {
     try {
-      const userId = req.headers["x-user-id"] as string;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مسجل الدخول" });
       }
@@ -205,20 +210,40 @@ export async function registerRoutes(
     }
   });
 
-  // Change password
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "فشل تسجيل الخروج" });
+      }
+      res.clearCookie("tatabuk.sid", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+      res.json({ success: true });
+    });
+  });
+
+  // Change password (requires authenticated session)
   app.post("/api/auth/change-password", async (req, res) => {
     try {
-      const { userId, currentPassword, newPassword } = req.body;
+      const sessionUserId = req.session.userId;
+      const { newPassword } = req.body;
       
-      if (!userId || !newPassword) {
-        return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
+      if (!sessionUserId) {
+        return res.status(401).json({ error: "غير مسجل الدخول" });
+      }
+
+      if (!newPassword) {
+        return res.status(400).json({ error: "كلمة المرور مطلوبة" });
       }
 
       if (newPassword.length < 6) {
         return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       }
 
-      const user = await storage.getUser(userId);
+      const user = await storage.getUser(sessionUserId);
       if (!user) {
         return res.status(404).json({ error: "المستخدم غير موجود" });
       }
@@ -227,7 +252,7 @@ export async function registerRoutes(
       const passwordHash = await bcrypt.hash(newPassword, 10);
       
       // Update user with new password and clear reset flag
-      await storage.updateUser(userId, {
+      await storage.updateUser(sessionUserId, {
         passwordHash,
         requiresPasswordReset: false,
       });
@@ -285,7 +310,12 @@ export async function registerRoutes(
       // Find matches
       await storage.findMatchesForPreference(preference.id);
 
-      // Return user with auto-login info
+      // Set session for auto-login
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+      req.session.userRole = user.role;
+
+      // Return user (no credentials exposed)
       res.json({ 
         success: true,
         user: {
@@ -297,10 +327,6 @@ export async function registerRoutes(
           requiresPasswordReset: true,
         },
         preference,
-        credentials: {
-          username: phone,
-          tempPassword: phone,
-        }
       });
     } catch (error: any) {
       console.error("Auto-register error:", error);

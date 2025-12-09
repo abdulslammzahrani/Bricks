@@ -38,31 +38,29 @@ export default function Dashboard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const userId = localStorage.getItem("tatabuk_user_id");
-
+  // Use session-based auth via cookies (no localStorage)
   const userQuery = useQuery<{ user: UserData }>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
-      if (!userId) throw new Error("لم يتم تسجيل الدخول");
       const res = await fetch("/api/auth/me", {
-        headers: { "x-user-id": userId },
         credentials: "include",
       });
-      if (!res.ok) throw new Error("فشل في جلب بيانات المستخدم");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "فشل في جلب بيانات المستخدم");
+      }
       return res.json();
     },
-    enabled: !!userId,
     retry: false,
   });
 
   const user = userQuery.data?.user;
 
   useEffect(() => {
-    if (!userId) {
+    if (userQuery.isError) {
       navigate("/");
-      return;
     }
-  }, [userId, navigate]);
+  }, [userQuery.isError, navigate]);
 
   useEffect(() => {
     if (user?.requiresPasswordReset) {
@@ -84,14 +82,11 @@ export default function Dashboard() {
   });
 
   const changePasswordMutation = useMutation({
-    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+    mutationFn: async ({ newPassword }: { newPassword: string }) => {
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-user-id": userId,
-        },
-        body: JSON.stringify({ userId, newPassword }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
         credentials: "include",
       });
       if (!response.ok) {
@@ -117,6 +112,23 @@ export default function Dashboard() {
     },
   });
 
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("فشل تسجيل الخروج");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      navigate("/");
+    },
+  });
+
   const handlePasswordChange = () => {
     if (newPassword.length < 6) {
       toast({
@@ -134,14 +146,11 @@ export default function Dashboard() {
       });
       return;
     }
-    if (user) {
-      changePasswordMutation.mutate({ userId: user.id, newPassword });
-    }
+    changePasswordMutation.mutate({ newPassword });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("tatabuk_user_id");
-    navigate("/");
+    logoutMutation.mutate();
   };
 
   const formatBudget = (amount: number | null) => {

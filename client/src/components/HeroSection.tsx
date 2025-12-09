@@ -739,13 +739,11 @@ export default function HeroSection() {
         const result = await response.json();
         
         if (result.success && result.user) {
-          // Store only user ID in localStorage (no credentials)
-          localStorage.setItem("tatabuk_user_id", result.user.id);
-          
-          // Show success message (password sent via SMS in production)
+          // Session cookie is automatically set by the server
+          // Show success message
           setConversation(prev => [
             ...prev,
-            { type: "system", text: `تم تسجيل طلبك بنجاح يا ${data.name.split(" ")[0]}! رقم جوالك هو اسم المستخدم. سنرسل لك رسالة SMS بكلمة المرور. جاري تحويلك لصفحتك الخاصة...` }
+            { type: "system", text: `تم تسجيل طلبك بنجاح يا ${data.name.split(" ")[0]}! رقم جوالك هو اسم المستخدم. جاري تحويلك لصفحتك الخاصة...` }
           ]);
           
           // Redirect to dashboard after 2 seconds
