@@ -6,6 +6,7 @@ import { TrendingUp, Building2, MapPin, Send, CheckCircle, Sparkles, Check, X } 
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import Header from "@/components/Header";
 
 interface ExampleSegment {
   text: string;
@@ -250,27 +251,31 @@ export default function InvestorPage() {
 
   if (isComplete) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center p-8">
-          <div className="mb-6">
-            <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-amber-600" />
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full text-center p-8">
+            <div className="mb-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-amber-600" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2">تم التسجيل بنجاح!</h2>
+              <p className="text-muted-foreground">
+                سنتواصل معك عند توفر فرص استثمارية تناسب معاييرك
+              </p>
             </div>
-            <h2 className="text-2xl font-bold mb-2">تم التسجيل بنجاح!</h2>
-            <p className="text-muted-foreground">
-              سنتواصل معك عند توفر فرص استثمارية تناسب معاييرك
-            </p>
-          </div>
-          <Button onClick={() => window.location.href = "/"} className="w-full bg-amber-600 hover:bg-amber-700">
-            العودة للرئيسية
-          </Button>
-        </Card>
+            <Button onClick={() => window.location.href = "/"} className="w-full bg-amber-600 hover:bg-amber-700">
+              العودة للرئيسية
+            </Button>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/50 via-background to-background dark:from-amber-950/20">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-amber-50/50 via-background to-background dark:from-amber-950/20">
+      <Header />
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
