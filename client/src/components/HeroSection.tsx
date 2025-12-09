@@ -278,11 +278,10 @@ export default function HeroSection() {
       });
     }, 3000 + Math.random() * 4000);
     
-    // Update requests every 30 seconds (linked to current viewers)
+    // Update requests every 20-40 seconds (separate from deals)
     const requestInterval = setInterval(() => {
       setLiveViewers(currentViewers => {
         const newRequests = calculateDailyRequests(currentViewers);
-        const newDeals = calculateDailyDeals(newRequests);
         
         // Trigger animation if requests changed
         if (newRequests !== prevRequestsRef.current) {
@@ -291,6 +290,16 @@ export default function HeroSection() {
           setTimeout(() => setRequestsAnimating(false), 600);
         }
         
+        setRequestsToday(newRequests);
+        return currentViewers;
+      });
+    }, 20000 + Math.random() * 20000);
+    
+    // Update deals every 45-90 seconds (separate from requests, less frequent)
+    const dealsInterval = setInterval(() => {
+      setRequestsToday(currentRequests => {
+        const newDeals = calculateDailyDeals(currentRequests);
+        
         // Trigger animation if deals changed
         if (newDeals !== prevDealsRef.current) {
           prevDealsRef.current = newDeals;
@@ -298,15 +307,15 @@ export default function HeroSection() {
           setTimeout(() => setDealsAnimating(false), 600);
         }
         
-        setRequestsToday(newRequests);
         setDealsToday(newDeals);
-        return currentViewers;
+        return currentRequests;
       });
-    }, 30000);
+    }, 45000 + Math.random() * 45000);
     
     return () => {
       clearInterval(viewerInterval);
       clearInterval(requestInterval);
+      clearInterval(dealsInterval);
     };
   }, []);
 
