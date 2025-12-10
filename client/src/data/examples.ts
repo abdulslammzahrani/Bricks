@@ -1,10 +1,10 @@
-interface ExampleSegment {
+export interface ExampleSegment {
   text: string;
   color?: string;
   underline?: boolean;
 }
 
-interface Example {
+export interface Example {
   id: string;
   segments: ExampleSegment[];
   fullText: string;
@@ -463,4 +463,3 @@ export function markExampleViewed(type: "buyer" | "seller" | "investor", example
   } catch (e) {}
 }
 
-export type { Example, ExampleSegment };

@@ -15,6 +15,7 @@ import { useLocation } from "wouter";
 import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
 import { AdvancedSearchForm } from "./AdvancedSearchForm";
 import { ListPropertyForm } from "./ListPropertyForm";
+import { TypewriterBanner } from "./TypewriterBanner";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -369,24 +370,10 @@ export default function HeroSection() {
     },
   });
 
-  // Typewriter effect - types then waits 3 seconds before next example
-  useEffect(() => {
-    const totalLength = exampleSegments.reduce((acc, seg) => acc + seg.text.length, 0);
-    if (charIndex < totalLength) {
-      // Still typing - advance one character every 50ms
-      const timer = setTimeout(() => {
-        setCharIndex(prev => prev + 1);
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
-      // Finished typing - wait 3 seconds then go to next example
-      const timer = setTimeout(() => {
-        setExampleIndex(prev => prev + 1);
-        setCharIndex(0);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [charIndex, exampleSegments]);
+  // Typewriter example completion handler
+  const handleExampleComplete = () => {
+    setExampleIndex(prev => prev + 1);
+  };
 
   const handleModeSwitch = (newMode: UserMode) => {
     setMode(newMode);
@@ -2068,26 +2055,13 @@ export default function HeroSection() {
                   </div>
                   
                   {/* Typewriter Example */}
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                      عميل يطلب الآن:
-                    </p>
-                  </div>
-                  <div 
-                    className="text-center cursor-pointer min-h-[40px] flex items-center justify-center px-2 overflow-hidden mb-2"
-                    onClick={() => addSuggestion(fullExampleText)}
-                    data-testid="button-typewriter-example"
-                  >
-                    <p className="text-sm leading-relaxed line-clamp-2">
-                      {renderTypedText()}
-                      <span className="text-muted-foreground">...</span>
-                      <span className="animate-pulse text-primary font-bold">|</span>
-                    </p>
-                  </div>
+                  <TypewriterBanner
+                    segments={exampleSegments}
+                    fullText={fullExampleText}
+                    mode={mode}
+                    onExampleComplete={handleExampleComplete}
+                    onTextClick={addSuggestion}
+                  />
                   
                   {/* Map */}
                   <SaudiMap 
@@ -2196,26 +2170,13 @@ export default function HeroSection() {
                   </div>
                   
                   {/* Typewriter Example for Seller */}
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <p className="text-xs font-medium text-green-600 dark:text-green-400">
-                      عقار معروض الآن:
-                    </p>
-                  </div>
-                  <div 
-                    className="text-center cursor-pointer min-h-[40px] flex items-center justify-center px-2 overflow-hidden mb-2"
-                    onClick={() => addSuggestion(fullExampleText)}
-                    data-testid="button-typewriter-seller"
-                  >
-                    <p className="text-sm leading-relaxed line-clamp-2">
-                      {renderTypedText()}
-                      <span className="text-muted-foreground">...</span>
-                      <span className="animate-pulse text-green-600 font-bold">|</span>
-                    </p>
-                  </div>
+                  <TypewriterBanner
+                    segments={exampleSegments}
+                    fullText={fullExampleText}
+                    mode={mode}
+                    onExampleComplete={handleExampleComplete}
+                    onTextClick={addSuggestion}
+                  />
                   
                   {/* Map */}
                   <SaudiMap 
