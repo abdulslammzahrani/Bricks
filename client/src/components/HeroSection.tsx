@@ -14,6 +14,7 @@ import { getShuffledExamples, markExampleViewed, type Example } from "@/data/exa
 import { useLocation } from "wouter";
 import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
 import { AdvancedSearchForm } from "./AdvancedSearchForm";
+import { ListPropertyForm } from "./ListPropertyForm";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -1894,16 +1895,11 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Typewriter Example + Map Panel (for sellers only) */}
+            {/* List Property Form (for sellers only) */}
             {mode === "seller" && !isComplete && conversation.length === 0 && !pendingConfirmation && (
-              <div 
-                className="bg-green-50 dark:bg-green-950/20"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}>
-                {/* Stats Bar + Typewriter (Top) */}
-                <div className="p-3 pb-2">
-                  {/* Stats Bar - Integrated */}
+              <div className="bg-amber-50/50 dark:bg-amber-950/10">
+                {/* Stats Bar (Top) */}
+                <div className="p-3 pb-0">
                   <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="relative flex h-2 w-2">
@@ -1928,36 +1924,30 @@ export default function HeroSection() {
                       <span>صفقة</span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                      بائع يعرض الآن:
-                    </p>
-                  </div>
-                  <div 
-                    className="text-center cursor-pointer min-h-[80px] flex items-center justify-center px-2 overflow-hidden"
-                    onClick={() => addSuggestion(fullExampleText)}
-                    data-testid="button-typewriter-example"
-                  >
-                    <p className="text-base leading-relaxed line-clamp-2">
-                      {renderTypedText()}
-                      <span className="text-muted-foreground">...</span>
-                      <span className="animate-pulse text-primary font-bold">|</span>
-                    </p>
-                  </div>
                 </div>
-                
-                {/* Saudi Map inside the panel (Bottom) */}
-                <div className="px-3 pb-3">
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
-                  />
-                </div>
+
+                {/* List Property Form */}
+                <ListPropertyForm 
+                  onSubmit={(propertyData) => {
+                    // Handle property submission
+                    toast({
+                      title: "تم استلام طلبك",
+                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                    });
+                    setIsComplete(true);
+                    setExtractedData({
+                      name: propertyData.ownerName,
+                      phone: propertyData.ownerPhone,
+                      city: propertyData.city,
+                      district: propertyData.district,
+                      propertyType: propertyData.propertyType,
+                      transactionType: propertyData.transactionType,
+                      rooms: propertyData.rooms,
+                      area: propertyData.area,
+                      price: propertyData.price,
+                    });
+                  }}
+                />
               </div>
             )}
 
