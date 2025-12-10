@@ -334,6 +334,7 @@ export function calculateMatchScore(buyer: BuyerPreference, property: PropertyLi
   };
 }
 
+// خوارزمية الفرز المتقدمة (Ranking Algorithm)
 export function findMatchingProperties(
   buyer: BuyerPreference, 
   properties: PropertyListing[],
@@ -342,9 +343,101 @@ export function findMatchingProperties(
   const results = properties
     .map(property => calculateMatchScore(buyer, property))
     .filter(result => result.matchScore >= minScore)
-    .sort((a, b) => b.matchScore - a.matchScore);
+    .sort((a, b) => {
+      // 1. نسبة التطابق (الأولوية الأعلى)
+      if (b.matchScore !== a.matchScore) {
+        return b.matchScore - a.matchScore;
+      }
+      
+      // 2. السعر الأقرب لميزانية العميل
+      const aDiff = Math.abs(a.property.price - buyer.budgetMax);
+      const bDiff = Math.abs(b.property.price - buyer.budgetMax);
+      if (aDiff !== bDiff) {
+        return aDiff - bDiff;
+      }
+      
+      // 3. العقارات ذات الواجهة المطلوبة
+      const aFacingMatch = buyer.facing && a.property.facing === buyer.facing ? 1 : 0;
+      const bFacingMatch = buyer.facing && b.property.facing === buyer.facing ? 1 : 0;
+      if (aFacingMatch !== bFacingMatch) {
+        return bFacingMatch - aFacingMatch;
+      }
+      
+      // 4. العقارات الأحدث عمراً
+      const aAge = a.property.propertyAge || 999;
+      const bAge = b.property.propertyAge || 999;
+      if (aAge !== bAge) {
+        return aAge - bAge;
+      }
+      
+      // 5. الأقرب للموقع (الحي المطابق)
+      const aDistrictMatch = buyer.districts.includes(a.property.district) ? 1 : 0;
+      const bDistrictMatch = buyer.districts.includes(b.property.district) ? 1 : 0;
+      return bDistrictMatch - aDistrictMatch;
+    });
   
   return results;
+}
+
+// تحليل نقاط القوة والضعف
+export function analyzePropertyMatch(result: MatchResult, buyer: BuyerPreference): {
+  strengths: string[];
+  weaknesses: string[];
+  improvementTips: string[];
+} {
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  const improvementTips: string[] = [];
+  
+  const { breakdown } = result;
+  
+  // تحليل الموقع
+  if (breakdown.location.score >= 80) {
+    strengths.push('موقع ممتاز ضمن الحي المطلوب');
+  } else if (breakdown.location.score < 50) {
+    weaknesses.push('الموقع بعيد عن الحي المطلوب');
+    improvementTips.push('يمكن توسيع نطاق البحث ليشمل أحياء مجاورة');
+  }
+  
+  // تحليل السعر
+  if (breakdown.price.score >= 80) {
+    strengths.push('سعر مناسب ضمن الميزانية');
+  } else if (breakdown.price.score < 50) {
+    weaknesses.push('السعر يتجاوز الميزانية المحددة');
+    improvementTips.push('يمكن التفاوض على السعر أو رفع الميزانية قليلاً');
+  }
+  
+  // تحليل المساحة
+  if (breakdown.area.score >= 80) {
+    strengths.push('المساحة مطابقة للمطلوب');
+  } else if (breakdown.area.score < 50) {
+    weaknesses.push('المساحة تختلف عن المطلوب');
+  }
+  
+  // تحليل عمر العقار
+  if (breakdown.propertyAge.score >= 80) {
+    strengths.push('عمر العقار مناسب');
+  } else if (breakdown.propertyAge.score < 50) {
+    weaknesses.push('عمر العقار أكبر من المطلوب');
+  }
+  
+  // تحليل الواجهة
+  if (breakdown.facing.score >= 80) {
+    strengths.push('الواجهة مطابقة للرغبة');
+  } else if (breakdown.facing.score < 50 && buyer.facing) {
+    weaknesses.push('الواجهة مختلفة عن المطلوب');
+  }
+  
+  // تحليل العائد الاستثماري
+  if (buyer.purpose === 'investment') {
+    if (breakdown.roi.score >= 80) {
+      strengths.push('عائد استثماري ممتاز');
+    } else if (breakdown.roi.score < 50) {
+      weaknesses.push('العائد الاستثماري أقل من المتوقع');
+    }
+  }
+  
+  return { strengths, weaknesses, improvementTips };
 }
 
 export function getMatchScoreColor(score: number): string {
