@@ -763,26 +763,28 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </MapContainer>
                     </div>
 
-                    {/* Cities List */}
-                    <div className="h-[200px] overflow-y-auto space-y-1">
-                      {filteredCities.map((city) => {
-                        const isSelected = filters.cities.includes(city.name);
-                        return (
-                          <button
-                            key={city.name}
-                            onClick={() => toggleCity(city.name)}
-                            className={`w-full py-1.5 px-2 rounded-lg border text-sm font-medium text-right transition-all flex items-center justify-between ${
-                              isSelected
-                                ? "border-primary bg-primary text-primary-foreground" 
-                                : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-city-desktop-${city.name}`}
-                          >
-                            <span>{city.name}</span>
-                            {isSelected && <Check className="h-4 w-4" />}
-                          </button>
-                        );
-                      })}
+                    {/* Cities Grid */}
+                    <div className="h-[200px] overflow-y-auto p-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        {filteredCities.map((city) => {
+                          const isSelected = filters.cities.includes(city.name);
+                          return (
+                            <button
+                              key={city.name}
+                              onClick={() => toggleCity(city.name)}
+                              className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground" 
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                              data-testid={`button-city-desktop-${city.name}`}
+                            >
+                              {isSelected && <Check className="h-4 w-4" />}
+                              {city.name}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
@@ -860,26 +862,28 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </MapContainer>
                     </div>
 
-                    {/* Districts List */}
-                    <div className="h-[200px] overflow-y-auto space-y-1">
-                      {filteredDistricts.slice(0, 20).map((district) => {
-                        const isSelected = filters.districts.includes(district.name);
-                        return (
-                          <button
-                            key={`${district.cityName}-${district.name}`}
-                            onClick={() => toggleDistrict(district.name)}
-                            className={`w-full py-1.5 px-2 rounded-lg border text-sm font-medium text-right transition-all flex items-center justify-between ${
-                              isSelected
-                                ? "border-primary bg-primary text-primary-foreground" 
-                                : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-district-desktop-${district.name}`}
-                          >
-                            <span>{district.name}</span>
-                            {isSelected && <Check className="h-4 w-4" />}
-                          </button>
-                        );
-                      })}
+                    {/* Districts Grid */}
+                    <div className="h-[200px] overflow-y-auto p-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        {filteredDistricts.map((district) => {
+                          const isSelected = filters.districts.includes(district.name);
+                          return (
+                            <button
+                              key={`${district.cityName}-${district.name}`}
+                              onClick={() => toggleDistrict(district.name)}
+                              className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                                isSelected
+                                  ? "border-primary bg-primary text-primary-foreground" 
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                              data-testid={`button-district-desktop-${district.name}`}
+                            >
+                              {isSelected && <Check className="h-4 w-4" />}
+                              {district.name}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
@@ -1262,19 +1266,19 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Cities Grid */}
-                  <div className="grid grid-cols-3 gap-1 max-h-[60px] overflow-y-auto">
-                    {filteredCities.slice(0, 12).map((city) => {
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto p-1">
+                    {filteredCities.map((city) => {
                       const isSelected = filters.cities.includes(city.name);
                       return (
                         <button
                           key={city.name}
                           onClick={() => toggleCity(city.name)}
-                          className={`py-1 px-1 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
-                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                          className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1 ${
+                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
                           }`}
                           data-testid={`button-city-${city.name}`}
                         >
-                          {isSelected && <Check className="h-2.5 w-2.5" />}
+                          {isSelected && <Check className="h-3 w-3" />}
                           {city.name}
                         </button>
                       );
@@ -1346,19 +1350,19 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Districts Grid */}
-                  <div className="grid grid-cols-3 gap-1 max-h-[60px] overflow-y-auto">
-                    {filteredDistricts.slice(0, 12).map((district) => {
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto p-1">
+                    {filteredDistricts.map((district) => {
                       const isSelected = filters.districts.includes(district.name);
                       return (
                         <button
                           key={`${district.cityName}-${district.name}`}
                           onClick={() => toggleDistrict(district.name)}
-                          className={`py-1 px-1 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
-                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                          className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1 ${
+                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
                           }`}
                           data-testid={`button-district-${district.name}`}
                         >
-                          {isSelected && <Check className="h-2.5 w-2.5" />}
+                          {isSelected && <Check className="h-3 w-3" />}
                           {district.name}
                         </button>
                       );
