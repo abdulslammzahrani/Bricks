@@ -1751,7 +1751,7 @@ export default function HeroSection() {
                       handleSubmit();
                     }
                   }}
-                  placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
+                  placeholder={isRecording ? "جارٍ التسجيل..." : "تحدث مع مستشار المبيعات"}
                   className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
                   autoComplete="off"
                   autoCorrect="off"
@@ -2398,7 +2398,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : (hasEssentialData ? "" : "لتجهيز طلبك اكتب اسمك ورقم جوالك والمدينة والحي ونوع العقار والميزانية وكاش أو تمويل ومتى ترغب بالشراء...")}
+                      placeholder={isRecording ? "جارٍ التسجيل..." : "تحدث مع مستشار المبيعات"}
                       className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
                       autoComplete="off"
                       autoCorrect="off"
