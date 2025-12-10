@@ -117,9 +117,40 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
     }
   };
 
+  // Calculate desktop reliability score
+  const getDesktopProgress = () => {
+    let score = 0;
+    if (filters.name.trim()) score += 20;
+    if (filters.phone.trim()) score += 20;
+    if (filters.location) score += 25;
+    if (filters.propertyType) score += 20;
+    if (filters.rooms) score += 15;
+    return score;
+  };
+
   // ==================== DESKTOP VERSION ====================
-  const DesktopForm = () => (
+  const DesktopForm = () => {
+    const desktopProgress = getDesktopProgress();
+    
+    return (
     <div className="hidden md:block p-4">
+      {/* Reliability Score */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-sm font-medium">مؤشر الموثوقية</span>
+          <span className="text-sm font-bold text-primary">{desktopProgress}%</span>
+        </div>
+        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
+            style={{ width: `${desktopProgress}%` }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1 text-center">
+          كلما أكملت بياناتك، زادت موثوقيتك وفرص التطابق
+        </p>
+      </div>
+
       {/* Row 0: Name & Phone */}
       <div className="flex items-center gap-2 mb-3">
         <Input
@@ -270,7 +301,8 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         </button>
       </p>
     </div>
-  );
+    );
+  };
 
   // ==================== MOBILE VERSION (Stacked Cards) ====================
   const MobileForm = () => (
