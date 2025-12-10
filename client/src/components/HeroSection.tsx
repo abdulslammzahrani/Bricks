@@ -2094,6 +2094,45 @@ export default function HeroSection() {
                     markers={mapMarkers} 
                     className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
                   />
+                  
+                  {/* Chat Input with Mic and Send */}
+                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
+                    <Button
+                      size="icon"
+                      onClick={handleSubmit}
+                      disabled={!inputText.trim()}
+                      className="rounded-full h-9 w-9 flex-shrink-0"
+                      data-testid="button-send-form"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      size="icon"
+                      variant={isRecording ? "destructive" : "ghost"}
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={isTranscribing}
+                      className={`rounded-full h-9 w-9 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                      data-testid="button-voice-form"
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                    
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && inputText.trim()) {
+                          handleSubmit();
+                        }
+                      }}
+                      placeholder="تحدث مع مستشار المبيعات"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+                      data-testid="input-chat-form"
+                    />
+                  </div>
                 </div>
               </div>
             )}
