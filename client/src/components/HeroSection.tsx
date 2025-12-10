@@ -1797,20 +1797,81 @@ export default function HeroSection() {
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
-            {/* Advanced Search Form for Buyers */}
+            {/* Combined: Search Form + Typewriter + Map for Buyers */}
             {mode === "buyer" && showSearchForm && !isComplete && conversation.length === 0 && !pendingConfirmation && (
               <div className="bg-muted/10">
+                {/* Stats Bar (Top) */}
+                <div className="p-3 pb-2">
+                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
+                        {requestsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>طلب</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
+                        {dealsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>صفقة</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Search Form */}
                 <AdvancedSearchForm 
                   onSearch={handleSearchFormSearch}
                   onSwitchToChat={handleSwitchToChat}
                 />
+
+                {/* Typewriter Preview */}
+                <div className="px-3 py-2 border-t border-border/30">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                      عميل يطلب الآن:
+                    </p>
+                  </div>
+                  <div 
+                    className="text-center cursor-pointer min-h-[50px] flex items-center justify-center px-2 overflow-hidden"
+                    onClick={() => addSuggestion(fullExampleText)}
+                    data-testid="button-typewriter-example"
+                  >
+                    <p className="text-sm leading-relaxed line-clamp-2">
+                      {renderTypedText()}
+                      <span className="text-muted-foreground">...</span>
+                      <span className="animate-pulse text-primary font-bold">|</span>
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Saudi Map */}
+                <div className="px-3 pb-3">
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-32 md:h-36 rounded-lg border border-border/30 shadow-sm"
+                  />
+                </div>
               </div>
             )}
 
-            {/* Typewriter Example + Map Panel (for sellers or when search form is hidden) */}
-            {!isComplete && conversation.length === 0 && !pendingConfirmation && (mode !== "buyer" || !showSearchForm) && (
+            {/* Typewriter Example + Map Panel (for sellers only) */}
+            {mode === "seller" && !isComplete && conversation.length === 0 && !pendingConfirmation && (
               <div 
-                className={`${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}
+                className="bg-green-50 dark:bg-green-950/20"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
                 }}>
@@ -1848,7 +1909,7 @@ export default function HeroSection() {
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
                     <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                      {mode === "buyer" ? "عميل يطلب الآن:" : mode === "seller" ? "بائع يعرض الآن:" : "مستثمر يبحث الآن:"}
+                      بائع يعرض الآن:
                     </p>
                   </div>
                   <div 
@@ -1865,6 +1926,69 @@ export default function HeroSection() {
                 </div>
                 
                 {/* Saudi Map inside the panel (Bottom) */}
+                <div className="px-3 pb-3">
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Typewriter for buyer when search form is hidden (after clicking chat link) */}
+            {mode === "buyer" && !showSearchForm && !isComplete && conversation.length === 0 && !pendingConfirmation && (
+              <div className="bg-muted/10"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}>
+                <div className="p-3 pb-2">
+                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
+                        {requestsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>طلب</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
+                        {dealsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>صفقة</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                      عميل يطلب الآن:
+                    </p>
+                  </div>
+                  <div 
+                    className="text-center cursor-pointer min-h-[80px] flex items-center justify-center px-2 overflow-hidden"
+                    onClick={() => addSuggestion(fullExampleText)}
+                    data-testid="button-typewriter-example"
+                  >
+                    <p className="text-base leading-relaxed line-clamp-2">
+                      {renderTypedText()}
+                      <span className="text-muted-foreground">...</span>
+                      <span className="animate-pulse text-primary font-bold">|</span>
+                    </p>
+                  </div>
+                </div>
+                
                 <div className="px-3 pb-3">
                   <SaudiMap 
                     markers={mapMarkers} 
