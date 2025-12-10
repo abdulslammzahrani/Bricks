@@ -1281,3 +1281,22 @@ export function searchNeighborhoods(query: string): { city: City; neighborhood: 
   
   return results;
 }
+
+export function findCityInText(text: string): { city: string; coordinates: Coordinates } | null {
+  if (!text) return null;
+  
+  for (const city of saudiCities) {
+    if (text.includes(city.name) || text.toLowerCase().includes(city.nameEn.toLowerCase())) {
+      return {
+        city: city.name,
+        coordinates: city.coordinates
+      };
+    }
+  }
+  
+  return null;
+}
+
+export function getCityNames(): string[] {
+  return saudiCities.map(city => city.name);
+}
