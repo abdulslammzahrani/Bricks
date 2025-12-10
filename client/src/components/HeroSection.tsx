@@ -1435,6 +1435,33 @@ export default function HeroSection() {
           </div>
         </div>
 
+        {/* Reliability Score Bar */}
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-card/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">اكتمال الطلب</span>
+          </div>
+          <ReliabilityScore 
+            score={calculateReliabilityScore({
+              name: extractedData.name,
+              phone: extractedData.phone,
+              city: extractedData.city,
+              districts: extractedData.district ? [extractedData.district] : [],
+              propertyType: extractedData.propertyType,
+              budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : null,
+              paymentMethod: extractedData.paymentMethod,
+              purchaseTimeline: extractedData.purchaseTimeline,
+              area: extractedData.area ? parseInt(extractedData.area) : null,
+              propertyAge: extractedData.propertyAge ? parseInt(extractedData.propertyAge) : null,
+              facing: extractedData.facing,
+              streetWidth: extractedData.streetWidth ? parseInt(extractedData.streetWidth) : null,
+              purchasePurpose: extractedData.purchasePurpose,
+            })}
+            size="sm"
+            label=""
+          />
+        </div>
+
         {/* Messages Area - WhatsApp style - min-h-0 is critical for flex scroll */}
         <div 
           className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
