@@ -11,7 +11,7 @@ import {
 import { 
   MapPin, User, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
-  Check, ChevronDown
+  Check, ChevronDown, Castle, Hotel, Store, Factory, Blocks
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 
@@ -36,14 +36,22 @@ const propertyOptions = {
   residential: [
     { value: "apartment", label: "شقة", icon: Building },
     { value: "villa", label: "فيلا", icon: Home },
+    { value: "duplex", label: "دوبلكس", icon: Blocks },
     { value: "floor", label: "دور", icon: Building2 },
-    { value: "land", label: "أرض", icon: LandPlot },
+    { value: "palace", label: "قصر", icon: Castle },
+    { value: "building", label: "عمارة", icon: Hotel },
+    { value: "land", label: "أرض سكنية", icon: LandPlot },
+    { value: "rest_house", label: "استراحة", icon: Home },
   ],
   commercial: [
     { value: "office", label: "مكتب", icon: Building },
+    { value: "shop", label: "محل", icon: Store },
     { value: "warehouse", label: "مستودع", icon: Warehouse },
-    { value: "shop", label: "محل", icon: Building2 },
+    { value: "showroom", label: "معرض", icon: Building2 },
+    { value: "factory", label: "مصنع", icon: Factory },
+    { value: "building", label: "عمارة تجارية", icon: Hotel },
     { value: "land", label: "أرض تجارية", icon: LandPlot },
+    { value: "complex", label: "مجمع تجاري", icon: Blocks },
   ],
 };
 
