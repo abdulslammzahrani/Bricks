@@ -2,13 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, MapPin, User, Phone, Home, Building2, ChevronDown, ChevronUp } from "lucide-react";
+  MapPin, User, Phone, Home, Building2, 
+  ChevronLeft, ChevronRight, Sparkles, Search,
+  Building, TreePine, Warehouse, LandPlot
+} from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 
 interface SearchFilters {
@@ -28,19 +25,20 @@ interface SearchFilters {
   rentPeriod: "all" | "yearly" | "monthly";
 }
 
-const residentialTypes = [
-  { value: "apartment", label: "شقة" },
-  { value: "villa", label: "فيلا" },
-  { value: "floor", label: "دور" },
-  { value: "residential_land", label: "أرض" },
-];
-
-const commercialTypes = [
-  { value: "office", label: "مكتب" },
-  { value: "commercial_building", label: "عمارة" },
-  { value: "warehouse", label: "مستودع" },
-  { value: "commercial_land", label: "أرض تجارية" },
-];
+const propertyOptions = {
+  residential: [
+    { value: "apartment", label: "شقة", icon: Building },
+    { value: "villa", label: "فيلا", icon: Home },
+    { value: "floor", label: "دور", icon: Building2 },
+    { value: "land", label: "أرض", icon: LandPlot },
+  ],
+  commercial: [
+    { value: "office", label: "مكتب", icon: Building },
+    { value: "warehouse", label: "مستودع", icon: Warehouse },
+    { value: "shop", label: "محل", icon: Building2 },
+    { value: "land", label: "أرض تجارية", icon: TreePine },
+  ],
+};
 
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
@@ -48,6 +46,7 @@ interface AdvancedSearchFormProps {
 }
 
 export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
+  const [step, setStep] = useState(1);
   const [filters, setFilters] = useState<SearchFilters>({
     name: "",
     phone: "",
@@ -65,232 +64,325 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
     rentPeriod: "all",
   });
 
-  const [showMore, setShowMore] = useState(false);
+  const totalSteps = 4;
+  const propertyTypes = propertyOptions[filters.propertyCategory];
 
-  const propertyTypes = filters.propertyCategory === "residential" ? residentialTypes : commercialTypes;
+  const handleNext = () => {
+    if (step < totalSteps) setStep(step + 1);
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
 
   const handleSearch = () => {
     onSearch(filters);
   };
 
+  const canProceed = () => {
+    switch (step) {
+      case 1: return filters.name.trim() !== "" && filters.phone.trim() !== "";
+      case 2: return true;
+      case 3: return filters.location !== "";
+      case 4: return true;
+      default: return true;
+    }
+  };
+
   return (
-    <div className="p-4 space-y-4">
-      {/* Name and Phone - Always visible */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="relative">
-          <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="الاسم"
-            value={filters.name}
-            onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-            className="pr-10 text-right h-12 text-base"
-            data-testid="input-name"
+    <div className="relative">
+      {/* Progress Bar */}
+      <div className="flex items-center justify-center gap-2 p-4 pb-2">
+        {[1, 2, 3, 4].map((s) => (
+          <button
+            key={s}
+            onClick={() => s <= step && setStep(s)}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              s === step 
+                ? "w-8 bg-primary" 
+                : s < step 
+                  ? "w-6 bg-primary/60 cursor-pointer" 
+                  : "w-6 bg-muted"
+            }`}
+            data-testid={`step-indicator-${s}`}
           />
-        </div>
-        <div className="relative">
-          <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="tel"
-            placeholder="رقم الجوال"
-            value={filters.phone}
-            onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
-            className="pr-10 text-right h-12 text-base"
-            dir="ltr"
-            data-testid="input-phone"
-          />
-        </div>
-      </div>
-
-      {/* Sale/Rent Toggle */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          size="lg"
-          variant={filters.transactionType === "sale" ? "default" : "outline"}
-          onClick={() => setFilters(f => ({ ...f, transactionType: "sale" }))}
-          className="flex-1 h-12 text-base"
-          data-testid="button-filter-sale"
-        >
-          للبيع
-        </Button>
-        <Button
-          type="button"
-          size="lg"
-          variant={filters.transactionType === "rent" ? "default" : "outline"}
-          onClick={() => setFilters(f => ({ ...f, transactionType: "rent" }))}
-          className="flex-1 h-12 text-base"
-          data-testid="button-filter-rent"
-        >
-          للإيجار
-        </Button>
-      </div>
-
-      {/* Location */}
-      <div className="relative">
-        <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-        <Select
-          value={filters.location}
-          onValueChange={(value) => setFilters(f => ({ ...f, location: value }))}
-        >
-          <SelectTrigger className="pr-10 text-right h-12 text-base" data-testid="select-location">
-            <SelectValue placeholder="اختر المدينة" />
-          </SelectTrigger>
-          <SelectContent className="z-[100]">
-            {saudiCities.map((city) => (
-              <SelectItem key={city.name} value={city.name} className="text-base">
-                {city.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Property Category Toggle */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant={filters.propertyCategory === "residential" ? "default" : "outline"}
-          onClick={() => setFilters(f => ({ ...f, propertyCategory: "residential", propertyType: "" }))}
-          className="flex-1 h-11 gap-2"
-          data-testid="button-category-residential"
-        >
-          <Home className="h-4 w-4" />
-          سكني
-        </Button>
-        <Button
-          type="button"
-          variant={filters.propertyCategory === "commercial" ? "default" : "outline"}
-          onClick={() => setFilters(f => ({ ...f, propertyCategory: "commercial", propertyType: "" }))}
-          className="flex-1 h-11 gap-2"
-          data-testid="button-category-commercial"
-        >
-          <Building2 className="h-4 w-4" />
-          تجاري
-        </Button>
-      </div>
-
-      {/* Property Type - Simple Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {propertyTypes.map((type) => (
-          <Button
-            key={type.value}
-            type="button"
-            variant={filters.propertyType === type.value ? "default" : "outline"}
-            onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-            className="h-11 text-base"
-            data-testid={`button-type-${type.value}`}
-          >
-            {type.label}
-          </Button>
         ))}
       </div>
 
-      {/* Show More Options */}
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => setShowMore(!showMore)}
-        className="w-full text-muted-foreground gap-2"
-        data-testid="button-show-more"
-      >
-        {showMore ? (
-          <>
-            <ChevronUp className="h-4 w-4" />
-            إخفاء الخيارات
-          </>
-        ) : (
-          <>
-            <ChevronDown className="h-4 w-4" />
-            المزيد من الخيارات
-          </>
+      {/* Step Content */}
+      <div className="p-5 min-h-[320px]">
+        
+        {/* Step 1: Personal Info */}
+        {step === 1 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                <User className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">مرحباً بك</h3>
+              <p className="text-muted-foreground text-sm mt-1">عرّفنا على نفسك</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="الاسم الكريم"
+                  value={filters.name}
+                  onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                  className="h-14 text-lg text-center rounded-2xl border-2 focus:border-primary transition-colors"
+                  data-testid="input-name"
+                />
+              </div>
+              <div className="relative">
+                <Input
+                  type="tel"
+                  placeholder="رقم الجوال"
+                  value={filters.phone}
+                  onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
+                  className="h-14 text-lg text-center rounded-2xl border-2 focus:border-primary transition-colors"
+                  dir="ltr"
+                  data-testid="input-phone"
+                />
+              </div>
+            </div>
+          </div>
         )}
-      </Button>
 
-      {/* Additional Options - Collapsible */}
-      {showMore && (
-        <div className="space-y-4 pt-2 border-t">
-          {/* Rooms */}
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">عدد الغرف</label>
-            <div className="flex gap-2 flex-wrap">
-              {["1", "2", "3", "4", "5", "6+"].map((num) => (
-                <Button
-                  key={num}
-                  type="button"
-                  size="sm"
-                  variant={filters.rooms === num ? "default" : "outline"}
-                  onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === num ? "" : num }))}
-                  className="flex-1 min-w-[48px]"
-                  data-testid={`button-rooms-${num}`}
+        {/* Step 2: Transaction Type & Category */}
+        {step === 2 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">وش تبي؟</h3>
+              <p className="text-muted-foreground text-sm mt-1">حدد نوع الطلب</p>
+            </div>
+
+            {/* Sale/Rent - Big Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setFilters(f => ({ ...f, transactionType: "sale" }))}
+                className={`relative p-5 rounded-2xl border-2 transition-all duration-200 ${
+                  filters.transactionType === "sale"
+                    ? "border-primary bg-primary/10 scale-[1.02]"
+                    : "border-border hover:border-primary/50"
+                }`}
+                data-testid="button-filter-sale"
+              >
+                <div className="text-3xl mb-2">🏠</div>
+                <div className="font-bold text-lg">شراء</div>
+                <div className="text-xs text-muted-foreground">أبحث عن عقار للتملك</div>
+                {filters.transactionType === "sale" && (
+                  <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-primary" />
+                )}
+              </button>
+              <button
+                onClick={() => setFilters(f => ({ ...f, transactionType: "rent" }))}
+                className={`relative p-5 rounded-2xl border-2 transition-all duration-200 ${
+                  filters.transactionType === "rent"
+                    ? "border-primary bg-primary/10 scale-[1.02]"
+                    : "border-border hover:border-primary/50"
+                }`}
+                data-testid="button-filter-rent"
+              >
+                <div className="text-3xl mb-2">🔑</div>
+                <div className="font-bold text-lg">إيجار</div>
+                <div className="text-xs text-muted-foreground">أبحث عن عقار للإيجار</div>
+                {filters.transactionType === "rent" && (
+                  <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-primary" />
+                )}
+              </button>
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setFilters(f => ({ ...f, propertyCategory: "residential", propertyType: "" }))}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 transition-all ${
+                  filters.propertyCategory === "residential"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary/50"
+                }`}
+                data-testid="button-category-residential"
+              >
+                <Home className="h-4 w-4" />
+                سكني
+              </button>
+              <button
+                onClick={() => setFilters(f => ({ ...f, propertyCategory: "commercial", propertyType: "" }))}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 transition-all ${
+                  filters.propertyCategory === "commercial"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary/50"
+                }`}
+                data-testid="button-category-commercial"
+              >
+                <Building2 className="h-4 w-4" />
+                تجاري
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Location */}
+        {step === 3 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">وين تبي؟</h3>
+              <p className="text-muted-foreground text-sm mt-1">اختر المدينة</p>
+            </div>
+
+            {/* Cities Grid */}
+            <div className="grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto p-1">
+              {saudiCities.slice(0, 12).map((city) => (
+                <button
+                  key={city.name}
+                  onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+                  className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    filters.location === city.name
+                      ? "border-primary bg-primary text-primary-foreground scale-[1.02]"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                  data-testid={`button-city-${city.name}`}
                 >
-                  {num}
-                </Button>
+                  {city.name}
+                </button>
               ))}
             </div>
-          </div>
 
-          {/* Price Range */}
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">نطاق السعر (ر.س)</label>
+            {/* More Cities */}
+            {saudiCities.length > 12 && (
+              <details className="group">
+                <summary className="text-center text-sm text-primary cursor-pointer">
+                  المزيد من المدن
+                </summary>
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {saudiCities.slice(12).map((city) => (
+                    <button
+                      key={city.name}
+                      onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+                      className={`p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                        filters.location === city.name
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
+        {/* Step 4: Property Type & Details */}
+        {step === 4 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-3">
+                <Home className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold">نوع العقار</h3>
+              <p className="text-muted-foreground text-sm mt-1">اختر نوع العقار المطلوب</p>
+            </div>
+
+            {/* Property Types - Big Icons */}
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="number"
-                placeholder="من"
-                value={filters.minPrice}
-                onChange={(e) => setFilters(f => ({ ...f, minPrice: e.target.value }))}
-                className="text-right h-11"
-                data-testid="input-min-price"
-              />
-              <Input
-                type="number"
-                placeholder="إلى"
-                value={filters.maxPrice}
-                onChange={(e) => setFilters(f => ({ ...f, maxPrice: e.target.value }))}
-                className="text-right h-11"
-                data-testid="input-max-price"
-              />
+              {propertyTypes.map((type) => {
+                const Icon = type.icon;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
+                    className={`relative p-4 rounded-2xl border-2 transition-all ${
+                      filters.propertyType === type.value
+                        ? "border-primary bg-primary/10 scale-[1.02]"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    data-testid={`button-type-${type.value}`}
+                  >
+                    <Icon className={`h-8 w-8 mx-auto mb-2 ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="font-bold">{type.label}</div>
+                    {filters.propertyType === type.value && (
+                      <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-primary" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Options */}
+            <div className="space-y-3 pt-2">
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block text-center">عدد الغرف (اختياري)</label>
+                <div className="flex justify-center gap-2">
+                  {["1", "2", "3", "4", "5+"].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === num ? "" : num }))}
+                      className={`w-12 h-12 rounded-full border-2 font-bold transition-all ${
+                        filters.rooms === num
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                      data-testid={`button-rooms-${num}`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Area Range */}
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">المساحة (م²)</label>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                type="number"
-                placeholder="من"
-                value={filters.minArea}
-                onChange={(e) => setFilters(f => ({ ...f, minArea: e.target.value }))}
-                className="text-right h-11"
-                data-testid="input-min-area"
-              />
-              <Input
-                type="number"
-                placeholder="إلى"
-                value={filters.maxArea}
-                onChange={(e) => setFilters(f => ({ ...f, maxArea: e.target.value }))}
-                className="text-right h-11"
-                data-testid="input-max-area"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Search Button */}
-      <Button
-        onClick={handleSearch}
-        size="lg"
-        className="w-full h-14 text-lg gap-3"
-        data-testid="button-search"
-      >
-        <Search className="h-5 w-5" />
-        ابحث الآن
-      </Button>
+      {/* Navigation Buttons */}
+      <div className="flex items-center gap-3 p-4 pt-0">
+        {step > 1 && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleBack}
+            className="h-14 px-6 rounded-2xl"
+            data-testid="button-back"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        )}
+        
+        {step < totalSteps ? (
+          <Button
+            size="lg"
+            onClick={handleNext}
+            disabled={!canProceed()}
+            className="flex-1 h-14 rounded-2xl text-lg gap-2"
+            data-testid="button-next"
+          >
+            التالي
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            onClick={handleSearch}
+            className="flex-1 h-14 rounded-2xl text-lg gap-2 bg-gradient-to-r from-primary to-green-600"
+            data-testid="button-search"
+          >
+            <Search className="h-5 w-5" />
+            ابحث الآن
+          </Button>
+        )}
+      </div>
 
       {/* Chat Alternative */}
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground pb-4">
         أو{" "}
         <button
           onClick={onSwitchToChat}
