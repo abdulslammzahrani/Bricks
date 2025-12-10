@@ -127,6 +127,54 @@ const budgetOptions = {
 // Saudi Arabia center coordinates
 const SAUDI_CENTER = { lat: 23.8859, lng: 45.0792 };
 
+// Convert Arabic numerals to English
+function convertArabicToEnglish(str: string): string {
+  const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let result = str;
+  arabicNumerals.forEach((arabic, index) => {
+    result = result.replace(new RegExp(arabic, 'g'), index.toString());
+  });
+  return result;
+}
+
+// Validate Saudi phone number
+function validateSaudiPhone(phone: string): { isValid: boolean; normalized: string; error: string } {
+  // Convert Arabic numerals to English
+  let normalized = convertArabicToEnglish(phone);
+  // Remove spaces, dashes, and other non-digit characters
+  normalized = normalized.replace(/[\s\-\(\)\.]/g, '');
+  
+  // Handle different formats
+  if (normalized.startsWith('+966')) {
+    normalized = '0' + normalized.slice(4);
+  } else if (normalized.startsWith('00966')) {
+    normalized = '0' + normalized.slice(5);
+  } else if (normalized.startsWith('966')) {
+    normalized = '0' + normalized.slice(3);
+  }
+  
+  // Check if it's a valid Saudi mobile number
+  // Saudi mobile numbers: 05xxxxxxxx (10 digits starting with 05)
+  const saudiMobileRegex = /^05[0-9]{8}$/;
+  
+  if (!normalized) {
+    return { isValid: false, normalized: '', error: 'أدخل رقم الجوال' };
+  }
+  
+  if (!saudiMobileRegex.test(normalized)) {
+    if (normalized.length < 10) {
+      return { isValid: false, normalized, error: 'الرقم قصير جداً' };
+    } else if (normalized.length > 10) {
+      return { isValid: false, normalized, error: 'الرقم طويل جداً' };
+    } else if (!normalized.startsWith('05')) {
+      return { isValid: false, normalized, error: 'يجب أن يبدأ بـ 05' };
+    }
+    return { isValid: false, normalized, error: 'رقم غير صحيح' };
+  }
+  
+  return { isValid: true, normalized, error: '' };
+}
+
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
   onSwitchToChat: () => void;
@@ -302,6 +350,24 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   });
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+
+  // Validate phone on change
+  const handlePhoneChange = (value: string) => {
+    const validation = validateSaudiPhone(value);
+    setFilters(f => ({ ...f, phone: value }));
+    if (value.trim()) {
+      setPhoneError(validation.isValid ? "" : validation.error);
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  // Check if phone is valid
+  const isPhoneValid = useMemo(() => {
+    if (!filters.phone.trim()) return false;
+    return validateSaudiPhone(filters.phone).isValid;
+  }, [filters.phone]);
 
   const propertyTypes = propertyOptions[filters.propertyCategory];
   const totalCards = 7;
@@ -404,7 +470,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
   const canProceed = () => {
     switch (activeCard) {
-      case 0: return filters.name.trim() !== "" && filters.phone.trim() !== "";
+      case 0: return filters.name.trim() !== "" && isPhoneValid;
       case 1: return true;
       case 2: return filters.cities.length > 0;
       case 3: return true;
@@ -566,13 +632,21 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
                       <Input
                         type="tel"
-                        placeholder="05xxxxxxxx"
+                        placeholder="05xxxxxxxx أو ٠٥xxxxxxxx"
                         value={filters.phone}
-                        onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
-                        className="h-11 text-center rounded-xl"
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
                         data-testid="input-phone-desktop"
                       />
+                      {phoneError && (
+                        <p className="text-xs text-red-500 mt-1 text-center">{phoneError}</p>
+                      )}
+                      {isPhoneValid && (
+                        <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
+                          <Check className="h-3 w-3" /> رقم صحيح
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
@@ -1062,15 +1136,25 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     className="h-9 text-sm text-center rounded-lg"
                     data-testid="input-name"
                   />
-                  <Input
-                    type="tel"
-                    placeholder="رقم الجوال"
-                    value={filters.phone}
-                    onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
-                    className="h-9 text-sm text-center rounded-lg"
-                    dir="ltr"
-                    data-testid="input-phone"
-                  />
+                  <div>
+                    <Input
+                      type="tel"
+                      placeholder="05xxxxxxxx أو ٠٥xxxxxxxx"
+                      value={filters.phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      dir="ltr"
+                      data-testid="input-phone"
+                    />
+                    {phoneError && (
+                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
+                    )}
+                    {isPhoneValid && (
+                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> صحيح
+                      </p>
+                    )}
+                  </div>
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-0">
                     التالي
                   </Button>
