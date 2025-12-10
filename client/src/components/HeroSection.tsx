@@ -12,7 +12,7 @@ import { SaudiMap } from "./SaudiMap";
 import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
-import { ReliabilityScore, calculateReliabilityScore } from "./ReliabilityScore";
+import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -1087,16 +1087,22 @@ export default function HeroSection() {
       
       // Check required fields based on mode - 6 fields required
       if (mode === "buyer") {
-        // Required: name, phone, city, district (mandatory), propertyType, budget, paymentMethod
-        const hasDistrict = mergedData.district || (mergedData.districts && mergedData.districts.length > 0);
-        const hasAllRequired = mergedData.name && mergedData.phone && 
-          mergedData.city && hasDistrict && 
-          mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) &&
-          mergedData.paymentMethod;
+        // التحقق من اكتمال المؤشر 100% قبل التأكيد
+        const reliabilityScore = calculateReliabilityScore({
+          name: mergedData.name,
+          phone: mergedData.phone,
+          city: mergedData.city,
+          districts: mergedData.district ? [mergedData.district] : (Array.isArray(mergedData.districts) ? mergedData.districts : []),
+          propertyType: mergedData.propertyType,
+          budgetMax: mergedData.budgetMax ? parseInt(mergedData.budgetMax) : (mergedData.budget ? parseInt(mergedData.budget) : null),
+          paymentMethod: mergedData.paymentMethod,
+          purchaseTimeline: mergedData.purchaseTimeline,
+          area: mergedData.area ? parseInt(mergedData.area) : null,
+          purchasePurpose: mergedData.purchasePurpose,
+        });
         
-        if (hasAllRequired) {
-          // Show confirmation card instead of registering directly
+        if (reliabilityScore >= 100) {
+          // Show confirmation card only when score is 100%
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));
@@ -1150,16 +1156,22 @@ export default function HeroSection() {
       });
       setExtractedData(mergedData);
       
-      // Check core required fields (fallback mode) - 6 fields required
+      // Check core required fields (fallback mode) - use reliability score
       if (mode === "buyer") {
-        const hasDistrict = mergedData.district || (mergedData.districts && mergedData.districts.length > 0);
-        const hasAllRequired = mergedData.name && mergedData.phone && 
-          mergedData.city && hasDistrict && 
-          mergedData.propertyType && 
-          (mergedData.budgetMin || mergedData.budgetMax || mergedData.budget) &&
-          mergedData.paymentMethod;
+        const reliabilityScore = calculateReliabilityScore({
+          name: mergedData.name,
+          phone: mergedData.phone,
+          city: mergedData.city,
+          districts: mergedData.district ? [mergedData.district] : (Array.isArray(mergedData.districts) ? mergedData.districts : []),
+          propertyType: mergedData.propertyType,
+          budgetMax: mergedData.budgetMax ? parseInt(mergedData.budgetMax) : (mergedData.budget ? parseInt(mergedData.budget) : null),
+          paymentMethod: mergedData.paymentMethod,
+          purchaseTimeline: mergedData.purchaseTimeline,
+          area: mergedData.area ? parseInt(mergedData.area) : null,
+          purchasePurpose: mergedData.purchasePurpose,
+        });
         
-        if (hasAllRequired) {
+        if (reliabilityScore >= 100) {
           setPendingConfirmation(true);
           setPendingData(mergedData);
           setConfirmationFields(generateConfirmationFields(mergedData, mode));

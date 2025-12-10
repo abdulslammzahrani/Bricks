@@ -122,24 +122,50 @@ export function calculateReliabilityScore(extractedData: {
   streetWidth?: number | null;
   purchasePurpose?: string | null;
 }): number {
+  // 10 حقول إجمالية، كل حقل = 10%
   let score = 0;
   
-  // الحقول الأساسية (70%)
+  // الحقول الأساسية (60%)
   if (extractedData.name) score += 10;
   if (extractedData.phone) score += 10;
   if (extractedData.city) score += 10;
   if (extractedData.districts && extractedData.districts.length > 0) score += 10;
   if (extractedData.propertyType) score += 10;
   if (extractedData.budgetMax) score += 10;
-  if (extractedData.paymentMethod) score += 5;
-  if (extractedData.purchaseTimeline) score += 5;
   
-  // الحقول الإضافية للمطابقة (30%)
-  if (extractedData.area) score += 6;
-  if (extractedData.propertyAge !== undefined && extractedData.propertyAge !== null) score += 6;
-  if (extractedData.facing) score += 6;
-  if (extractedData.streetWidth) score += 6;
-  if (extractedData.purchasePurpose) score += 6;
+  // الحقول الإضافية للمطابقة (40%)
+  if (extractedData.paymentMethod) score += 10;
+  if (extractedData.purchaseTimeline) score += 10;
+  if (extractedData.area) score += 10;
+  if (extractedData.purchasePurpose) score += 10;
   
   return Math.min(100, score);
+}
+
+export function getMissingFieldsForScore(extractedData: {
+  name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  districts?: string[];
+  propertyType?: string | null;
+  budgetMax?: number | null;
+  paymentMethod?: string | null;
+  purchaseTimeline?: string | null;
+  area?: number | null;
+  purchasePurpose?: string | null;
+}): string[] {
+  const missing: string[] = [];
+  
+  if (!extractedData.name) missing.push("الاسم");
+  if (!extractedData.phone) missing.push("رقم الجوال");
+  if (!extractedData.city) missing.push("المدينة");
+  if (!extractedData.districts || extractedData.districts.length === 0) missing.push("الحي");
+  if (!extractedData.propertyType) missing.push("نوع العقار");
+  if (!extractedData.budgetMax) missing.push("الميزانية");
+  if (!extractedData.paymentMethod) missing.push("طريقة الدفع");
+  if (!extractedData.purchaseTimeline) missing.push("توقيت الشراء");
+  if (!extractedData.area) missing.push("المساحة المطلوبة");
+  if (!extractedData.purchasePurpose) missing.push("الغرض من الشراء");
+  
+  return missing;
 }
