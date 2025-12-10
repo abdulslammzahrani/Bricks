@@ -120,6 +120,26 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
   // ==================== DESKTOP VERSION ====================
   const DesktopForm = () => (
     <div className="hidden md:block p-4">
+      {/* Row 0: Name & Phone */}
+      <div className="flex items-center gap-2 mb-3">
+        <Input
+          placeholder="الاسم"
+          value={filters.name}
+          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+          className="h-12 flex-1"
+          data-testid="input-name-desktop"
+        />
+        <Input
+          type="tel"
+          placeholder="رقم الجوال"
+          value={filters.phone}
+          onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
+          className="h-12 flex-1"
+          dir="ltr"
+          data-testid="input-phone-desktop"
+        />
+      </div>
+
       {/* Row 1: Sale/Rent Tabs + Location + Search */}
       <div className="flex items-center gap-2 mb-3">
         {/* Sale/Rent Toggle */}
