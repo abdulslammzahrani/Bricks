@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   MapPin, User, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
-  Check
+  Check, ChevronDown
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 
@@ -112,142 +119,134 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
 
   // ==================== DESKTOP VERSION ====================
   const DesktopForm = () => (
-    <div className="hidden md:block p-6 space-y-5">
-      {/* Name & Phone */}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          placeholder="الاسم"
-          value={filters.name}
-          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-          className="h-12 text-center"
-          data-testid="input-name-desktop"
-        />
-        <Input
-          type="tel"
-          placeholder="رقم الجوال"
-          value={filters.phone}
-          onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
-          className="h-12 text-center"
-          dir="ltr"
-          data-testid="input-phone-desktop"
-        />
-      </div>
-
-      {/* Transaction Type */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { v: "sale", l: "شراء", e: "🏠" },
-          { v: "rent", l: "إيجار", e: "🔑" }
-        ].map(t => (
+    <div className="hidden md:block p-4">
+      {/* Row 1: Sale/Rent Tabs + Location + Search */}
+      <div className="flex items-center gap-2 mb-3">
+        {/* Sale/Rent Toggle */}
+        <div className="flex rounded-lg overflow-hidden border">
           <button
-            key={t.v}
-            onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent" }))}
-            className={`p-4 rounded-xl border-2 text-center transition-all ${
-              filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
+            onClick={() => setFilters(f => ({ ...f, transactionType: "sale" }))}
+            className={`px-5 py-3 font-medium transition-all ${
+              filters.transactionType === "sale" 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-background hover:bg-muted"
             }`}
-            data-testid={`button-filter-${t.v}-desktop`}
+            data-testid="button-filter-sale-desktop"
           >
-            <span className="text-2xl">{t.e}</span>
-            <div className="font-bold mt-1">{t.l}</div>
+            للبيع
           </button>
-        ))}
-      </div>
-
-      {/* Category */}
-      <div className="flex justify-center gap-3">
-        {[
-          { v: "residential", l: "سكني", I: Home },
-          { v: "commercial", l: "تجاري", I: Building2 }
-        ].map(c => (
           <button
-            key={c.v}
-            onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-            className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 transition-all ${
-              filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
+            onClick={() => setFilters(f => ({ ...f, transactionType: "rent" }))}
+            className={`px-5 py-3 font-medium transition-all ${
+              filters.transactionType === "rent" 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-background hover:bg-muted"
             }`}
-            data-testid={`button-category-${c.v}-desktop`}
+            data-testid="button-filter-rent-desktop"
           >
-            <c.I className="h-4 w-4" />
-            {c.l}
+            للإيجار
           </button>
-        ))}
-      </div>
-
-      {/* City */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">المدينة</label>
-        <div className="grid grid-cols-6 gap-2">
-          {saudiCities.slice(0, 12).map((city) => (
-            <button
-              key={city.name}
-              onClick={() => setFilters(f => ({ ...f, location: city.name }))}
-              className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
-                filters.location === city.name ? "border-primary bg-primary text-primary-foreground" : "border-border"
-              }`}
-              data-testid={`button-city-${city.name}-desktop`}
-            >
-              {city.name}
-            </button>
-          ))}
         </div>
-      </div>
 
-      {/* Property Type */}
-      <div>
-        <label className="text-sm font-medium mb-2 block">نوع العقار</label>
-        <div className="grid grid-cols-4 gap-3">
-          {propertyTypes.map((type) => {
-            const Icon = type.icon;
-            return (
-              <button
-                key={type.value}
-                onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  filters.propertyType === type.value ? "border-primary bg-primary/10" : "border-border"
-                }`}
-                data-testid={`button-type-${type.value}-desktop`}
-              >
-                <Icon className={`h-8 w-8 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                <div className="font-medium mt-2">{type.label}</div>
-              </button>
-            );
-          })}
+        {/* Location Input */}
+        <div className="flex-1 relative">
+          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Select value={filters.location} onValueChange={(v) => setFilters(f => ({ ...f, location: v }))}>
+            <SelectTrigger className="h-12 pr-10 text-right" data-testid="select-location-desktop">
+              <SelectValue placeholder="أدخل الموقع" />
+            </SelectTrigger>
+            <SelectContent>
+              {saudiCities.map((city) => (
+                <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Search Button */}
+        <Button 
+          onClick={handleSearch}
+          className="h-12 px-8 bg-primary hover:bg-primary/90"
+          data-testid="button-search-desktop"
+        >
+          بحث
+        </Button>
       </div>
 
-      {/* Rooms */}
-      <div>
-        <label className="text-sm font-medium mb-2 block text-center">عدد الغرف</label>
-        <div className="flex justify-center gap-3">
-          {["1", "2", "3", "4", "5+"].map((n) => (
-            <button
-              key={n}
-              onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
-              className={`w-12 h-12 rounded-full border-2 font-bold transition-all ${
-                filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
-              }`}
-              data-testid={`button-rooms-${n}-desktop`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Row 2: Filters */}
+      <div className="flex items-center gap-2">
+        {/* Price */}
+        <Select value={filters.minPrice || "all"} onValueChange={(v) => setFilters(f => ({ ...f, minPrice: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-11 min-w-[120px]" data-testid="select-price-desktop">
+            <SelectValue placeholder="السعر (ر.س)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الكل</SelectItem>
+            <SelectItem value="500000">500,000+</SelectItem>
+            <SelectItem value="1000000">1,000,000+</SelectItem>
+            <SelectItem value="2000000">2,000,000+</SelectItem>
+            <SelectItem value="5000000">5,000,000+</SelectItem>
+          </SelectContent>
+        </Select>
 
-      {/* Search Button */}
-      <Button 
-        onClick={handleSearch} 
-        className="w-full h-14 rounded-xl text-lg gap-2 bg-gradient-to-r from-primary to-green-600"
-        data-testid="button-search-desktop"
-      >
-        <Search className="h-5 w-5" />
-        ابحث الآن
-      </Button>
+        {/* Rooms & Bathrooms */}
+        <Select value={filters.rooms || "all"} onValueChange={(v) => setFilters(f => ({ ...f, rooms: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-11 min-w-[140px]" data-testid="select-rooms-desktop">
+            <SelectValue placeholder="غرفة & دورة مياه" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الكل</SelectItem>
+            <SelectItem value="1">1 غرفة</SelectItem>
+            <SelectItem value="2">2 غرفة</SelectItem>
+            <SelectItem value="3">3 غرف</SelectItem>
+            <SelectItem value="4">4 غرف</SelectItem>
+            <SelectItem value="5+">5+ غرف</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Property Category */}
+        <Select value={filters.propertyCategory} onValueChange={(v) => setFilters(f => ({ ...f, propertyCategory: v as "residential" | "commercial", propertyType: "" }))}>
+          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-category-desktop">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="residential">سكني</SelectItem>
+            <SelectItem value="commercial">تجاري</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Property Type */}
+        <Select value={filters.propertyType || "all"} onValueChange={(v) => setFilters(f => ({ ...f, propertyType: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-type-desktop">
+            <SelectValue placeholder="الجميع" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الجميع</SelectItem>
+            {propertyTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Rent Period (only for rent) */}
+        {filters.transactionType === "rent" && (
+          <Select value={filters.rentPeriod} onValueChange={(v) => setFilters(f => ({ ...f, rentPeriod: v as "all" | "yearly" | "monthly" }))}>
+            <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-period-desktop">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">الجميع</SelectItem>
+              <SelectItem value="yearly">سنوياً</SelectItem>
+              <SelectItem value="monthly">شهرياً</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       {/* Chat Link */}
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground mt-4">
         <button onClick={onSwitchToChat} className="text-primary underline" data-testid="button-switch-to-chat-desktop">
-          تحدث مع المساعد الذكي
+          أو تحدث مع المساعد الذكي
         </button>
       </p>
     </div>
