@@ -422,18 +422,65 @@ export async function registerRoutes(
     }
   });
 
-  // Get matches for a preference
+  // Get matches for a preference (with ML-enhanced scoring)
   app.get("/api/buyers/preferences/:prefId/matches", async (req, res) => {
     try {
       const matches = await storage.getMatchesByBuyerPreference(req.params.prefId);
+      const { userId, sessionId } = req.query;
       
-      // Enrich with property details
+      // Get learned weights if user/session provided
+      let learnedWeights = null;
+      if (userId || sessionId) {
+        try {
+          const { getLearnedWeights } = await import("./learning-engine");
+          learnedWeights = await getLearnedWeights(
+            userId as string | undefined,
+            sessionId as string | undefined
+          );
+        } catch (err) {
+          console.warn("Could not load learned weights:", err);
+        }
+      }
+      
+      // Enrich with property details and apply ML adjustments
       const enrichedMatches = await Promise.all(
         matches.map(async (match) => {
           const property = match.propertyId ? await storage.getProperty(match.propertyId) : null;
-          return { ...match, property };
+          
+          // Apply learned weights boost if available
+          let adjustedScore = match.matchScore;
+          let isPreferred = false;
+          
+          if (learnedWeights && learnedWeights.confidenceScore >= 0.2 && property) {
+            // District preference bonus
+            if (learnedWeights.preferredDistricts?.includes(property.district)) {
+              adjustedScore = Math.min(100, adjustedScore + 5);
+              isPreferred = true;
+            }
+            // Property type preference bonus  
+            if (learnedWeights.preferredPropertyTypes?.includes(property.propertyType)) {
+              adjustedScore = Math.min(100, adjustedScore + 3);
+              isPreferred = true;
+            }
+            // Price range preference bonus
+            if (learnedWeights.priceRangeMin && learnedWeights.priceRangeMax) {
+              if (property.price >= learnedWeights.priceRangeMin && property.price <= learnedWeights.priceRangeMax) {
+                adjustedScore = Math.min(100, adjustedScore + 3);
+              }
+            }
+          }
+          
+          return { 
+            ...match, 
+            property, 
+            matchScore: adjustedScore,
+            isPreferred, 
+          };
         })
       );
+      
+      // Sort by adjusted score
+      enrichedMatches.sort((a, b) => b.matchScore - a.matchScore);
       
       res.json(enrichedMatches);
     } catch (error: any) {
@@ -1516,6 +1563,91 @@ export async function registerRoutes(
       
       res.json(page);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ MACHINE LEARNING ROUTES ============
+  
+  // Validation schema for ML interactions
+  const mlInteractionSchema = z.object({
+    userId: z.string().uuid().optional().nullable(),
+    sessionId: z.string().min(10).max(100).optional().nullable(),
+    propertyId: z.string().uuid(),
+    interactionType: z.enum(["view", "save", "skip", "contact", "share", "unsave"]),
+    duration: z.number().int().min(0).max(3600).optional(),
+    deviceType: z.enum(["mobile", "desktop", "tablet"]).optional(),
+  });
+
+  // Record user interaction (view, save, skip, contact)
+  app.post("/api/ml/interaction", async (req, res) => {
+    try {
+      const { recordInteraction } = await import("./learning-engine");
+      
+      // Validate input
+      const validationResult = mlInteractionSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid input", 
+          details: validationResult.error.errors 
+        });
+      }
+      
+      const { userId, sessionId, propertyId, interactionType, duration, deviceType } = validationResult.data;
+      
+      // Must have either userId or sessionId for tracking
+      if (!userId && !sessionId) {
+        return res.status(400).json({ error: "Either userId or sessionId is required" });
+      }
+      
+      await recordInteraction({
+        userId: userId || undefined,
+        sessionId: sessionId || undefined,
+        propertyId,
+        interactionType,
+        duration,
+        deviceType,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error recording interaction:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get learned weights for a user/session
+  app.get("/api/ml/weights", async (req, res) => {
+    try {
+      const { getLearnedWeights } = await import("./learning-engine");
+      const { userId, sessionId } = req.query;
+      
+      const weights = await getLearnedWeights(
+        userId as string | undefined,
+        sessionId as string | undefined
+      );
+      
+      res.json(weights);
+    } catch (error: any) {
+      console.error("Error getting learned weights:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get learning stats for a user
+  app.get("/api/ml/stats", async (req, res) => {
+    try {
+      const { getLearningStats } = await import("./learning-engine");
+      const { userId, sessionId } = req.query;
+      
+      const stats = await getLearningStats(
+        userId as string | undefined,
+        sessionId as string | undefined
+      );
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error getting learning stats:", error);
       res.status(500).json({ error: error.message });
     }
   });

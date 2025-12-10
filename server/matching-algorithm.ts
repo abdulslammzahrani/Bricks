@@ -456,3 +456,129 @@ export function getMatchScoreLabel(score: number): string {
   if (score >= 50) return 'متوسط';
   return 'ضعيف';
 }
+
+// =============================================
+// Machine Learning Integration
+// =============================================
+
+export interface LearnedWeights {
+  locationWeight: number;
+  priceWeight: number;
+  areaWeight: number;
+  propertyTypeWeight: number;
+  ageWeight: number;
+  amenitiesWeight: number;
+  preferredDistricts: string[];
+  preferredPropertyTypes: string[];
+  priceRangeMin: number | null;
+  priceRangeMax: number | null;
+  confidenceScore: number;
+}
+
+/**
+ * تطبيق الأوزان المتعلمة على نتيجة المطابقة
+ * Applies learned weights to boost/reduce match scores based on user behavior
+ */
+export function applyLearnedWeights(
+  matchResult: MatchResult,
+  learnedWeights: LearnedWeights
+): MatchResult {
+  if (learnedWeights.confidenceScore < 0.2) {
+    return matchResult;
+  }
+
+  let adjustedScore = 0;
+  let totalAdjustedWeight = 0;
+
+  // Apply personalized weights
+  const adjustedBreakdown = { ...matchResult.breakdown };
+
+  // Location with learned weight
+  const locationWeight = WEIGHTS.location * learnedWeights.locationWeight;
+  adjustedScore += adjustedBreakdown.location.score * locationWeight;
+  totalAdjustedWeight += locationWeight;
+
+  // Price with learned weight
+  const priceWeight = WEIGHTS.price * learnedWeights.priceWeight;
+  adjustedScore += adjustedBreakdown.price.score * priceWeight;
+  totalAdjustedWeight += priceWeight;
+
+  // Area with learned weight
+  const areaWeight = WEIGHTS.area * learnedWeights.areaWeight;
+  adjustedScore += adjustedBreakdown.area.score * areaWeight;
+  totalAdjustedWeight += areaWeight;
+
+  // Property age with learned weight
+  const ageWeight = WEIGHTS.propertyAge * learnedWeights.ageWeight;
+  adjustedScore += adjustedBreakdown.propertyAge.score * ageWeight;
+  totalAdjustedWeight += ageWeight;
+
+  // Add fixed weights for other criteria
+  adjustedScore += adjustedBreakdown.facing.score * WEIGHTS.facing;
+  totalAdjustedWeight += WEIGHTS.facing;
+  adjustedScore += adjustedBreakdown.streetWidth.score * WEIGHTS.streetWidth;
+  totalAdjustedWeight += WEIGHTS.streetWidth;
+  adjustedScore += adjustedBreakdown.purpose.score * WEIGHTS.purpose;
+  totalAdjustedWeight += WEIGHTS.purpose;
+  adjustedScore += adjustedBreakdown.roi.score * WEIGHTS.roi;
+  totalAdjustedWeight += WEIGHTS.roi;
+
+  // Normalize score
+  const normalizedScore = Math.round(adjustedScore / totalAdjustedWeight);
+
+  // Boost score if property matches learned preferences
+  let preferenceBonus = 0;
+  
+  // District preference bonus
+  if (learnedWeights.preferredDistricts.length > 0) {
+    const districtMatch = learnedWeights.preferredDistricts.some(
+      d => d.toLowerCase() === matchResult.property.district.toLowerCase()
+    );
+    if (districtMatch) {
+      preferenceBonus += 5;
+    }
+  }
+
+  // Property type preference bonus
+  if (learnedWeights.preferredPropertyTypes.length > 0) {
+    const typeMatch = learnedWeights.preferredPropertyTypes.some(
+      t => t.toLowerCase() === matchResult.property.propertyType.toLowerCase()
+    );
+    if (typeMatch) {
+      preferenceBonus += 3;
+    }
+  }
+
+  // Learned price range bonus
+  if (learnedWeights.priceRangeMin && learnedWeights.priceRangeMax) {
+    const price = matchResult.property.price;
+    if (price >= learnedWeights.priceRangeMin && price <= learnedWeights.priceRangeMax) {
+      preferenceBonus += 3;
+    }
+  }
+
+  // Blend original score with learned adjustments
+  const blendFactor = learnedWeights.confidenceScore * 0.4;
+  const finalScore = Math.min(100, Math.round(
+    matchResult.matchScore * (1 - blendFactor) + 
+    (normalizedScore + preferenceBonus) * blendFactor
+  ));
+
+  return {
+    ...matchResult,
+    matchScore: finalScore,
+    recommendation: matchResult.recommendation + (preferenceBonus > 0 ? ' (مفضل بناءً على سلوكك)' : ''),
+  };
+}
+
+/**
+ * ترتيب العقارات مع تطبيق التعلم الآلي
+ */
+export function rankPropertiesWithML(
+  properties: MatchResult[],
+  learnedWeights: LearnedWeights
+): MatchResult[] {
+  return properties
+    .map(p => applyLearnedWeights(p, learnedWeights))
+    .sort((a, b) => b.matchScore - a.matchScore);
+}

@@ -209,3 +209,78 @@ export const staticPages = pgTable("static_pages", {
 export const insertStaticPageSchema = createInsertSchema(staticPages).omit({ id: true, updatedAt: true });
 export type InsertStaticPage = z.infer<typeof insertStaticPageSchema>;
 export type StaticPage = typeof staticPages.$inferSelect;
+
+// =============================================
+// Machine Learning & User Behavior Tracking
+// =============================================
+
+// User interactions - tracks all user actions for ML learning
+export const userInteractions = pgTable("user_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  sessionId: text("session_id"), // For anonymous users
+  propertyId: varchar("property_id").references(() => properties.id),
+  interactionType: text("interaction_type").notNull(), // view, save, skip, contact, share, unsave
+  duration: integer("duration"), // Time spent viewing (seconds)
+  // Property attributes at time of interaction (for learning)
+  propertyCity: text("property_city"),
+  propertyDistrict: text("property_district"),
+  propertyType: text("property_type"),
+  propertyPrice: integer("property_price"),
+  propertyArea: integer("property_area"),
+  // User context
+  userBudgetMax: integer("user_budget_max"),
+  userPreferredCity: text("user_preferred_city"),
+  userPreferredType: text("user_preferred_type"),
+  // Metadata
+  deviceType: text("device_type"), // mobile, desktop, tablet
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUserInteractionSchema = createInsertSchema(userInteractions).omit({ id: true, createdAt: true });
+export type InsertUserInteraction = z.infer<typeof insertUserInteractionSchema>;
+export type UserInteraction = typeof userInteractions.$inferSelect;
+
+// Learned preference weights - personalized weights for each user
+export const userPreferenceWeights = pgTable("user_preference_weights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  sessionId: text("session_id"), // For anonymous users
+  // Learned weights (0.0 to 2.0, where 1.0 is default)
+  locationWeight: doublePrecision("location_weight").notNull().default(1.0),
+  priceWeight: doublePrecision("price_weight").notNull().default(1.0),
+  areaWeight: doublePrecision("area_weight").notNull().default(1.0),
+  propertyTypeWeight: doublePrecision("property_type_weight").notNull().default(1.0),
+  ageWeight: doublePrecision("age_weight").notNull().default(1.0),
+  amenitiesWeight: doublePrecision("amenities_weight").notNull().default(1.0),
+  // Learned preferences
+  preferredDistricts: text("preferred_districts").array().default(sql`'{}'::text[]`),
+  preferredPropertyTypes: text("preferred_property_types").array().default(sql`'{}'::text[]`),
+  priceRangeMin: integer("price_range_min"),
+  priceRangeMax: integer("price_range_max"),
+  areaRangeMin: integer("area_range_min"),
+  areaRangeMax: integer("area_range_max"),
+  // Learning metadata
+  totalInteractions: integer("total_interactions").notNull().default(0),
+  lastLearningUpdate: timestamp("last_learning_update").defaultNow(),
+  confidenceScore: doublePrecision("confidence_score").notNull().default(0.0), // 0-1
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserPreferenceWeightsSchema = createInsertSchema(userPreferenceWeights).omit({ id: true, updatedAt: true, lastLearningUpdate: true });
+export type InsertUserPreferenceWeights = z.infer<typeof insertUserPreferenceWeightsSchema>;
+export type UserPreferenceWeights = typeof userPreferenceWeights.$inferSelect;
+
+// ML model metrics - tracks model performance
+export const mlModelMetrics = pgTable("ml_model_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  modelVersion: text("model_version").notNull(),
+  metricType: text("metric_type").notNull(), // accuracy, precision, recall, conversion_rate
+  metricValue: doublePrecision("metric_value").notNull(),
+  sampleSize: integer("sample_size").notNull(),
+  calculatedAt: timestamp("calculated_at").defaultNow(),
+});
+
+export const insertMlModelMetricsSchema = createInsertSchema(mlModelMetrics).omit({ id: true, calculatedAt: true });
+export type InsertMlModelMetrics = z.infer<typeof insertMlModelMetricsSchema>;
+export type MlModelMetrics = typeof mlModelMetrics.$inferSelect;
