@@ -284,3 +284,131 @@ export const mlModelMetrics = pgTable("ml_model_metrics", {
 export const insertMlModelMetricsSchema = createInsertSchema(mlModelMetrics).omit({ id: true, calculatedAt: true });
 export type InsertMlModelMetrics = z.infer<typeof insertMlModelMetricsSchema>;
 export type MlModelMetrics = typeof mlModelMetrics.$inferSelect;
+
+// =============================================
+// AUDIENCE SEGMENTATION SYSTEM (نظام تصنيف الجمهور)
+// =============================================
+
+// Audience segments - predefined customer segments
+export const audienceSegments = pgTable("audience_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // اسم الشريحة
+  nameAr: text("name_ar").notNull(), // الاسم بالعربية
+  description: text("description"),
+  // Segment criteria
+  purchasingPowerTier: text("purchasing_power_tier").notNull(), // luxury, premium, mid_range, budget, economy
+  minBudget: integer("min_budget"), // الحد الأدنى للميزانية
+  maxBudget: integer("max_budget"), // الحد الأعلى للميزانية
+  propertyTypes: text("property_types").array().default(sql`'{}'::text[]`), // أنواع العقارات المستهدفة
+  transactionTypes: text("transaction_types").array().default(sql`'{}'::text[]`), // buy, rent
+  cities: text("cities").array().default(sql`'{}'::text[]`), // المدن المستهدفة
+  purposes: text("purposes").array().default(sql`'{}'::text[]`), // residence, investment
+  // Behavioral criteria
+  engagementLevel: text("engagement_level"), // high, medium, low
+  conversionPotential: text("conversion_potential"), // hot, warm, cold
+  // Segment metadata
+  color: text("color").default("#3B82F6"), // لون الشريحة للعرض
+  priority: integer("priority").notNull().default(0), // أولوية الاستهداف
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAudienceSegmentSchema = createInsertSchema(audienceSegments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAudienceSegment = z.infer<typeof insertAudienceSegmentSchema>;
+export type AudienceSegment = typeof audienceSegments.$inferSelect;
+
+// User segment assignments - links users to segments
+export const userSegments = pgTable("user_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  segmentId: varchar("segment_id").references(() => audienceSegments.id),
+  // Classification scores
+  matchScore: integer("match_score").notNull().default(0), // 0-100 how well user matches segment
+  purchasingPowerScore: integer("purchasing_power_score").notNull().default(0), // 0-100 قوة شرائية
+  engagementScore: integer("engagement_score").notNull().default(0), // 0-100 مستوى التفاعل
+  intentScore: integer("intent_score").notNull().default(0), // 0-100 نية الشراء
+  // Classification metadata
+  classifiedAt: timestamp("classified_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  classificationReason: text("classification_reason"), // سبب التصنيف
+  isAutoClassified: boolean("is_auto_classified").notNull().default(true), // تصنيف آلي أم يدوي
+});
+
+export const insertUserSegmentSchema = createInsertSchema(userSegments).omit({ id: true, classifiedAt: true, lastUpdated: true });
+export type InsertUserSegment = z.infer<typeof insertUserSegmentSchema>;
+export type UserSegment = typeof userSegments.$inferSelect;
+
+// Ad campaigns - targeted advertising campaigns
+export const adCampaigns = pgTable("ad_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  // Targeting
+  targetSegments: text("target_segments").array().default(sql`'{}'::text[]`), // شرائح الجمهور المستهدفة
+  targetCities: text("target_cities").array().default(sql`'{}'::text[]`),
+  targetPropertyTypes: text("target_property_types").array().default(sql`'{}'::text[]`),
+  minPurchasingPower: integer("min_purchasing_power"), // الحد الأدنى للقوة الشرائية
+  maxPurchasingPower: integer("max_purchasing_power"),
+  // Campaign content
+  messageTemplate: text("message_template"), // قالب الرسالة
+  emailSubject: text("email_subject"),
+  emailTemplate: text("email_template"),
+  // Channels
+  channels: text("channels").array().default(sql`'{}'::text[]`), // whatsapp, email, sms, push
+  // Schedule
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  frequency: text("frequency").default("once"), // once, daily, weekly, monthly
+  // Status
+  status: text("status").notNull().default("draft"), // draft, scheduled, active, paused, completed
+  // Metrics
+  totalSent: integer("total_sent").notNull().default(0),
+  totalDelivered: integer("total_delivered").notNull().default(0),
+  totalOpened: integer("total_opened").notNull().default(0),
+  totalClicked: integer("total_clicked").notNull().default(0),
+  totalConverted: integer("total_converted").notNull().default(0),
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAdCampaignSchema = createInsertSchema(adCampaigns).omit({ id: true, createdAt: true, updatedAt: true, totalSent: true, totalDelivered: true, totalOpened: true, totalClicked: true, totalConverted: true });
+export type InsertAdCampaign = z.infer<typeof insertAdCampaignSchema>;
+export type AdCampaign = typeof adCampaigns.$inferSelect;
+
+// Campaign sends - tracks individual campaign messages
+export const campaignSends = pgTable("campaign_sends", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").references(() => adCampaigns.id),
+  userId: varchar("user_id").references(() => users.id),
+  segmentId: varchar("segment_id").references(() => audienceSegments.id),
+  // Message details
+  channel: text("channel").notNull(), // whatsapp, email, sms, push
+  messageContent: text("message_content"),
+  // Status tracking
+  status: text("status").notNull().default("pending"), // pending, sent, delivered, opened, clicked, converted, failed
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  convertedAt: timestamp("converted_at"),
+  // Error tracking
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCampaignSendSchema = createInsertSchema(campaignSends).omit({ id: true, createdAt: true });
+export type InsertCampaignSend = z.infer<typeof insertCampaignSendSchema>;
+export type CampaignSend = typeof campaignSends.$inferSelect;
+
+// Purchasing power tiers enum for frontend
+export const PURCHASING_POWER_TIERS = {
+  luxury: { min: 5000000, label: "فاخر", labelEn: "Luxury", color: "#8B5CF6" },
+  premium: { min: 2000000, max: 5000000, label: "متميز", labelEn: "Premium", color: "#3B82F6" },
+  mid_range: { min: 800000, max: 2000000, label: "متوسط", labelEn: "Mid-Range", color: "#10B981" },
+  budget: { min: 300000, max: 800000, label: "اقتصادي", labelEn: "Budget", color: "#F59E0B" },
+  economy: { max: 300000, label: "ميسر", labelEn: "Economy", color: "#6B7280" },
+} as const;

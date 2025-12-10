@@ -1,7 +1,19 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertBuyerPreferenceSchema, insertPropertySchema, insertContactRequestSchema, insertSendLogSchema } from "@shared/schema";
+import { db } from "./db";
+import { 
+  insertUserSchema, 
+  insertBuyerPreferenceSchema, 
+  insertPropertySchema, 
+  insertContactRequestSchema, 
+  insertSendLogSchema,
+  audienceSegments,
+  userSegments,
+  adCampaigns,
+  campaignSends,
+} from "@shared/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
@@ -1648,6 +1660,352 @@ export async function registerRoutes(
       res.json(stats);
     } catch (error: any) {
       console.error("Error getting learning stats:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ AUDIENCE SEGMENTATION ROUTES (نظام تصنيف الجمهور) ============
+
+  // Get all audience segments
+  app.get("/api/segments", async (req, res) => {
+    try {
+      const segments = await db.select().from(audienceSegments).where(eq(audienceSegments.isActive, true));
+      res.json(segments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new segment
+  app.post("/api/segments", async (req, res) => {
+    try {
+      const segmentSchema = z.object({
+        name: z.string().min(1),
+        nameAr: z.string().min(1),
+        description: z.string().optional(),
+        purchasingPowerTier: z.enum(["luxury", "premium", "mid_range", "budget", "economy"]),
+        minBudget: z.number().optional(),
+        maxBudget: z.number().optional(),
+        propertyTypes: z.array(z.string()).optional(),
+        transactionTypes: z.array(z.string()).optional(),
+        cities: z.array(z.string()).optional(),
+        purposes: z.array(z.string()).optional(),
+        engagementLevel: z.enum(["high", "medium", "low"]).optional(),
+        conversionPotential: z.enum(["hot", "warm", "cold"]).optional(),
+        color: z.string().optional(),
+        priority: z.number().default(0),
+      });
+      
+      const result = segmentSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "بيانات غير صالحة", details: result.error.errors });
+      }
+      
+      const [segment] = await db.insert(audienceSegments).values(result.data).returning();
+      res.json(segment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get segment details with users
+  app.get("/api/segments/:segmentId", async (req, res) => {
+    try {
+      const { getUsersInSegment } = await import("./audience-segmentation");
+      
+      const [segment] = await db.select().from(audienceSegments).where(eq(audienceSegments.id, req.params.segmentId));
+      if (!segment) {
+        return res.status(404).json({ error: "الشريحة غير موجودة" });
+      }
+      
+      const users = await getUsersInSegment(req.params.segmentId);
+      
+      res.json({ segment, users, userCount: users.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Initialize default segments
+  app.post("/api/segments/initialize", async (req, res) => {
+    try {
+      const { initializeDefaultSegments } = await import("./audience-segmentation");
+      await initializeDefaultSegments();
+      
+      const segments = await db.select().from(audienceSegments);
+      res.json({ success: true, segments });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Classify a single user
+  app.post("/api/segments/classify/:userId", async (req, res) => {
+    try {
+      const { classifyUser } = await import("./audience-segmentation");
+      const classification = await classifyUser(req.params.userId);
+      res.json(classification);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Classify all users (batch operation)
+  app.post("/api/segments/classify-all", async (req, res) => {
+    try {
+      const { classifyAllUsers } = await import("./audience-segmentation");
+      const result = await classifyAllUsers();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's purchasing power analysis
+  app.get("/api/segments/purchasing-power/:userId", async (req, res) => {
+    try {
+      const { calculatePurchasingPower } = await import("./audience-segmentation");
+      const result = await calculatePurchasingPower(req.params.userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's engagement analysis
+  app.get("/api/segments/engagement/:userId", async (req, res) => {
+    try {
+      const { calculateEngagement } = await import("./audience-segmentation");
+      const result = await calculateEngagement(req.params.userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's intent analysis
+  app.get("/api/segments/intent/:userId", async (req, res) => {
+    try {
+      const { calculateIntent } = await import("./audience-segmentation");
+      const result = await calculateIntent(req.params.userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ AD CAMPAIGNS ROUTES (الحملات الإعلانية) ============
+
+  // Get all campaigns
+  app.get("/api/campaigns", async (req, res) => {
+    try {
+      const campaigns = await db.select().from(adCampaigns).orderBy(desc(adCampaigns.createdAt));
+      res.json(campaigns);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create new campaign
+  app.post("/api/campaigns", async (req, res) => {
+    try {
+      const campaignSchema = z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        targetSegments: z.array(z.string()).optional(),
+        targetCities: z.array(z.string()).optional(),
+        targetPropertyTypes: z.array(z.string()).optional(),
+        minPurchasingPower: z.number().optional(),
+        maxPurchasingPower: z.number().optional(),
+        messageTemplate: z.string().optional(),
+        emailSubject: z.string().optional(),
+        emailTemplate: z.string().optional(),
+        channels: z.array(z.enum(["whatsapp", "email", "sms", "push"])).default(["whatsapp"]),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        frequency: z.enum(["once", "daily", "weekly", "monthly"]).default("once"),
+        createdBy: z.string().optional(),
+      });
+      
+      const result = campaignSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "بيانات غير صالحة", details: result.error.errors });
+      }
+      
+      const data = {
+        ...result.data,
+        startDate: result.data.startDate ? new Date(result.data.startDate) : undefined,
+        endDate: result.data.endDate ? new Date(result.data.endDate) : undefined,
+      };
+      
+      const [campaign] = await db.insert(adCampaigns).values(data).returning();
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get campaign details with targeted users
+  app.get("/api/campaigns/:campaignId", async (req, res) => {
+    try {
+      const { getTargetedUsersForCampaign } = await import("./audience-segmentation");
+      
+      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      if (!campaign) {
+        return res.status(404).json({ error: "الحملة غير موجودة" });
+      }
+      
+      const targetedUsers = await getTargetedUsersForCampaign(req.params.campaignId);
+      
+      res.json({ campaign, targetedUsers, targetCount: targetedUsers.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update campaign status
+  app.patch("/api/campaigns/:campaignId/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const validStatuses = ["draft", "scheduled", "active", "paused", "completed"];
+      
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "حالة غير صالحة" });
+      }
+      
+      const [updated] = await db.update(adCampaigns)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(adCampaigns.id, req.params.campaignId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send campaign (execute)
+  app.post("/api/campaigns/:campaignId/send", async (req, res) => {
+    try {
+      const { getTargetedUsersForCampaign } = await import("./audience-segmentation");
+      
+      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      if (!campaign) {
+        return res.status(404).json({ error: "الحملة غير موجودة" });
+      }
+      
+      const targetedUsers = await getTargetedUsersForCampaign(req.params.campaignId);
+      const channels = campaign.channels || ["whatsapp"];
+      
+      let totalSent = 0;
+      const errors: string[] = [];
+      
+      for (const { userId, user, segmentMatch } of targetedUsers) {
+        for (const channel of channels) {
+          try {
+            // Create campaign send record
+            await db.insert(campaignSends).values({
+              campaignId: campaign.id,
+              userId,
+              segmentId: segmentMatch.segmentId,
+              channel,
+              messageContent: campaign.messageTemplate,
+              status: "pending",
+            });
+            
+            // TODO: Integrate with actual notification service
+            // For now, just mark as sent
+            totalSent++;
+          } catch (err: any) {
+            errors.push(`فشل إرسال لـ ${user.name}: ${err.message}`);
+          }
+        }
+      }
+      
+      // Update campaign metrics
+      await db.update(adCampaigns)
+        .set({ 
+          status: "active",
+          totalSent: campaign.totalSent + totalSent,
+          updatedAt: new Date(),
+        })
+        .where(eq(adCampaigns.id, campaign.id));
+      
+      res.json({ 
+        success: true, 
+        totalSent, 
+        targetCount: targetedUsers.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get campaign analytics
+  app.get("/api/campaigns/:campaignId/analytics", async (req, res) => {
+    try {
+      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      if (!campaign) {
+        return res.status(404).json({ error: "الحملة غير موجودة" });
+      }
+      
+      const sends = await db.select().from(campaignSends).where(eq(campaignSends.campaignId, req.params.campaignId));
+      
+      // Calculate channel breakdown
+      const byChannel: Record<string, number> = {};
+      const byStatus: Record<string, number> = {};
+      for (const send of sends) {
+        byChannel[send.channel] = (byChannel[send.channel] || 0) + 1;
+        byStatus[send.status] = (byStatus[send.status] || 0) + 1;
+      }
+      
+      const analytics = {
+        totalSent: campaign.totalSent,
+        totalDelivered: campaign.totalDelivered,
+        totalOpened: campaign.totalOpened,
+        totalClicked: campaign.totalClicked,
+        totalConverted: campaign.totalConverted,
+        deliveryRate: campaign.totalSent > 0 ? (campaign.totalDelivered / campaign.totalSent * 100).toFixed(1) : 0,
+        openRate: campaign.totalDelivered > 0 ? (campaign.totalOpened / campaign.totalDelivered * 100).toFixed(1) : 0,
+        clickRate: campaign.totalOpened > 0 ? (campaign.totalClicked / campaign.totalOpened * 100).toFixed(1) : 0,
+        conversionRate: campaign.totalClicked > 0 ? (campaign.totalConverted / campaign.totalClicked * 100).toFixed(1) : 0,
+        byChannel,
+        byStatus,
+      };
+      
+      res.json(analytics);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get segment statistics summary
+  app.get("/api/segments/stats/summary", async (req, res) => {
+    try {
+      const segments = await db.select().from(audienceSegments).where(eq(audienceSegments.isActive, true));
+      const userSegmentCounts = await db.select({
+        segmentId: userSegments.segmentId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(userSegments)
+      .groupBy(userSegments.segmentId);
+      
+      const countMap = new Map(userSegmentCounts.map(u => [u.segmentId, u.count]));
+      
+      const summary = segments.map(segment => ({
+        id: segment.id,
+        name: segment.name,
+        nameAr: segment.nameAr,
+        purchasingPowerTier: segment.purchasingPowerTier,
+        color: segment.color,
+        userCount: countMap.get(segment.id) || 0,
+      }));
+      
+      const totalUsers = Array.from(countMap.values()).reduce((a, b) => a + b, 0);
+      
+      res.json({ segments: summary, totalSegmentedUsers: totalUsers });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
