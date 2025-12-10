@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, doublePrecision, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -78,6 +78,8 @@ export const properties = pgTable("properties", {
   viewsCount: integer("views_count").notNull().default(0),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({ id: true, viewsCount: true });
@@ -412,3 +414,226 @@ export const PURCHASING_POWER_TIERS = {
   budget: { min: 300000, max: 800000, label: "اقتصادي", labelEn: "Budget", color: "#F59E0B" },
   economy: { max: 300000, label: "ميسر", labelEn: "Economy", color: "#6B7280" },
 } as const;
+
+// ==================== BROKER SUBSCRIPTION SYSTEM ====================
+
+// Subscription plans for brokers
+export const BROKER_SUBSCRIPTION_PLANS = {
+  free: {
+    name: "مجاني",
+    nameEn: "Free",
+    maxProperties: 3,
+    maxLeadsPerMonth: 10,
+    featuredListings: 0,
+    prioritySupport: false,
+    analytics: false,
+    price: 0,
+  },
+  basic: {
+    name: "أساسي",
+    nameEn: "Basic",
+    maxProperties: 15,
+    maxLeadsPerMonth: 50,
+    featuredListings: 2,
+    prioritySupport: false,
+    analytics: true,
+    price: 299,
+  },
+  premium: {
+    name: "متميز",
+    nameEn: "Premium",
+    maxProperties: 50,
+    maxLeadsPerMonth: 200,
+    featuredListings: 10,
+    prioritySupport: true,
+    analytics: true,
+    price: 799,
+  },
+  professional: {
+    name: "احترافي",
+    nameEn: "Professional",
+    maxProperties: -1, // unlimited
+    maxLeadsPerMonth: -1, // unlimited
+    featuredListings: -1, // unlimited
+    prioritySupport: true,
+    analytics: true,
+    price: 1499,
+  },
+} as const;
+
+// Broker subscriptions table
+export const brokerSubscriptions = pgTable("broker_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  // Plan details
+  plan: text("plan").notNull().default("free"), // free, basic, premium, professional
+  // Dates
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  // Usage tracking
+  propertiesUsed: integer("properties_used").notNull().default(0),
+  leadsUsedThisMonth: integer("leads_used_this_month").notNull().default(0),
+  featuredUsed: integer("featured_used").notNull().default(0),
+  // Billing
+  billingCycle: text("billing_cycle").default("monthly"), // monthly, yearly
+  lastBillingDate: timestamp("last_billing_date"),
+  nextBillingDate: timestamp("next_billing_date"),
+  // Status
+  status: text("status").notNull().default("active"), // active, expired, cancelled, suspended
+  autoRenew: boolean("auto_renew").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertBrokerSubscriptionSchema = createInsertSchema(brokerSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBrokerSubscription = z.infer<typeof insertBrokerSubscriptionSchema>;
+export type BrokerSubscription = typeof brokerSubscriptions.$inferSelect;
+
+// ==================== LEADS SYSTEM ====================
+
+// Leads - when a buyer shows interest in a property
+export const propertyLeads = pgTable("property_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").references(() => properties.id).notNull(),
+  buyerId: varchar("buyer_id").references(() => users.id).notNull(),
+  sellerId: varchar("seller_id").references(() => users.id).notNull(),
+  // Lead source
+  source: text("source").notNull().default("view"), // view, save, contact, inquiry, call
+  // Lead quality score (0-100)
+  qualityScore: integer("quality_score").notNull().default(50),
+  // Status tracking
+  status: text("status").notNull().default("new"), // new, contacted, qualified, negotiating, converted, lost
+  // Contact info
+  buyerMessage: text("buyer_message"),
+  buyerPhone: text("buyer_phone"),
+  buyerEmail: text("buyer_email"),
+  // Follow-up
+  lastContactAt: timestamp("last_contact_at"),
+  nextFollowUpAt: timestamp("next_follow_up_at"),
+  notes: text("notes"),
+  // Conversion tracking
+  convertedAt: timestamp("converted_at"),
+  conversionValue: integer("conversion_value"), // sale price if converted
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyLeadSchema = createInsertSchema(propertyLeads).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPropertyLead = z.infer<typeof insertPropertyLeadSchema>;
+export type PropertyLead = typeof propertyLeads.$inferSelect;
+
+// ==================== AD VIEWS & IMPRESSIONS ====================
+
+// Property impressions (views)
+export const propertyImpressions = pgTable("property_impressions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").references(() => properties.id).notNull(),
+  viewerId: varchar("viewer_id").references(() => users.id), // null for anonymous
+  // View details
+  viewType: text("view_type").notNull().default("list"), // list, detail, search, featured, recommended
+  duration: integer("duration"), // seconds spent viewing
+  // Source tracking
+  source: text("source").default("organic"), // organic, featured, ad, recommendation, search
+  referrer: text("referrer"),
+  // Device info
+  deviceType: text("device_type"), // mobile, desktop, tablet
+  // Action taken
+  actionTaken: text("action_taken"), // none, save, contact, share, call
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPropertyImpressionSchema = createInsertSchema(propertyImpressions).omit({ id: true, createdAt: true });
+export type InsertPropertyImpression = z.infer<typeof insertPropertyImpressionSchema>;
+export type PropertyImpression = typeof propertyImpressions.$inferSelect;
+
+// ==================== FEATURED/BOOSTED LISTINGS ====================
+
+// Property boosts - paid promotion for properties
+export const propertyBoosts = pgTable("property_boosts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").references(() => properties.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  // Boost type
+  boostType: text("boost_type").notNull().default("featured"), // featured, spotlight, homepage, search_top
+  // Duration
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date").notNull(),
+  // Pricing
+  price: integer("price").notNull(), // in SAR
+  // Targeting
+  targetCities: text("target_cities").array().default(sql`'{}'::text[]`),
+  targetBudgetMin: integer("target_budget_min"),
+  targetBudgetMax: integer("target_budget_max"),
+  // Performance metrics
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  leads: integer("leads").notNull().default(0),
+  // Status
+  status: text("status").notNull().default("active"), // pending, active, paused, expired, cancelled
+  // Payment
+  paymentStatus: text("payment_status").notNull().default("pending"), // pending, paid, failed, refunded
+  paymentId: text("payment_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyBoostSchema = createInsertSchema(propertyBoosts).omit({ id: true, createdAt: true, updatedAt: true, impressions: true, clicks: true, leads: true });
+export type InsertPropertyBoost = z.infer<typeof insertPropertyBoostSchema>;
+export type PropertyBoost = typeof propertyBoosts.$inferSelect;
+
+// ==================== PROPERTY RANKING ALGORITHM ====================
+
+// Property ranking scores - calculated scores for ranking
+export const propertyRankingScores = pgTable("property_ranking_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").references(() => properties.id).notNull().unique(),
+  // Base scores
+  subscriptionScore: real("subscription_score").notNull().default(0), // 0-100 based on seller's plan
+  qualityScore: real("quality_score").notNull().default(0), // 0-100 based on property completeness
+  engagementScore: real("engagement_score").notNull().default(0), // 0-100 based on views/saves
+  recencyScore: real("recency_score").notNull().default(0), // 0-100 based on listing age
+  verificationScore: real("verification_score").notNull().default(0), // 0-100 based on seller verification
+  // Boost multipliers
+  boostMultiplier: real("boost_multiplier").notNull().default(1.0),
+  featuredBonus: real("featured_bonus").notNull().default(0),
+  // Final composite score
+  totalScore: real("total_score").notNull().default(0),
+  // Tracking
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyRankingScoreSchema = createInsertSchema(propertyRankingScores).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPropertyRankingScore = z.infer<typeof insertPropertyRankingScoreSchema>;
+export type PropertyRankingScore = typeof propertyRankingScores.$inferSelect;
+
+// ==================== BROKER ANALYTICS ====================
+
+// Daily broker analytics
+export const brokerAnalytics = pgTable("broker_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  date: timestamp("date").notNull(),
+  // Impressions
+  totalImpressions: integer("total_impressions").notNull().default(0),
+  uniqueViewers: integer("unique_viewers").notNull().default(0),
+  // Engagement
+  totalClicks: integer("total_clicks").notNull().default(0),
+  totalSaves: integer("total_saves").notNull().default(0),
+  totalShares: integer("total_shares").notNull().default(0),
+  // Leads
+  newLeads: integer("new_leads").notNull().default(0),
+  qualifiedLeads: integer("qualified_leads").notNull().default(0),
+  convertedLeads: integer("converted_leads").notNull().default(0),
+  // Revenue (from conversions)
+  revenueGenerated: integer("revenue_generated").notNull().default(0),
+  // Property stats
+  activeListings: integer("active_listings").notNull().default(0),
+  featuredListings: integer("featured_listings").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBrokerAnalyticsSchema = createInsertSchema(brokerAnalytics).omit({ id: true, createdAt: true });
+export type InsertBrokerAnalytics = z.infer<typeof insertBrokerAnalyticsSchema>;
+export type BrokerAnalytics = typeof brokerAnalytics.$inferSelect;

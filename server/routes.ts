@@ -2010,5 +2010,186 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== BROKER SUBSCRIPTION & ADS SYSTEM ====================
+  
+  // Helper to check broker authentication
+  const requireBrokerAuth = (req: any, res: any, userId: string): boolean => {
+    const sessionUser = req.session?.user;
+    if (!sessionUser) {
+      res.status(401).json({ error: "يجب تسجيل الدخول" });
+      return false;
+    }
+    if (sessionUser.id !== userId && sessionUser.role !== "admin") {
+      res.status(403).json({ error: "غير مصرح لك بالوصول" });
+      return false;
+    }
+    return true;
+  };
+
+  // Get broker subscription (authenticated)
+  app.get("/api/broker/subscription/:userId", async (req, res) => {
+    try {
+      if (!requireBrokerAuth(req, res, req.params.userId)) return;
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const subscription = await brokerAdsEngine.getBrokerSubscription(req.params.userId);
+      res.json(subscription);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get broker dashboard stats (authenticated)
+  app.get("/api/broker/dashboard/:userId", async (req, res) => {
+    try {
+      if (!requireBrokerAuth(req, res, req.params.userId)) return;
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const stats = await brokerAdsEngine.getBrokerDashboardStats(req.params.userId);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Check if can add property (authenticated)
+  app.get("/api/broker/can-add-property/:userId", async (req, res) => {
+    try {
+      if (!requireBrokerAuth(req, res, req.params.userId)) return;
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const result = await brokerAdsEngine.canAddProperty(req.params.userId);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create lead (authenticated buyer)
+  app.post("/api/leads", async (req, res) => {
+    try {
+      const sessionUser = (req as any).session?.user;
+      if (!sessionUser) {
+        return res.status(401).json({ error: "يجب تسجيل الدخول لإرسال طلب التواصل" });
+      }
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const lead = await brokerAdsEngine.createLead({
+        ...req.body,
+        buyerId: sessionUser.id,
+      });
+      res.status(201).json(lead);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get seller leads (authenticated seller)
+  app.get("/api/broker/leads/:sellerId", async (req, res) => {
+    try {
+      if (!requireBrokerAuth(req, res, req.params.sellerId)) return;
+      const { propertyLeads } = await import("@shared/schema");
+      const leads = await db.select()
+        .from(propertyLeads)
+        .where(eq(propertyLeads.sellerId, req.params.sellerId))
+        .orderBy(desc(propertyLeads.createdAt));
+      res.json(leads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Track property impression
+  app.post("/api/impressions", async (req, res) => {
+    try {
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const impression = await brokerAdsEngine.trackImpression(req.body);
+      res.status(201).json(impression);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get ranked properties (public endpoint)
+  app.get("/api/ranked-properties", async (req, res) => {
+    try {
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const options = {
+        limit: parseInt(req.query.limit as string) || 20,
+        offset: parseInt(req.query.offset as string) || 0,
+        city: req.query.city as string,
+        propertyType: req.query.propertyType as string,
+        minPrice: req.query.minPrice ? parseInt(req.query.minPrice as string) : undefined,
+        maxPrice: req.query.maxPrice ? parseInt(req.query.maxPrice as string) : undefined,
+        buyerId: req.query.buyerId as string,
+      };
+      const properties = await brokerAdsEngine.getRankedProperties(options);
+      res.json(properties);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create property boost (authenticated)
+  app.post("/api/boosts", async (req, res) => {
+    try {
+      const sessionUser = (req as any).session?.user;
+      if (!sessionUser) {
+        return res.status(401).json({ error: "يجب تسجيل الدخول" });
+      }
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const boost = await brokerAdsEngine.createPropertyBoost({
+        ...req.body,
+        userId: sessionUser.id,
+      });
+      res.status(201).json(boost);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Activate boost (after payment - admin or owner)
+  app.post("/api/boosts/:boostId/activate", async (req, res) => {
+    try {
+      const sessionUser = (req as any).session?.user;
+      if (!sessionUser) {
+        return res.status(401).json({ error: "يجب تسجيل الدخول" });
+      }
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const boost = await brokerAdsEngine.activateBoost(req.params.boostId);
+      res.json(boost);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get active boosts for a user (authenticated)
+  app.get("/api/broker/boosts/:userId", async (req, res) => {
+    try {
+      if (!requireBrokerAuth(req, res, req.params.userId)) return;
+      const { propertyBoosts } = await import("@shared/schema");
+      const boosts = await db.select()
+        .from(propertyBoosts)
+        .where(eq(propertyBoosts.userId, req.params.userId))
+        .orderBy(desc(propertyBoosts.createdAt));
+      res.json(boosts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get subscription plans
+  app.get("/api/subscription-plans", async (req, res) => {
+    const { BROKER_SUBSCRIPTION_PLANS } = await import("@shared/schema");
+    res.json(BROKER_SUBSCRIPTION_PLANS);
+  });
+
+  // Recalculate property ranking score
+  app.post("/api/properties/:propertyId/recalculate-ranking", async (req, res) => {
+    try {
+      const { brokerAdsEngine } = await import("./broker-ads-engine");
+      const score = await brokerAdsEngine.calculatePropertyRankingScore(req.params.propertyId);
+      res.json({ score });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
