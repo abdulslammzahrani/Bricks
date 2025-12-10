@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,15 +11,27 @@ import {
 import { 
   MapPin, User, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
-  Check, ChevronDown, Castle, Hotel, Store, Factory, Blocks
+  Check, ChevronDown, Castle, Hotel, Store, Factory, Blocks, Navigation
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix leaflet default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface SearchFilters {
   name: string;
   phone: string;
   transactionType: "sale" | "rent";
   location: string;
+  district: string;
   propertyCategory: "residential" | "commercial";
   propertyType: string;
   rooms: string;
@@ -60,6 +72,25 @@ interface AdvancedSearchFormProps {
   onSwitchToChat: () => void;
 }
 
+// Map click handler component
+function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+// Map center changer component
+function MapCenterChanger({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+}
+
 export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -68,6 +99,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     phone: "",
     transactionType: "sale",
     location: "",
+    district: "",
     propertyCategory: "residential",
     propertyType: "",
     rooms: "",
@@ -79,16 +111,33 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     status: "all",
     rentPeriod: "all",
   });
+  const [districtSearch, setDistrictSearch] = useState("");
+  const [pinLocation, setPinLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const propertyTypes = propertyOptions[filters.propertyCategory];
-  const totalCards = 4;
+  const totalCards = 5; // Now 5 cards: Personal, Type, City, District, Property
   const progress = ((activeCard) / totalCards) * 100;
+
+  // Get selected city data
+  const selectedCity = useMemo(() => {
+    return saudiCities.find(city => city.name === filters.location);
+  }, [filters.location]);
+
+  // Filter districts based on search
+  const filteredDistricts = useMemo(() => {
+    if (!selectedCity) return [];
+    if (!districtSearch.trim()) return selectedCity.neighborhoods;
+    return selectedCity.neighborhoods.filter(n => 
+      n.name.includes(districtSearch) || (n.nameEn && n.nameEn.toLowerCase().includes(districtSearch.toLowerCase()))
+    );
+  }, [selectedCity, districtSearch]);
 
   const cards = [
     { id: 0, icon: User, title: "البيانات", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
     { id: 1, icon: Sparkles, title: "نوع الطلب", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
     { id: 2, icon: MapPin, title: "المدينة", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
-    { id: 3, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
+    { id: 3, icon: Navigation, title: "الحي", color: "bg-teal-500", lightColor: "bg-teal-100 dark:bg-teal-900/40" },
+    { id: 4, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
   ];
 
   const goNext = () => {
@@ -120,18 +169,26 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       case 0: return filters.name.trim() !== "" && filters.phone.trim() !== "";
       case 1: return true;
       case 2: return filters.location !== "";
-      case 3: return true;
+      case 3: return true; // District is optional
+      case 4: return true;
       default: return true;
     }
+  };
+
+  // Handle map pin placement
+  const handlePinPlacement = (lat: number, lng: number) => {
+    setPinLocation({ lat, lng });
+    // Find nearest district based on pin (simplified - just set a visual indicator)
   };
 
   // Calculate desktop reliability score
   const getDesktopProgress = () => {
     let score = 0;
-    if (filters.name.trim()) score += 20;
-    if (filters.phone.trim()) score += 20;
-    if (filters.location) score += 25;
-    if (filters.propertyType) score += 20;
+    if (filters.name.trim()) score += 15;
+    if (filters.phone.trim()) score += 15;
+    if (filters.location) score += 20;
+    if (filters.district) score += 20;
+    if (filters.propertyType) score += 15;
     if (filters.rooms) score += 15;
     return score;
   };
@@ -161,7 +218,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Desktop Stacked Cards Container */}
-      <div className="relative max-w-lg mx-auto" style={{ minHeight: "380px" }}>
+      <div className="relative max-w-lg mx-auto" style={{ minHeight: "420px" }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -297,7 +354,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     {saudiCities.slice(0, 20).map((city) => (
                       <button
                         key={city.name}
-                        onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+                        onClick={() => setFilters(f => ({ ...f, location: city.name, district: "" }))}
                         className={`py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all ${
                           filters.location === city.name ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border hover:border-primary/50"
                         }`}
@@ -313,8 +370,86 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 3: Property */}
-              {activeCard === 3 && (
+              {/* Step 3: District with Map */}
+              {activeCard === 3 && selectedCity && (
+                <div className="space-y-4">
+                  <label className="text-sm font-medium mb-2 block text-center">اختر الحي في {filters.location}</label>
+                  
+                  {/* Search Box */}
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="ابحث عن حي..."
+                      value={districtSearch}
+                      onChange={(e) => setDistrictSearch(e.target.value)}
+                      className="h-10 pr-10 text-sm rounded-xl"
+                      data-testid="input-district-search-desktop"
+                    />
+                  </div>
+
+                  {/* Map and Districts Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Map */}
+                    <div className="h-[180px] rounded-xl overflow-hidden border-2 border-border">
+                      <MapContainer
+                        center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]}
+                        zoom={11}
+                        style={{ height: "100%", width: "100%" }}
+                        zoomControl={false}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <MapCenterChanger 
+                          center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]} 
+                          zoom={11} 
+                        />
+                        <MapClickHandler onLocationSelect={handlePinPlacement} />
+                        {pinLocation && (
+                          <Marker position={[pinLocation.lat, pinLocation.lng]} />
+                        )}
+                      </MapContainer>
+                      <p className="text-[10px] text-center text-muted-foreground mt-1">انقر على الخريطة لوضع دبوس</p>
+                    </div>
+
+                    {/* Districts List */}
+                    <div className="h-[180px] overflow-y-auto space-y-1 p-1">
+                      {filteredDistricts.slice(0, 15).map((district) => (
+                        <button
+                          key={district.name}
+                          onClick={() => setFilters(f => ({ ...f, district: district.name }))}
+                          className={`w-full py-2 px-3 rounded-lg border text-sm font-medium text-right transition-all ${
+                            filters.district === district.name 
+                              ? "border-primary bg-primary text-primary-foreground" 
+                              : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-district-desktop-${district.name}`}
+                        >
+                          {district.name}
+                        </button>
+                      ))}
+                      {filteredDistricts.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">لا توجد نتائج</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {filters.district && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-primary">
+                      <Navigation className="h-4 w-4" />
+                      <span>الحي المختار: {filters.district}</span>
+                    </div>
+                  )}
+
+                  <Button onClick={goNext} className="w-full h-12 rounded-xl text-base" data-testid="button-next-desktop-3">
+                    {filters.district ? "التالي" : "تخطي واختيار لاحقاً"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 4: Property */}
+              {activeCard === 4 && (
                 <div className="space-y-4">
                   <label className="text-sm font-medium mb-2 block text-center">نوع العقار</label>
                   <div className="grid grid-cols-4 gap-3">
@@ -370,7 +505,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               key={card.id}
               className="absolute inset-x-2 pointer-events-none"
               style={{
-                top: `${(activeCard * 44) + 300 + (idx * 24)}px`,
+                top: `${(activeCard * 44) + 320 + (idx * 24)}px`,
                 zIndex: -idx - 1,
                 opacity: 0.5 - (idx * 0.15),
               }}
@@ -408,7 +543,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Stacked Cards Container */}
-      <div className="relative" style={{ height: "280px" }}>
+      <div className="relative" style={{ height: activeCard === 3 ? "340px" : "280px" }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -481,8 +616,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { v: "sale", l: "شراء", e: "🏠" },
-                      { v: "rent", l: "إيجار", e: "🔑" }
+                      { v: "sale", l: "شراء", icon: Home },
+                      { v: "rent", l: "إيجار", icon: Building2 }
                     ].map(t => (
                       <button
                         key={t.v}
@@ -492,7 +627,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         }`}
                         data-testid={`button-filter-${t.v}`}
                       >
-                        <span className="text-xl">{t.e}</span>
+                        <t.icon className={`h-6 w-6 mx-auto ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
                         <div className="font-bold text-sm mt-1">{t.l}</div>
                       </button>
                     ))}
@@ -528,7 +663,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     {saudiCities.slice(0, 16).map((city) => (
                       <button
                         key={city.name}
-                        onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+                        onClick={() => setFilters(f => ({ ...f, location: city.name, district: "" }))}
                         className={`py-2 px-1 rounded-lg border text-xs font-medium transition-all ${
                           filters.location === city.name ? "border-primary bg-primary text-primary-foreground" : "border-border"
                         }`}
@@ -544,8 +679,72 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 3: Property */}
-              {activeCard === 3 && (
+              {/* Step 3: District with Map */}
+              {activeCard === 3 && selectedCity && (
+                <div className="space-y-2">
+                  <p className="text-xs text-center text-muted-foreground">اختر الحي في {filters.location}</p>
+                  
+                  {/* Search Box */}
+                  <div className="relative">
+                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="ابحث عن حي..."
+                      value={districtSearch}
+                      onChange={(e) => setDistrictSearch(e.target.value)}
+                      className="h-8 pr-8 text-xs rounded-lg"
+                      data-testid="input-district-search"
+                    />
+                  </div>
+
+                  {/* Map */}
+                  <div className="h-[100px] rounded-lg overflow-hidden border border-border">
+                    <MapContainer
+                      center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]}
+                      zoom={10}
+                      style={{ height: "100%", width: "100%" }}
+                      zoomControl={false}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <MapCenterChanger 
+                        center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]} 
+                        zoom={10} 
+                      />
+                      <MapClickHandler onLocationSelect={handlePinPlacement} />
+                      {pinLocation && (
+                        <Marker position={[pinLocation.lat, pinLocation.lng]} />
+                      )}
+                    </MapContainer>
+                  </div>
+
+                  {/* Districts Grid */}
+                  <div className="grid grid-cols-3 gap-1 max-h-[80px] overflow-y-auto">
+                    {filteredDistricts.slice(0, 12).map((district) => (
+                      <button
+                        key={district.name}
+                        onClick={() => setFilters(f => ({ ...f, district: district.name }))}
+                        className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
+                          filters.district === district.name 
+                            ? "border-primary bg-primary text-primary-foreground" 
+                            : "border-border"
+                        }`}
+                        data-testid={`button-district-${district.name}`}
+                      >
+                        {district.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button onClick={goNext} className="w-full h-10 rounded-lg text-sm" data-testid="button-next-3">
+                    {filters.district ? "التالي" : "تخطي"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 4: Property */}
+              {activeCard === 4 && (
                 <div className="space-y-2">
                   <div className="grid grid-cols-4 gap-1.5">
                     {propertyTypes.map((type) => {
@@ -597,7 +796,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               key={card.id}
               className="absolute inset-x-1 pointer-events-none"
               style={{
-                top: `${(activeCard * 28) + 220 + (idx * 16)}px`,
+                top: `${(activeCard * 28) + (activeCard === 3 ? 280 : 220) + (idx * 16)}px`,
                 zIndex: -idx - 1,
                 opacity: 0.4 - (idx * 0.15),
               }}
