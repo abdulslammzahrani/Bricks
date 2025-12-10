@@ -632,7 +632,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
                       <Input
                         type="tel"
-                        placeholder="05xxxxxxxx أو ٠٥xxxxxxxx"
+                        placeholder="رقم الجوال"
                         value={filters.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
@@ -1139,7 +1139,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   <div>
                     <Input
                       type="tel"
-                      placeholder="05xxxxxxxx أو ٠٥xxxxxxxx"
+                      placeholder="رقم الجوال"
                       value={filters.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
