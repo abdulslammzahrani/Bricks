@@ -2040,9 +2040,9 @@ export default function HeroSection() {
                 />
                 
                 {/* Live Stats and Map Section */}
-                <div className="border-t bg-muted/30 p-3">
+                <div className="border-t bg-muted/30 p-2 pt-2">
                   {/* Stats Row */}
-                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -2068,17 +2068,17 @@ export default function HeroSection() {
                   </div>
                   
                   {/* Typewriter Example */}
-                  <div className="flex items-center justify-center gap-2 mb-2">
+                  <div className="flex items-center justify-center gap-2 mb-1">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400">
                       عميل يطلب الآن:
                     </p>
                   </div>
                   <div 
-                    className="text-center cursor-pointer min-h-[60px] flex items-center justify-center px-2 overflow-hidden mb-3"
+                    className="text-center cursor-pointer min-h-[40px] flex items-center justify-center px-2 overflow-hidden mb-2"
                     onClick={() => addSuggestion(fullExampleText)}
                     data-testid="button-typewriter-example"
                   >
