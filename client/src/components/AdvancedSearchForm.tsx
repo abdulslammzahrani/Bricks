@@ -110,8 +110,152 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
     }
   };
 
-  return (
-    <div className="relative px-3 py-4">
+  // ==================== DESKTOP VERSION ====================
+  const DesktopForm = () => (
+    <div className="hidden md:block p-6 space-y-5">
+      {/* Name & Phone */}
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          placeholder="الاسم"
+          value={filters.name}
+          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+          className="h-12 text-center"
+          data-testid="input-name-desktop"
+        />
+        <Input
+          type="tel"
+          placeholder="رقم الجوال"
+          value={filters.phone}
+          onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
+          className="h-12 text-center"
+          dir="ltr"
+          data-testid="input-phone-desktop"
+        />
+      </div>
+
+      {/* Transaction Type */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { v: "sale", l: "شراء", e: "🏠" },
+          { v: "rent", l: "إيجار", e: "🔑" }
+        ].map(t => (
+          <button
+            key={t.v}
+            onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent" }))}
+            className={`p-4 rounded-xl border-2 text-center transition-all ${
+              filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
+            }`}
+            data-testid={`button-filter-${t.v}-desktop`}
+          >
+            <span className="text-2xl">{t.e}</span>
+            <div className="font-bold mt-1">{t.l}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Category */}
+      <div className="flex justify-center gap-3">
+        {[
+          { v: "residential", l: "سكني", I: Home },
+          { v: "commercial", l: "تجاري", I: Building2 }
+        ].map(c => (
+          <button
+            key={c.v}
+            onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+            className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 transition-all ${
+              filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
+            }`}
+            data-testid={`button-category-${c.v}-desktop`}
+          >
+            <c.I className="h-4 w-4" />
+            {c.l}
+          </button>
+        ))}
+      </div>
+
+      {/* City */}
+      <div>
+        <label className="text-sm font-medium mb-2 block">المدينة</label>
+        <div className="grid grid-cols-6 gap-2">
+          {saudiCities.slice(0, 12).map((city) => (
+            <button
+              key={city.name}
+              onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+              className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                filters.location === city.name ? "border-primary bg-primary text-primary-foreground" : "border-border"
+              }`}
+              data-testid={`button-city-${city.name}-desktop`}
+            >
+              {city.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Property Type */}
+      <div>
+        <label className="text-sm font-medium mb-2 block">نوع العقار</label>
+        <div className="grid grid-cols-4 gap-3">
+          {propertyTypes.map((type) => {
+            const Icon = type.icon;
+            return (
+              <button
+                key={type.value}
+                onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
+                className={`p-4 rounded-xl border-2 text-center transition-all ${
+                  filters.propertyType === type.value ? "border-primary bg-primary/10" : "border-border"
+                }`}
+                data-testid={`button-type-${type.value}-desktop`}
+              >
+                <Icon className={`h-8 w-8 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="font-medium mt-2">{type.label}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Rooms */}
+      <div>
+        <label className="text-sm font-medium mb-2 block text-center">عدد الغرف</label>
+        <div className="flex justify-center gap-3">
+          {["1", "2", "3", "4", "5+"].map((n) => (
+            <button
+              key={n}
+              onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
+              className={`w-12 h-12 rounded-full border-2 font-bold transition-all ${
+                filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
+              }`}
+              data-testid={`button-rooms-${n}-desktop`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Search Button */}
+      <Button 
+        onClick={handleSearch} 
+        className="w-full h-14 rounded-xl text-lg gap-2 bg-gradient-to-r from-primary to-green-600"
+        data-testid="button-search-desktop"
+      >
+        <Search className="h-5 w-5" />
+        ابحث الآن
+      </Button>
+
+      {/* Chat Link */}
+      <p className="text-center text-sm text-muted-foreground">
+        <button onClick={onSwitchToChat} className="text-primary underline" data-testid="button-switch-to-chat-desktop">
+          تحدث مع المساعد الذكي
+        </button>
+      </p>
+    </div>
+  );
+
+  // ==================== MOBILE VERSION (Stacked Cards) ====================
+  const MobileForm = () => (
+    <div className="md:hidden relative px-3 py-4">
       {/* Progress & Reliability */}
       <div className="mb-4 px-1">
         <div className="flex items-center justify-between mb-1.5">
@@ -132,7 +276,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
       {/* Stacked Cards Container */}
       <div className="relative" style={{ height: "280px" }}>
         
-        {/* Completed Cards - Stacked at top */}
+        {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
           const Icon = card.icon;
           return (
@@ -140,10 +284,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
               key={card.id}
               onClick={() => goBack(card.id)}
               className="absolute inset-x-0 cursor-pointer transition-all duration-200"
-              style={{
-                top: `${idx * 28}px`,
-                zIndex: idx + 1,
-              }}
+              style={{ top: `${idx * 28}px`, zIndex: idx + 1 }}
             >
               <div className={`${card.lightColor} rounded-xl p-2.5 flex items-center gap-2 border border-primary/20`}>
                 <div className={`w-7 h-7 rounded-lg ${card.color} flex items-center justify-center`}>
@@ -345,5 +486,12 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         </button>
       </p>
     </div>
+  );
+
+  return (
+    <>
+      <DesktopForm />
+      <MobileForm />
+    </>
   );
 }
