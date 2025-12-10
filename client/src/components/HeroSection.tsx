@@ -2038,6 +2038,63 @@ export default function HeroSection() {
                   onSearch={handleSearchFormSearch}
                   onSwitchToChat={handleSwitchToChat}
                 />
+                
+                {/* Live Stats and Map Section */}
+                <div className="border-t bg-muted/30 p-3">
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
+                        {requestsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>طلب</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
+                        {dealsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>صفقة</span>
+                    </div>
+                  </div>
+                  
+                  {/* Typewriter Example */}
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                      عميل يطلب الآن:
+                    </p>
+                  </div>
+                  <div 
+                    className="text-center cursor-pointer min-h-[60px] flex items-center justify-center px-2 overflow-hidden mb-3"
+                    onClick={() => addSuggestion(fullExampleText)}
+                    data-testid="button-typewriter-example"
+                  >
+                    <p className="text-sm leading-relaxed line-clamp-2">
+                      {renderTypedText()}
+                      <span className="text-muted-foreground">...</span>
+                      <span className="animate-pulse text-primary font-bold">|</span>
+                    </p>
+                  </div>
+                  
+                  {/* Map */}
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                  />
+                </div>
               </div>
             )}
 
