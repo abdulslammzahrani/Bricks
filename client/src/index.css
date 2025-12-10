@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet z-index fix - ensure popovers appear above map */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  z-index: 1 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 10 !important;
+}
+
+.leaflet-control {
+  z-index: 10 !important;
+}
+
 /* iOS Safari keyboard scroll prevention - opacity animation trick */
 @keyframes prevent-ios-scroll {
   0% { opacity: 0.99; }
