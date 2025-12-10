@@ -400,7 +400,16 @@ export default function HeroSection() {
 
   const handleSearchFormSearch = (filters: any) => {
     const queryParts = [];
-    if (filters.location) queryParts.push(filters.location);
+    
+    // Add name if provided
+    if (filters.name) queryParts.push(`اسمي ${filters.name}`);
+    
+    // Add phone if provided
+    if (filters.phone) queryParts.push(`جوالي ${filters.phone}`);
+    
+    // Build property query
+    const propertyParts = [];
+    if (filters.location) propertyParts.push(filters.location);
     if (filters.propertyType) {
       const types: Record<string, string> = {
         apartment: "شقة", villa: "فيلا", duplex: "دوبلكس", floor: "دور", 
@@ -412,34 +421,51 @@ export default function HeroSection() {
         factory: "مصنع", school: "مدرسة", health_center: "مركز صحي",
         station: "محطة", showroom: "معرض"
       };
-      queryParts.push(types[filters.propertyType] || filters.propertyType);
+      propertyParts.push(types[filters.propertyType] || filters.propertyType);
     }
-    if (filters.transactionType === "sale") queryParts.push("للبيع");
-    else queryParts.push("للإيجار");
-    if (filters.rooms) queryParts.push(`${filters.rooms} غرف`);
+    if (filters.transactionType === "sale") propertyParts.push("للبيع");
+    else propertyParts.push("للإيجار");
+    if (filters.rooms) propertyParts.push(`${filters.rooms} غرف`);
     if (filters.minPrice || filters.maxPrice) {
       if (filters.minPrice && filters.maxPrice) {
-        queryParts.push(`ميزانية من ${filters.minPrice} إلى ${filters.maxPrice}`);
+        propertyParts.push(`ميزانية من ${filters.minPrice} إلى ${filters.maxPrice}`);
       } else if (filters.minPrice) {
-        queryParts.push(`ميزانية أكثر من ${filters.minPrice}`);
+        propertyParts.push(`ميزانية أكثر من ${filters.minPrice}`);
       } else {
-        queryParts.push(`ميزانية أقل من ${filters.maxPrice}`);
+        propertyParts.push(`ميزانية أقل من ${filters.maxPrice}`);
+      }
+    }
+    if (filters.minArea || filters.maxArea) {
+      if (filters.minArea && filters.maxArea) {
+        propertyParts.push(`مساحة من ${filters.minArea} إلى ${filters.maxArea} متر`);
+      } else if (filters.minArea) {
+        propertyParts.push(`مساحة أكثر من ${filters.minArea} متر`);
+      } else {
+        propertyParts.push(`مساحة أقل من ${filters.maxArea} متر`);
       }
     }
     
-    const searchQuery = queryParts.join(" - ");
+    // Combine all parts
+    if (propertyParts.length > 0) {
+      queryParts.push(`أبحث عن ${propertyParts.join(" - ")}`);
+    }
+    
+    const searchQuery = queryParts.join("، ");
     setExtractedData({
+      name: filters.name,
+      phone: filters.phone,
       city: filters.location,
       propertyType: filters.propertyType,
       transactionType: filters.transactionType,
       rooms: filters.rooms,
       budgetMin: filters.minPrice,
       budgetMax: filters.maxPrice,
-      area: filters.minArea,
+      areaMin: filters.minArea,
+      areaMax: filters.maxArea,
     });
     setShowSearchForm(false);
     setInputText("");
-    addSuggestion(`أبحث عن ${searchQuery}`);
+    addSuggestion(searchQuery);
   };
 
   const handleSwitchToChat = () => {

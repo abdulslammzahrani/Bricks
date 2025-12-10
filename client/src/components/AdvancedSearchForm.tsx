@@ -15,10 +15,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MapPin, ChevronDown, Home, Building2, X, MessageCircle } from "lucide-react";
+import { Search, MapPin, ChevronDown, Home, Building2, X, MessageCircle, User, Phone } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 
 interface SearchFilters {
+  name: string;
+  phone: string;
   transactionType: "sale" | "rent";
   location: string;
   propertyCategory: "residential" | "commercial";
@@ -70,6 +72,8 @@ interface AdvancedSearchFormProps {
 
 export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
   const [filters, setFilters] = useState<SearchFilters>({
+    name: "",
+    phone: "",
     transactionType: "sale",
     location: "",
     propertyCategory: "residential",
@@ -98,6 +102,8 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
 
   const handleReset = () => {
     setFilters({
+      name: "",
+      phone: "",
       transactionType: "sale",
       location: "",
       propertyCategory: "residential",
@@ -147,6 +153,33 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
     <Card className="p-0 overflow-hidden shadow-xl bg-card/95 backdrop-blur-sm">
       <div className="p-4 space-y-4">
         <div className="flex flex-col gap-4">
+          {/* Name and Phone Fields */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[150px]">
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="الاسم"
+                value={filters.name}
+                onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                className="pr-10 text-right"
+                data-testid="input-name"
+              />
+            </div>
+            <div className="relative flex-1 min-w-[150px]">
+              <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="رقم الجوال"
+                value={filters.phone}
+                onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
+                className="pr-10 text-right"
+                dir="ltr"
+                data-testid="input-phone"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="inline-flex rounded-lg border p-1 bg-muted/30">
               <Button
@@ -196,7 +229,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
               data-testid="button-search"
             >
               <Search className="h-4 w-4" />
-              بحث
+              ابحث الآن
             </Button>
           </div>
 
