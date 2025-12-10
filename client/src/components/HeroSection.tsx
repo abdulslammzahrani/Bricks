@@ -1774,162 +1774,91 @@ export default function HeroSection() {
       {/* Main landing section */}
       {!isFullScreenChat && (
       <section 
-        className="relative flex items-start overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pt-4 md:pt-8"
-        style={{ minHeight: 'calc(var(--vh, 1vh) * 85)' }}
+        className="relative min-h-screen bg-gradient-to-b from-primary/5 via-background to-background"
       >
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-          
-          {/* Icon above title */}
-          <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-primary" />
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          {/* Header Section */}
+          <div className="max-w-2xl mx-auto text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
+              <Sparkles className="h-4 w-4" />
+              <span>منصة ذكية للعقارات</span>
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4" data-testid="text-hero-title">
+              {mode === "buyer" ? "ابحث عن عقارك المثالي" : "اعرض عقارك للبيع"}
+            </h1>
+            
+            <p className="text-muted-foreground text-base md:text-lg" data-testid="text-hero-description">
+              {mode === "buyer" 
+                ? "أخبرنا ماذا تبحث عنه وسنجد لك الأفضل"
+                : "سجّل بيانات عقارك وسنوصله للمشترين المناسبين"
+              }
+            </p>
+          </div>
+
+          {/* Stats Bar - Shared */}
+          <div className="max-w-md mx-auto mb-6">
+            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                <span>يتصفحون الآن</span>
+              </div>
+              <div className="h-4 w-px bg-border"></div>
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-amber-500" />
+                <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                <span>طلب اليوم</span>
+              </div>
             </div>
           </div>
-          
-          {/* Main Headline - Larger */}
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold leading-tight mb-3" data-testid="text-hero-title">
-            سجّل رغبتك العقارية
-            <span className="text-primary block mt-2">ودعنا نجد لك الأفضل</span>
-          </h1>
-          
-          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-4" data-testid="text-hero-description">
-            أخبرنا ماذا تريد بكلماتك أو صوتك، وسنفهم ونوصلك بالعقار المناسب
-          </p>
 
-          {/* Mode Toggle - Larger Segmented Control */}
-          <div className="flex flex-col items-center gap-3 mb-5">
-            <div className="inline-flex rounded-xl border p-1.5 bg-muted/30 shadow-sm">
+          {/* Mode Toggle */}
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex rounded-full border-2 border-border p-1 bg-background shadow-sm">
               <Button
                 size="lg"
                 variant={mode === "buyer" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-lg"
+                className="gap-2 rounded-full px-6"
                 data-testid="button-mode-buyer"
               >
-                <Users className="h-5 w-5" />
+                <Users className="h-4 w-4" />
                 أبحث عن عقار
               </Button>
               <Button
                 size="lg"
                 variant={mode === "seller" ? "default" : "ghost"}
                 onClick={() => handleModeSwitch("seller")}
-                className="gap-2 rounded-lg"
+                className="gap-2 rounded-full px-6"
                 data-testid="button-mode-seller"
               >
-                <Building2 className="h-5 w-5" />
+                <Building2 className="h-4 w-4" />
                 اعرض عقارك
               </Button>
             </div>
           </div>
 
-          <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
-            {/* Combined: Search Form + Typewriter + Map for Buyers */}
+          {/* Main Card */}
+          <Card className="max-w-2xl mx-auto overflow-hidden shadow-2xl border-2">
+            {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && !isComplete && conversation.length === 0 && !pendingConfirmation && (
-              <div className="bg-muted/10">
-                {/* Stats Bar (Top) */}
-                <div className="p-3 pb-2">
-                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
-                        {requestsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>طلب</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {dealsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>صفقة</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Advanced Search Form */}
+              <div>
                 <AdvancedSearchForm 
                   onSearch={handleSearchFormSearch}
                   onSwitchToChat={handleSwitchToChat}
                 />
-
-                {/* Typewriter Preview */}
-                <div className="px-3 py-2 border-t border-border/30">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                      عميل يطلب الآن:
-                    </p>
-                  </div>
-                  <div 
-                    className="text-center cursor-pointer min-h-[50px] flex items-center justify-center px-2 overflow-hidden"
-                    onClick={() => addSuggestion(fullExampleText)}
-                    data-testid="button-typewriter-example"
-                  >
-                    <p className="text-sm leading-relaxed line-clamp-2">
-                      {renderTypedText()}
-                      <span className="text-muted-foreground">...</span>
-                      <span className="animate-pulse text-primary font-bold">|</span>
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Saudi Map */}
-                <div className="px-3 pb-3">
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-32 md:h-36 rounded-lg border border-border/30 shadow-sm"
-                  />
-                </div>
               </div>
             )}
 
-            {/* List Property Form (for sellers only) */}
+            {/* Seller Property Form */}
             {mode === "seller" && !isComplete && conversation.length === 0 && !pendingConfirmation && (
-              <div className="bg-amber-50/50 dark:bg-amber-950/10">
-                {/* Stats Bar (Top) */}
-                <div className="p-3 pb-0">
-                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
-                        {requestsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>طلب</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {dealsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>صفقة</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* List Property Form */}
+              <div>
                 <ListPropertyForm 
                   onSubmit={(propertyData) => {
-                    // Handle property submission
                     toast({
                       title: "تم استلام طلبك",
                       description: "سنتواصل معك قريباً لإكمال عرض عقارك",
@@ -2298,26 +2227,24 @@ export default function HeroSection() {
             )}
           </Card>
 
+          {/* Location Picker Modal */}
+          <LocationPicker
+            open={showLocationPicker}
+            onOpenChange={setShowLocationPicker}
+            onLocationSelect={(lat, lng) => {
+              setExtractedData(prev => ({
+                ...prev,
+                latitude: lat.toString(),
+                longitude: lng.toString()
+              }));
+              setConversation(prev => [
+                ...prev,
+                { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
+              ]);
+            }}
+          />
         </div>
-      </div>
-      
-      {/* Location Picker Modal */}
-      <LocationPicker
-        open={showLocationPicker}
-        onOpenChange={setShowLocationPicker}
-        onLocationSelect={(lat, lng) => {
-          setExtractedData(prev => ({
-            ...prev,
-            latitude: lat.toString(),
-            longitude: lng.toString()
-          }));
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
-          ]);
-        }}
-      />
-    </section>
+      </section>
       )}
     </>
   );
