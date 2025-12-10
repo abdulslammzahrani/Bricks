@@ -13,6 +13,7 @@ import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
 import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
+import { AdvancedSearchForm } from "./AdvancedSearchForm";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -131,6 +132,7 @@ export default function HeroSection() {
   const [exampleIndex, setExampleIndex] = useState(0);
   const [shuffledExamples, setShuffledExamples] = useState<Example[]>(() => getShuffledExamples("buyer"));
   const [isFullScreenChat, setIsFullScreenChat] = useState(false);
+  const [showSearchForm, setShowSearchForm] = useState(true);
   const [mapMarkers, setMapMarkers] = useState<Array<{city: string; lat: number; lng: number}>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -393,6 +395,55 @@ export default function HeroSection() {
     setConversation([]);
     setIsComplete(false);
     setExtractedData({});
+    setShowSearchForm(newMode === "buyer");
+  };
+
+  const handleSearchFormSearch = (filters: any) => {
+    const queryParts = [];
+    if (filters.location) queryParts.push(filters.location);
+    if (filters.propertyType) {
+      const types: Record<string, string> = {
+        apartment: "شقة", villa: "فيلا", duplex: "دوبلكس", floor: "دور", 
+        room: "غرفة", chalet: "شاليه", rest_house: "استراحة", townhouse: "تاون هاوس",
+        residential_building: "عمارة سكنية", residential_land: "أرض سكنية",
+        office: "مكتب", commercial_building: "عمارة تجارية", warehouse: "مستودع",
+        commercial_land: "أرض تجارية", industrial_land: "أرض صناعية", farm: "مزرعة",
+        agricultural_land: "أرض زراعية", hotel: "فندق", workshop: "ورشة",
+        factory: "مصنع", school: "مدرسة", health_center: "مركز صحي",
+        station: "محطة", showroom: "معرض"
+      };
+      queryParts.push(types[filters.propertyType] || filters.propertyType);
+    }
+    if (filters.transactionType === "sale") queryParts.push("للبيع");
+    else queryParts.push("للإيجار");
+    if (filters.rooms) queryParts.push(`${filters.rooms} غرف`);
+    if (filters.minPrice || filters.maxPrice) {
+      if (filters.minPrice && filters.maxPrice) {
+        queryParts.push(`ميزانية من ${filters.minPrice} إلى ${filters.maxPrice}`);
+      } else if (filters.minPrice) {
+        queryParts.push(`ميزانية أكثر من ${filters.minPrice}`);
+      } else {
+        queryParts.push(`ميزانية أقل من ${filters.maxPrice}`);
+      }
+    }
+    
+    const searchQuery = queryParts.join(" - ");
+    setExtractedData({
+      city: filters.location,
+      propertyType: filters.propertyType,
+      transactionType: filters.transactionType,
+      rooms: filters.rooms,
+      budgetMin: filters.minPrice,
+      budgetMax: filters.maxPrice,
+      area: filters.minArea,
+    });
+    setShowSearchForm(false);
+    setInputText("");
+    addSuggestion(`أبحث عن ${searchQuery}`);
+  };
+
+  const handleSwitchToChat = () => {
+    setShowSearchForm(false);
   };
 
   const renderTypedText = () => {
@@ -1746,8 +1797,18 @@ export default function HeroSection() {
           </div>
 
           <Card className="max-w-3xl mx-auto p-0 overflow-hidden shadow-xl">
-            {/* Typewriter Example + Map Panel */}
-            {!isComplete && conversation.length === 0 && !pendingConfirmation && (
+            {/* Advanced Search Form for Buyers */}
+            {mode === "buyer" && showSearchForm && !isComplete && conversation.length === 0 && !pendingConfirmation && (
+              <div className="bg-muted/10">
+                <AdvancedSearchForm 
+                  onSearch={handleSearchFormSearch}
+                  onSwitchToChat={handleSwitchToChat}
+                />
+              </div>
+            )}
+
+            {/* Typewriter Example + Map Panel (for sellers or when search form is hidden) */}
+            {!isComplete && conversation.length === 0 && !pendingConfirmation && (mode !== "buyer" || !showSearchForm) && (
               <div 
                 className={`${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : mode === "investor" ? "bg-amber-50 dark:bg-amber-950/20" : "bg-muted/10"}`}
                 style={{
@@ -1914,8 +1975,8 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Input area */}
-            {!isComplete ? (
+            {/* Input area - hidden when search form is shown */}
+            {!isComplete && !(mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) ? (
               <div 
                 className="p-4 border-t"
                 style={{
