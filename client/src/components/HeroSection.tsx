@@ -2175,42 +2175,147 @@ export default function HeroSection() {
                 )}
               </div>
             ) : (
-              <div className={`p-6 text-center ${mode === "seller" ? "bg-green-50 dark:bg-green-950/20" : "bg-primary/5"}`}>
-                <Check className={`h-12 w-12 mx-auto mb-3 ${mode === "seller" ? "text-green-600" : "text-primary"}`} />
-                <h3 className="text-xl font-bold mb-2">
-                  {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
-                </h3>
-                <p className="text-muted-foreground mb-2">
-                  {mode === "buyer" ? "سنتواصل معك عند توفر عقار مناسب" : "سنتواصل معك عند وجود مشترين مهتمين"}
-                </p>
-                
-                {/* Registration info */}
-                <div className="bg-card border rounded-lg p-4 my-4 text-right max-w-sm mx-auto">
-                  <p className="text-sm mb-2">
-                    <span className="text-muted-foreground">تم تسجيلك بالموقع:</span>
-                  </p>
-                  <p className="text-sm mb-1">
-                    <span className="text-muted-foreground">رقم الجوال: </span>
-                    <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
-                  </p>
-                  <p className="text-sm mb-3">
-                    <span className="text-muted-foreground">كلمة المرور: </span>
-                    <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    بتسجيلك، أنت توافق على الشروط والأحكام وسياسة الخصوصية
+              <div className="p-6">
+                {/* Success Header */}
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Check className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">
+                    {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
+                  </h3>
+                </div>
+
+                {/* Matching Animation Message */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Brain className="h-4 w-4 text-primary animate-pulse" />
+                    </div>
+                    <p className="font-medium text-primary">جارٍ المطابقة الذكية...</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {mode === "buyer" 
+                      ? "سيتم الآن إجراء المطابقة والمقارنة مع العقارات المتاحة"
+                      : "سيتم الآن مطابقة عقارك مع طلبات المشترين المهتمين"
+                    }
                   </p>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+
+                {/* Client Data Summary */}
+                <div className="bg-muted/30 rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    ملخص البيانات المسجلة
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {extractedData.name && (
+                      <div>
+                        <span className="text-muted-foreground">الاسم: </span>
+                        <span className="font-medium">{extractedData.name}</span>
+                      </div>
+                    )}
+                    {extractedData.phone && (
+                      <div>
+                        <span className="text-muted-foreground">الجوال: </span>
+                        <span className="font-medium" dir="ltr">{extractedData.phone}</span>
+                      </div>
+                    )}
+                    {extractedData.city && (
+                      <div>
+                        <span className="text-muted-foreground">المدينة: </span>
+                        <span className="font-medium">{extractedData.city}</span>
+                      </div>
+                    )}
+                    {extractedData.district && (
+                      <div>
+                        <span className="text-muted-foreground">الحي: </span>
+                        <span className="font-medium">{extractedData.district}</span>
+                      </div>
+                    )}
+                    {extractedData.propertyType && (
+                      <div>
+                        <span className="text-muted-foreground">نوع العقار: </span>
+                        <span className="font-medium">{extractedData.propertyType}</span>
+                      </div>
+                    )}
+                    {extractedData.transactionType && (
+                      <div>
+                        <span className="text-muted-foreground">نوع المعاملة: </span>
+                        <span className="font-medium">{extractedData.transactionType}</span>
+                      </div>
+                    )}
+                    {(extractedData.budgetMin || extractedData.budgetMax) && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">الميزانية: </span>
+                        <span className="font-medium">
+                          {extractedData.budgetMin && `من ${parseInt(extractedData.budgetMin).toLocaleString('ar-SA')} `}
+                          {extractedData.budgetMax && `إلى ${parseInt(extractedData.budgetMax).toLocaleString('ar-SA')} ريال`}
+                        </span>
+                      </div>
+                    )}
+                    {extractedData.price && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">السعر: </span>
+                        <span className="font-medium">{parseInt(extractedData.price).toLocaleString('ar-SA')} ريال</span>
+                      </div>
+                    )}
+                    {extractedData.area && (
+                      <div>
+                        <span className="text-muted-foreground">المساحة: </span>
+                        <span className="font-medium">{extractedData.area} م²</span>
+                      </div>
+                    )}
+                    {extractedData.rooms && (
+                      <div>
+                        <span className="text-muted-foreground">الغرف: </span>
+                        <span className="font-medium">{extractedData.rooms}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Account Info */}
+                <div className="bg-card border rounded-lg p-4 mb-6">
+                  <h4 className="font-semibold mb-3">بيانات الدخول</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">رقم الجوال:</span>
+                      <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">كلمة المرور المؤقتة:</span>
+                      <span className="font-bold text-amber-600" dir="ltr">{extractedData.phone?.slice(-4) || "1234"}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                      <Zap className="h-3 w-3" />
+                      يُنصح بتغيير كلمة المرور بعد تسجيل الدخول لأول مرة
+                    </p>
+                  </div>
+                </div>
+
+                {/* Redirect Notice */}
+                <div className="text-center mb-6">
+                  <p className="text-sm text-muted-foreground">
+                    سيتم تحويلك إلى صفحتك الرئيسية لمتابعة طلباتك
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button 
-                    variant="default"
+                    size="lg"
                     onClick={() => window.location.href = "/profile"}
+                    className="gap-2"
                     data-testid="button-go-profile"
                   >
+                    <ArrowRight className="h-4 w-4" />
                     الدخول لصفحتي الشخصية
                   </Button>
                   <Button 
+                    size="lg"
                     variant="outline" 
                     onClick={() => {
                       setIsComplete(false);
@@ -2223,6 +2328,11 @@ export default function HeroSection() {
                     {mode === "buyer" ? "إضافة رغبة أخرى" : "إضافة عقار آخر"}
                   </Button>
                 </div>
+
+                {/* Terms */}
+                <p className="text-xs text-muted-foreground text-center mt-4">
+                  بتسجيلك، أنت توافق على الشروط والأحكام وسياسة الخصوصية
+                </p>
               </div>
             )}
           </Card>
