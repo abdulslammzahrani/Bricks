@@ -128,174 +128,257 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
     return score;
   };
 
-  // ==================== DESKTOP VERSION ====================
+  // ==================== DESKTOP VERSION (Stacked Cards) ====================
   const DesktopForm = () => {
     const desktopProgress = getDesktopProgress();
     
     return (
-    <div className="hidden md:block p-4">
-      {/* Reliability Score */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1.5">
+    <div className="hidden md:block p-6">
+      {/* Progress & Reliability */}
+      <div className="mb-6 max-w-md mx-auto">
+        <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">مؤشر الموثوقية</span>
-          <span className="text-sm font-bold text-primary">{desktopProgress}%</span>
+          <span className="text-sm font-bold text-primary">{Math.round(progress)}%</span>
         </div>
-        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+        <div className="h-3 bg-muted rounded-full overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
-            style={{ width: `${desktopProgress}%` }}
+            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="text-xs text-muted-foreground mt-1 text-center">
+        <p className="text-xs text-muted-foreground mt-2 text-center">
           كلما أكملت بياناتك، زادت موثوقيتك وفرص التطابق
         </p>
       </div>
 
-      {/* Row 0: Name & Phone */}
-      <div className="flex items-center gap-2 mb-3">
-        <Input
-          placeholder="الاسم"
-          value={filters.name}
-          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-          className="h-12 flex-1"
-          data-testid="input-name-desktop"
-        />
-        <Input
-          type="tel"
-          placeholder="رقم الجوال"
-          value={filters.phone}
-          onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
-          className="h-12 flex-1"
-          dir="ltr"
-          data-testid="input-phone-desktop"
-        />
-      </div>
+      {/* Desktop Stacked Cards Container */}
+      <div className="relative max-w-lg mx-auto" style={{ minHeight: "380px" }}>
+        
+        {/* Completed Cards */}
+        {cards.slice(0, activeCard).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              onClick={() => goBack(card.id)}
+              className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+              style={{ top: `${idx * 44}px`, zIndex: idx + 1 }}
+            >
+              <div className={`${card.lightColor} rounded-2xl p-4 flex items-center gap-4 border-2 border-primary/30 shadow-sm`}>
+                <div className={`w-10 h-10 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
+                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                </div>
+                <span className="text-sm font-bold truncate flex-1">{card.title}</span>
+                <span className="text-xs text-primary font-medium">تعديل</span>
+              </div>
+            </div>
+          );
+        })}
 
-      {/* Row 1: Sale/Rent Tabs + Location + Search */}
-      <div className="flex items-center gap-2 mb-3">
-        {/* Sale/Rent Toggle */}
-        <div className="flex rounded-lg overflow-hidden border">
-          <button
-            onClick={() => setFilters(f => ({ ...f, transactionType: "sale" }))}
-            className={`px-5 py-3 font-medium transition-all ${
-              filters.transactionType === "sale" 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-background hover:bg-muted"
-            }`}
-            data-testid="button-filter-sale-desktop"
-          >
-            للبيع
-          </button>
-          <button
-            onClick={() => setFilters(f => ({ ...f, transactionType: "rent" }))}
-            className={`px-5 py-3 font-medium transition-all ${
-              filters.transactionType === "rent" 
-                ? "bg-primary text-primary-foreground" 
-                : "bg-background hover:bg-muted"
-            }`}
-            data-testid="button-filter-rent-desktop"
-          >
-            للإيجار
-          </button>
-        </div>
-
-        {/* Location Input */}
-        <div className="relative min-w-[160px]">
-          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Select value={filters.location} onValueChange={(v) => setFilters(f => ({ ...f, location: v }))}>
-            <SelectTrigger className="h-12 pr-9" data-testid="select-location-desktop">
-              <SelectValue placeholder="المدينة" />
-            </SelectTrigger>
-            <SelectContent>
-              {saudiCities.map((city) => (
-                <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Search Button */}
-        <Button 
-          onClick={handleSearch}
-          className="h-12 px-8 bg-primary hover:bg-primary/90"
-          data-testid="button-search-desktop"
+        {/* Active Card */}
+        <div
+          className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+          style={{ top: `${activeCard * 44}px`, zIndex: 10 }}
         >
-          بحث
-        </Button>
-      </div>
+          <div className="bg-card border-2 rounded-2xl shadow-lg">
+            
+            {/* Card Header */}
+            <div className="flex items-center gap-4 p-5 border-b">
+              <div className={`w-12 h-12 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-6 h-6 text-primary" />; })()}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg">{cards[activeCard].title}</h3>
+                <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                {cards.map((_, i) => (
+                  <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all ${i <= activeCard ? 'bg-primary' : 'bg-muted'}`} />
+                ))}
+              </div>
+            </div>
 
-      {/* Row 2: Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Property Category */}
-        <Select value={filters.propertyCategory} onValueChange={(v) => setFilters(f => ({ ...f, propertyCategory: v as "residential" | "commercial", propertyType: "" }))}>
-          <SelectTrigger className="h-11 min-w-[90px]" data-testid="select-category-desktop">
-            <SelectValue placeholder="التصنيف" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="residential">سكني</SelectItem>
-            <SelectItem value="commercial">تجاري</SelectItem>
-          </SelectContent>
-        </Select>
+            {/* Card Content */}
+            <div className="p-5">
+              
+              {/* Step 0: Personal */}
+              {activeCard === 0 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">الاسم</label>
+                      <Input
+                        placeholder="أدخل اسمك"
+                        value={filters.name}
+                        onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                        className="h-12 text-center rounded-xl"
+                        data-testid="input-name-desktop"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">رقم الجوال</label>
+                      <Input
+                        type="tel"
+                        placeholder="05xxxxxxxx"
+                        value={filters.phone}
+                        onChange={(e) => setFilters(f => ({ ...f, phone: e.target.value }))}
+                        className="h-12 text-center rounded-xl"
+                        dir="ltr"
+                        data-testid="input-phone-desktop"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base" data-testid="button-next-desktop-0">
+                    التالي
+                  </Button>
+                </div>
+              )}
 
-        {/* Property Type */}
-        <Select value={filters.propertyType || "all"} onValueChange={(v) => setFilters(f => ({ ...f, propertyType: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-type-desktop">
-            <SelectValue placeholder="نوع العقار" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">الكل</SelectItem>
-            {propertyTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {/* Step 1: Type */}
+              {activeCard === 1 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { v: "sale", l: "شراء", desc: "أبحث عن عقار للشراء", icon: Home },
+                      { v: "rent", l: "إيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
+                    ].map(t => (
+                      <button
+                        key={t.v}
+                        onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent" }))}
+                        className={`p-5 rounded-xl border-2 text-center transition-all ${
+                          filters.transactionType === t.v ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid={`button-filter-${t.v}-desktop`}
+                      >
+                        <t.icon className={`h-8 w-8 mx-auto mb-2 ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
+                        <div className="font-bold text-base">{t.l}</div>
+                        <div className="text-xs text-muted-foreground mt-1">{t.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-center gap-3">
+                    {[
+                      { v: "residential", l: "سكني", I: Home },
+                      { v: "commercial", l: "تجاري", I: Building2 }
+                    ].map(c => (
+                      <button
+                        key={c.v}
+                        onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-full border-2 text-sm transition-all ${
+                          filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid={`button-category-${c.v}-desktop`}
+                      >
+                        <c.I className="h-4 w-4" />
+                        {c.l}
+                      </button>
+                    ))}
+                  </div>
+                  <Button onClick={goNext} className="w-full h-12 rounded-xl text-base" data-testid="button-next-desktop-1">
+                    التالي
+                  </Button>
+                </div>
+              )}
 
-        {/* Rooms */}
-        <Select value={filters.rooms || "all"} onValueChange={(v) => setFilters(f => ({ ...f, rooms: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-rooms-desktop">
-            <SelectValue placeholder="عدد الغرف" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="1">غرفة واحدة</SelectItem>
-            <SelectItem value="2">غرفتين</SelectItem>
-            <SelectItem value="3">3 غرف</SelectItem>
-            <SelectItem value="4">4 غرف</SelectItem>
-            <SelectItem value="5+">5 غرف أو أكثر</SelectItem>
-          </SelectContent>
-        </Select>
+              {/* Step 2: Location */}
+              {activeCard === 2 && (
+                <div className="space-y-4">
+                  <label className="text-sm font-medium mb-2 block text-center">اختر المدينة</label>
+                  <div className="grid grid-cols-4 gap-2 max-h-[180px] overflow-y-auto p-1">
+                    {saudiCities.slice(0, 20).map((city) => (
+                      <button
+                        key={city.name}
+                        onClick={() => setFilters(f => ({ ...f, location: city.name }))}
+                        className={`py-3 px-2 rounded-xl border-2 text-sm font-medium transition-all ${
+                          filters.location === city.name ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border hover:border-primary/50"
+                        }`}
+                        data-testid={`button-city-desktop-${city.name}`}
+                      >
+                        {city.name}
+                      </button>
+                    ))}
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base" data-testid="button-next-desktop-2">
+                    التالي
+                  </Button>
+                </div>
+              )}
 
-        {/* Price */}
-        <Select value={filters.minPrice || "all"} onValueChange={(v) => setFilters(f => ({ ...f, minPrice: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-11 min-w-[120px]" data-testid="select-price-desktop">
-            <SelectValue placeholder="السعر" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="500000">من 500 ألف</SelectItem>
-            <SelectItem value="1000000">من مليون</SelectItem>
-            <SelectItem value="2000000">من 2 مليون</SelectItem>
-            <SelectItem value="5000000">من 5 مليون</SelectItem>
-          </SelectContent>
-        </Select>
+              {/* Step 3: Property */}
+              {activeCard === 3 && (
+                <div className="space-y-4">
+                  <label className="text-sm font-medium mb-2 block text-center">نوع العقار</label>
+                  <div className="grid grid-cols-4 gap-3">
+                    {propertyTypes.map((type) => {
+                      const Icon = type.icon;
+                      return (
+                        <button
+                          key={type.value}
+                          onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-type-desktop-${type.value}`}
+                        >
+                          <Icon className={`h-7 w-7 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="text-sm font-medium mt-2">{type.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-center">عدد الغرف</label>
+                    <div className="flex justify-center gap-2">
+                      {["1", "2", "3", "4", "5+"].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
+                          className={`w-12 h-12 rounded-full border-2 text-sm font-bold transition-all ${
+                            filters.rooms === n ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-rooms-desktop-${n}`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-primary to-green-600" data-testid="button-search-desktop">
+                    <Search className="h-5 w-5" />
+                    ابدأ البحث
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-        {/* Rent Period (only for rent) */}
-        {filters.transactionType === "rent" && (
-          <Select value={filters.rentPeriod} onValueChange={(v) => setFilters(f => ({ ...f, rentPeriod: v as "all" | "yearly" | "monthly" }))}>
-            <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-period-desktop">
-              <SelectValue placeholder="فترة الإيجار" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="yearly">سنوي</SelectItem>
-              <SelectItem value="monthly">شهري</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
+        {/* Upcoming Cards Preview */}
+        {cards.slice(activeCard + 1).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              className="absolute inset-x-2 pointer-events-none"
+              style={{
+                top: `${(activeCard * 44) + 300 + (idx * 24)}px`,
+                zIndex: -idx - 1,
+                opacity: 0.5 - (idx * 0.15),
+              }}
+            >
+              <div className="bg-muted/60 rounded-xl p-3 flex items-center gap-3 border border-border/40">
+                <div className={`w-9 h-9 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
+                  <Icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Chat Link */}
-      <p className="text-center text-sm text-muted-foreground mt-4">
+      <p className="text-center text-sm text-muted-foreground mt-6">
         <button onClick={onSwitchToChat} className="text-primary underline" data-testid="button-switch-to-chat-desktop">
           أو تحدث مع المساعد الذكي
         </button>
