@@ -128,11 +128,12 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     return score;
   };
 
-  // ==================== DESKTOP VERSION (Stacked Cards) ====================
-  const DesktopForm = () => {
-    const desktopProgress = getDesktopProgress();
-    
-    return (
+  // Calculate desktop progress
+  const desktopProgress = getDesktopProgress();
+
+  return (
+    <>
+    {/* ==================== DESKTOP VERSION (Stacked Cards) ==================== */}
     <div className="hidden md:block p-6">
       {/* Progress & Reliability */}
       <div className="mb-6 max-w-md mx-auto">
@@ -378,11 +379,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
     </div>
-    );
-  };
 
-  // ==================== MOBILE VERSION (Stacked Cards) ====================
-  const MobileForm = () => (
+    {/* ==================== MOBILE VERSION (Stacked Cards) ==================== */}
     <div className="md:hidden relative px-3 py-4">
       {/* Progress & Reliability */}
       <div className="mb-4 px-1">
@@ -607,12 +605,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         })}
       </div>
     </div>
-  );
-
-  return (
-    <>
-      <DesktopForm />
-      <MobileForm />
     </>
   );
 });
