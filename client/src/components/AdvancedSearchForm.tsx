@@ -200,11 +200,11 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         </div>
 
         {/* Location Input */}
-        <div className="flex-1 relative">
-          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <div className="relative min-w-[160px]">
+          <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Select value={filters.location} onValueChange={(v) => setFilters(f => ({ ...f, location: v }))}>
-            <SelectTrigger className="h-12 pr-10 text-right" data-testid="select-location-desktop">
-              <SelectValue placeholder="أدخل الموقع" />
+            <SelectTrigger className="h-12 pr-9" data-testid="select-location-desktop">
+              <SelectValue placeholder="المدينة" />
             </SelectTrigger>
             <SelectContent>
               {saudiCities.map((city) => (
@@ -225,40 +225,11 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
       </div>
 
       {/* Row 2: Filters */}
-      <div className="flex items-center gap-2">
-        {/* Price */}
-        <Select value={filters.minPrice || "all"} onValueChange={(v) => setFilters(f => ({ ...f, minPrice: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-11 min-w-[120px]" data-testid="select-price-desktop">
-            <SelectValue placeholder="السعر (ر.س)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="500000">500,000+</SelectItem>
-            <SelectItem value="1000000">1,000,000+</SelectItem>
-            <SelectItem value="2000000">2,000,000+</SelectItem>
-            <SelectItem value="5000000">5,000,000+</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Rooms & Bathrooms */}
-        <Select value={filters.rooms || "all"} onValueChange={(v) => setFilters(f => ({ ...f, rooms: v === "all" ? "" : v }))}>
-          <SelectTrigger className="h-11 min-w-[140px]" data-testid="select-rooms-desktop">
-            <SelectValue placeholder="غرفة & دورة مياه" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="1">1 غرفة</SelectItem>
-            <SelectItem value="2">2 غرفة</SelectItem>
-            <SelectItem value="3">3 غرف</SelectItem>
-            <SelectItem value="4">4 غرف</SelectItem>
-            <SelectItem value="5+">5+ غرف</SelectItem>
-          </SelectContent>
-        </Select>
-
+      <div className="flex items-center gap-2 flex-wrap">
         {/* Property Category */}
         <Select value={filters.propertyCategory} onValueChange={(v) => setFilters(f => ({ ...f, propertyCategory: v as "residential" | "commercial", propertyType: "" }))}>
-          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-category-desktop">
-            <SelectValue />
+          <SelectTrigger className="h-11 min-w-[90px]" data-testid="select-category-desktop">
+            <SelectValue placeholder="التصنيف" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="residential">سكني</SelectItem>
@@ -269,13 +240,42 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         {/* Property Type */}
         <Select value={filters.propertyType || "all"} onValueChange={(v) => setFilters(f => ({ ...f, propertyType: v === "all" ? "" : v }))}>
           <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-type-desktop">
-            <SelectValue placeholder="الجميع" />
+            <SelectValue placeholder="نوع العقار" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">الجميع</SelectItem>
+            <SelectItem value="all">الكل</SelectItem>
             {propertyTypes.map((type) => (
               <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        {/* Rooms */}
+        <Select value={filters.rooms || "all"} onValueChange={(v) => setFilters(f => ({ ...f, rooms: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-rooms-desktop">
+            <SelectValue placeholder="عدد الغرف" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الكل</SelectItem>
+            <SelectItem value="1">غرفة واحدة</SelectItem>
+            <SelectItem value="2">غرفتين</SelectItem>
+            <SelectItem value="3">3 غرف</SelectItem>
+            <SelectItem value="4">4 غرف</SelectItem>
+            <SelectItem value="5+">5 غرف أو أكثر</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Price */}
+        <Select value={filters.minPrice || "all"} onValueChange={(v) => setFilters(f => ({ ...f, minPrice: v === "all" ? "" : v }))}>
+          <SelectTrigger className="h-11 min-w-[120px]" data-testid="select-price-desktop">
+            <SelectValue placeholder="السعر" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">الكل</SelectItem>
+            <SelectItem value="500000">من 500 ألف</SelectItem>
+            <SelectItem value="1000000">من مليون</SelectItem>
+            <SelectItem value="2000000">من 2 مليون</SelectItem>
+            <SelectItem value="5000000">من 5 مليون</SelectItem>
           </SelectContent>
         </Select>
 
@@ -283,12 +283,12 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         {filters.transactionType === "rent" && (
           <Select value={filters.rentPeriod} onValueChange={(v) => setFilters(f => ({ ...f, rentPeriod: v as "all" | "yearly" | "monthly" }))}>
             <SelectTrigger className="h-11 min-w-[100px]" data-testid="select-period-desktop">
-              <SelectValue />
+              <SelectValue placeholder="فترة الإيجار" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">الجميع</SelectItem>
-              <SelectItem value="yearly">سنوياً</SelectItem>
-              <SelectItem value="monthly">شهرياً</SelectItem>
+              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="yearly">سنوي</SelectItem>
+              <SelectItem value="monthly">شهري</SelectItem>
             </SelectContent>
           </Select>
         )}
