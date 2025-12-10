@@ -112,15 +112,21 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
 
   return (
     <div className="relative px-3 py-4">
-      {/* Progress */}
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+      {/* Progress & Reliability */}
+      <div className="mb-4 px-1">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium">الموثوقية</span>
+          <span className="text-xs font-bold text-primary">{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div 
-            className="h-full bg-primary rounded-full transition-all duration-200"
+            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <span className="text-xs font-medium text-muted-foreground">{activeCard + 1}/{totalCards}</span>
+        <p className="text-[10px] text-muted-foreground mt-1 text-center">
+          أكمل بياناتك لزيادة فرص التطابق
+        </p>
       </div>
 
       {/* Stacked Cards Container */}
