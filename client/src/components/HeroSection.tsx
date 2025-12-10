@@ -12,6 +12,7 @@ import { SaudiMap } from "./SaudiMap";
 import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
+import { ReliabilityScore, calculateReliabilityScore } from "./ReliabilityScore";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -1775,12 +1776,41 @@ export default function HeroSection() {
 
             {/* Conversation area */}
             {(conversation.length > 0 || pendingConfirmation) && (
-              <div 
-                className="h-[600px] overflow-y-auto p-4 space-y-3"
-                style={{
-                  backgroundColor: "hsl(var(--muted) / 0.2)",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}>
+              <div className="flex flex-col h-[600px]">
+                {/* Reliability Score Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium">مؤشر اكتمال الطلب</span>
+                  </div>
+                  <ReliabilityScore 
+                    score={calculateReliabilityScore({
+                      name: extractedData.name,
+                      phone: extractedData.phone,
+                      city: extractedData.city,
+                      districts: extractedData.district ? [extractedData.district] : [],
+                      propertyType: extractedData.propertyType,
+                      budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : null,
+                      paymentMethod: extractedData.paymentMethod,
+                      purchaseTimeline: extractedData.purchaseTimeline,
+                      area: extractedData.area ? parseInt(extractedData.area) : null,
+                      propertyAge: extractedData.propertyAge ? parseInt(extractedData.propertyAge) : null,
+                      facing: extractedData.facing,
+                      streetWidth: extractedData.streetWidth ? parseInt(extractedData.streetWidth) : null,
+                      purchasePurpose: extractedData.purchasePurpose,
+                    })}
+                    size="sm"
+                    label=""
+                  />
+                </div>
+                
+                {/* Messages area */}
+                <div 
+                  className="flex-1 overflow-y-auto p-4 space-y-3"
+                  style={{
+                    backgroundColor: "hsl(var(--muted) / 0.2)",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  }}>
                 {conversation.map((msg, idx) => (
                   <div
                     key={idx}
@@ -1841,6 +1871,7 @@ export default function HeroSection() {
                 )}
                 {/* Auto-scroll anchor */}
                 <div ref={messagesEndRef} />
+              </div>
               </div>
             )}
 
