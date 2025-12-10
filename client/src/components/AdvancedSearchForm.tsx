@@ -241,7 +241,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-48 p-2" align="start">
+              <PopoverContent className="w-48 p-2 z-[100]" align="start" sideOffset={5}>
                 <div className="space-y-1">
                   {[
                     { value: "all", label: "الجميع" },
@@ -271,7 +271,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 p-0" align="start">
+              <PopoverContent className="w-80 p-0 z-[100]" align="start" sideOffset={5}>
                 <Tabs
                   value={filters.propertyCategory}
                   onValueChange={(v) => setFilters(f => ({ ...f, propertyCategory: v as any, propertyType: "" }))}
@@ -326,7 +326,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-4" align="start">
+              <PopoverContent className="w-64 p-4 z-[100]" align="start" sideOffset={5}>
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">عدد الغرف</label>
@@ -383,7 +383,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-4" align="start">
+              <PopoverContent className="w-72 p-4 z-[100]" align="start" sideOffset={5}>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -432,7 +432,7 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-4" align="start">
+              <PopoverContent className="w-72 p-4 z-[100]" align="start" sideOffset={5}>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
