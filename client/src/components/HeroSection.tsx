@@ -2160,6 +2160,102 @@ export default function HeroSection() {
                     });
                   }}
                 />
+                
+                {/* Live Stats and Map Section for Seller */}
+                <div className="border-t bg-muted/30 p-2 pt-2">
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Building2 className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-green-600' : ''}`}>
+                        {requestsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>عقار</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
+                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
+                        {dealsToday.toLocaleString('ar-EG')}
+                      </span>
+                      <span>صفقة</span>
+                    </div>
+                  </div>
+                  
+                  {/* Typewriter Example for Seller */}
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                      عقار معروض الآن:
+                    </p>
+                  </div>
+                  <div 
+                    className="text-center cursor-pointer min-h-[40px] flex items-center justify-center px-2 overflow-hidden mb-2"
+                    onClick={() => addSuggestion(fullExampleText)}
+                    data-testid="button-typewriter-seller"
+                  >
+                    <p className="text-sm leading-relaxed line-clamp-2">
+                      {renderTypedText()}
+                      <span className="text-muted-foreground">...</span>
+                      <span className="animate-pulse text-green-600 font-bold">|</span>
+                    </p>
+                  </div>
+                  
+                  {/* Map */}
+                  <SaudiMap 
+                    markers={mapMarkers} 
+                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                  />
+                  
+                  {/* Chat Input with Mic and Send */}
+                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
+                    <Button
+                      size="icon"
+                      onClick={handleSubmit}
+                      disabled={!inputText.trim()}
+                      className="rounded-full h-9 w-9 flex-shrink-0 bg-green-600 hover:bg-green-700"
+                      data-testid="button-send-seller-form"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                      size="icon"
+                      variant={isRecording ? "destructive" : "ghost"}
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={isTranscribing}
+                      className={`rounded-full h-9 w-9 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                      data-testid="button-voice-seller-form"
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                    
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && inputText.trim()) {
+                          handleSubmit();
+                        }
+                      }}
+                      placeholder="تحدث مع مستشار العقارات"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+                      data-testid="input-chat-seller-form"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
