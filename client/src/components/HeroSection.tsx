@@ -451,22 +451,45 @@ export default function HeroSection() {
       queryParts.push(`أبحث عن ${propertyParts.join(" - ")}`);
     }
     
-    const searchQuery = queryParts.join("، ");
+    // Map property type to Arabic
+    const types: Record<string, string> = {
+      apartment: "شقة", villa: "فيلا", duplex: "دوبلكس", floor: "دور", 
+      room: "غرفة", chalet: "شاليه", rest_house: "استراحة", townhouse: "تاون هاوس",
+      residential_building: "عمارة سكنية", residential_land: "أرض سكنية",
+      office: "مكتب", commercial_building: "عمارة تجارية", warehouse: "مستودع",
+      commercial_land: "أرض تجارية", industrial_land: "أرض صناعية", farm: "مزرعة",
+      agricultural_land: "أرض زراعية", hotel: "فندق", workshop: "ورشة",
+      factory: "مصنع", school: "مدرسة", health_center: "مركز صحي",
+      station: "محطة", showroom: "معرض"
+    };
+
+    // Parse city and district from location
+    const locationParts = filters.location?.split(" - ") || [];
+    const city = locationParts[0] || filters.location;
+    const district = locationParts[1] || "";
+
+    // Set extracted data and mark as complete
     setExtractedData({
-      name: filters.name,
-      phone: filters.phone,
-      city: filters.location,
-      propertyType: filters.propertyType,
-      transactionType: filters.transactionType,
-      rooms: filters.rooms,
-      budgetMin: filters.minPrice,
-      budgetMax: filters.maxPrice,
-      areaMin: filters.minArea,
-      areaMax: filters.maxArea,
+      name: filters.name || "",
+      phone: filters.phone || "",
+      city: city || "",
+      district: district || "",
+      propertyType: types[filters.propertyType] || filters.propertyType || "",
+      transactionType: filters.transactionType === "sale" ? "للبيع" : "للإيجار",
+      rooms: filters.rooms || "",
+      budgetMin: filters.minPrice || "",
+      budgetMax: filters.maxPrice || "",
+      area: filters.minArea || filters.maxArea || "",
     });
+    
+    // Show success toast and go to completion screen
+    toast({
+      title: "تم استلام طلبك",
+      description: "سنتواصل معك قريباً عند توفر عقار مناسب",
+    });
+    
     setShowSearchForm(false);
-    setInputText("");
-    addSuggestion(searchQuery);
+    setIsComplete(true);
   };
 
   const handleSwitchToChat = () => {
