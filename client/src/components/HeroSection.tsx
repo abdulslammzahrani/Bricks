@@ -133,7 +133,7 @@ export default function HeroSection() {
   const [exampleIndex, setExampleIndex] = useState(0);
   const [shuffledExamples, setShuffledExamples] = useState<Example[]>(() => getShuffledExamples("buyer"));
   const [isFullScreenChat, setIsFullScreenChat] = useState(false);
-  const [showSearchForm, setShowSearchForm] = useState(false);
+  const [showSearchForm, setShowSearchForm] = useState(true);
   const [mapMarkers, setMapMarkers] = useState<Array<{city: string; lat: number; lng: number}>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
