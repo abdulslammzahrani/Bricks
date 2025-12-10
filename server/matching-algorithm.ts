@@ -12,10 +12,12 @@ export interface BuyerPreference {
   area?: number;
   rooms?: number;
   propertyAge?: number;
+  propertyAgePreference?: 'new' | 'medium' | 'old';
   facing?: string;
   streetWidth?: number;
   purpose?: 'residential' | 'investment';
   expectedROI?: number;
+  usage?: string;
 }
 
 export interface PropertyListing {
@@ -32,6 +34,7 @@ export interface PropertyListing {
   purpose?: 'residential' | 'investment';
   rentalIncome?: number;
   pricePerMeter?: number;
+  usage?: string;
 }
 
 export interface MatchResult {
@@ -46,7 +49,6 @@ export interface MatchResult {
     streetWidth: { score: number; weight: number; details: string };
     purpose: { score: number; weight: number; details: string };
     roi: { score: number; weight: number; details: string };
-    additional: { score: number; weight: number; details: string };
   };
   recommendation: string;
 }
@@ -60,16 +62,16 @@ const WEIGHTS = {
   streetWidth: 0.05,
   purpose: 0.10,
   roi: 0.10,
-  additional: 0.05,
 };
 
+// 📍 الموقع / الحي (25%)
 function calculateLocationScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
   if (buyer.city !== property.city) {
-    return { score: 0, details: 'مدينة مختلفة' };
+    return { score: 0, details: 'لا علاقة - مدينة مختلفة تماماً' };
   }
   
   if (buyer.districts.length === 0) {
-    return { score: 80, details: 'نفس المدينة' };
+    return { score: 70, details: 'نفس المدينة - لم يحدد حي' };
   }
   
   const districtMatch = buyer.districts.some(d => 
@@ -79,176 +81,193 @@ function calculateLocationScore(buyer: BuyerPreference, property: PropertyListin
   );
   
   if (districtMatch) {
-    return { score: 100, details: `الحي مطابق: ${property.district}` };
+    return { score: 100, details: `الحي مطابق تماماً: ${property.district}` };
   }
   
-  return { score: 50, details: `حي مختلف: ${property.district}` };
+  // يمكن إضافة منطق الأحياء المجاورة هنا
+  return { score: 30, details: `حي بعيد: ${property.district}` };
 }
 
+// 📐 المساحة (10%)
 function calculateAreaScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
   if (!buyer.area) {
-    return { score: 80, details: 'لم يحدد مساحة مطلوبة' };
+    return { score: 70, details: 'لم يحدد مساحة مطلوبة' };
   }
   
-  const diff = Math.abs(property.area - buyer.area) / buyer.area;
+  const diff = Math.abs(property.area - buyer.area) / buyer.area * 100;
   
-  if (diff <= 0.05) {
-    return { score: 100, details: `مساحة مطابقة تماماً: ${property.area}م²` };
-  } else if (diff <= 0.15) {
-    return { score: 85, details: `مساحة قريبة جداً: ${property.area}م²` };
-  } else if (diff <= 0.25) {
-    return { score: 70, details: `مساحة مقبولة: ${property.area}م²` };
-  } else if (diff <= 0.40) {
-    return { score: 50, details: `فرق في المساحة: ${property.area}م²` };
+  if (diff <= 5) {
+    return { score: 100, details: `مطابق تماماً (±5%): ${property.area}م²` };
+  } else if (diff <= 10) {
+    return { score: 80, details: `ضمن 10%: ${property.area}م²` };
+  } else if (diff <= 20) {
+    return { score: 50, details: `ضمن 20%: ${property.area}م²` };
   }
   
-  return { score: 20, details: `مساحة بعيدة عن المطلوب: ${property.area}م²` };
+  return { score: 0, details: `خارج النطاق: ${property.area}م²` };
 }
 
+// ⏳ عمر العقار (10%)
 function calculatePropertyAgeScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
-  if (!buyer.propertyAge || !property.propertyAge) {
-    return { score: 75, details: 'لم يحدد عمر العقار' };
+  if (!property.propertyAge) {
+    return { score: 50, details: 'لم يحدد عمر العقار' };
   }
   
-  const ageDiff = Math.abs(property.propertyAge - buyer.propertyAge);
+  const age = property.propertyAge;
+  const pref = buyer.propertyAgePreference || 'new';
   
-  if (ageDiff === 0) {
-    return { score: 100, details: `عمر مطابق: ${property.propertyAge} سنة` };
-  } else if (ageDiff <= 2) {
-    return { score: 90, details: `عمر قريب: ${property.propertyAge} سنة` };
-  } else if (ageDiff <= 5) {
-    return { score: 70, details: `فرق معقول: ${property.propertyAge} سنة` };
-  } else if (ageDiff <= 10) {
-    return { score: 50, details: `فرق ملحوظ: ${property.propertyAge} سنة` };
+  if (pref === 'new') {
+    // رغبة العميل: جديد (0-5 سنوات)
+    if (age <= 5) {
+      return { score: 100, details: `جديد ضمن المدى: ${age} سنة` };
+    } else if (age <= 10) {
+      return { score: 70, details: `متوسط العمر: ${age} سنة` };
+    }
+    return { score: 0, details: `قديم: ${age} سنة` };
+  } else if (pref === 'medium') {
+    // رغبة العميل: متوسط (5-10 سنوات)
+    if (age >= 5 && age <= 10) {
+      return { score: 100, details: `ضمن المدى المطلوب: ${age} سنة` };
+    } else if (age < 5 || (age > 10 && age <= 15)) {
+      return { score: 70, details: `قريب من المطلوب: ${age} سنة` };
+    }
+    return { score: 0, details: `خارج النطاق: ${age} سنة` };
+  } else {
+    // رغبة العميل: قديم (أكثر من 10 سنوات)
+    if (age > 10) {
+      return { score: 100, details: `ضمن المدى المطلوب: ${age} سنة` };
+    } else if (age >= 5) {
+      return { score: 70, details: `متوسط العمر: ${age} سنة` };
+    }
+    return { score: 0, details: `جديد جداً: ${age} سنة` };
   }
-  
-  return { score: 25, details: `عمر بعيد عن المطلوب: ${property.propertyAge} سنة` };
 }
 
+// 💰 السعر (20%)
 function calculatePriceScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
   const maxBudget = buyer.budgetMax;
-  const minBudget = buyer.budgetMin || 0;
   
-  if (property.price <= maxBudget && property.price >= minBudget) {
-    const percentOfBudget = (property.price / maxBudget) * 100;
-    if (percentOfBudget <= 80) {
-      return { score: 100, details: `سعر ممتاز ضمن الميزانية: ${formatPrice(property.price)}` };
-    } else if (percentOfBudget <= 95) {
-      return { score: 90, details: `سعر جيد ضمن الميزانية: ${formatPrice(property.price)}` };
-    }
-    return { score: 80, details: `سعر مناسب ضمن الميزانية: ${formatPrice(property.price)}` };
+  if (property.price <= maxBudget) {
+    // أقل من الميزانية = +10% مكافأة
+    const bonus = property.price < maxBudget ? 10 : 0;
+    return { score: Math.min(100, 100 + bonus), details: `ضمن الميزانية: ${formatPrice(property.price)}` };
   }
   
-  if (property.price > maxBudget) {
-    const overBudgetPercent = ((property.price - maxBudget) / maxBudget) * 100;
-    if (overBudgetPercent <= 5) {
-      return { score: 65, details: `أعلى من الميزانية بـ 5%: ${formatPrice(property.price)}` };
-    } else if (overBudgetPercent <= 10) {
-      return { score: 50, details: `أعلى من الميزانية بـ 10%: ${formatPrice(property.price)}` };
-    } else if (overBudgetPercent <= 20) {
-      return { score: 30, details: `أعلى من الميزانية بـ 20%: ${formatPrice(property.price)}` };
-    }
-    return { score: 10, details: `يتجاوز الميزانية بكثير: ${formatPrice(property.price)}` };
+  const overBudgetPercent = ((property.price - maxBudget) / maxBudget) * 100;
+  
+  if (overBudgetPercent <= 5) {
+    return { score: 80, details: `زيادة 5% عن الميزانية: ${formatPrice(property.price)}` };
+  } else if (overBudgetPercent <= 10) {
+    return { score: 50, details: `زيادة 10% عن الميزانية: ${formatPrice(property.price)}` };
   }
   
-  return { score: 70, details: `أقل من الحد الأدنى: ${formatPrice(property.price)}` };
+  return { score: 0, details: `أكثر من 10% فوق الميزانية: ${formatPrice(property.price)}` };
 }
 
+// ☀️ الواجهة (5%)
 function calculateFacingScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
   if (!buyer.facing || !property.facing) {
-    return { score: 75, details: 'لم يحدد الواجهة المطلوبة' };
+    return { score: 50, details: 'لم يحدد الواجهة' };
   }
   
-  if (buyer.facing.toLowerCase() === property.facing.toLowerCase()) {
+  const buyerFacing = buyer.facing.toLowerCase();
+  const propFacing = property.facing.toLowerCase();
+  
+  if (buyerFacing === propFacing) {
     return { score: 100, details: `واجهة مطابقة: ${property.facing}` };
   }
   
-  return { score: 40, details: `واجهة مختلفة: ${property.facing}` };
-}
-
-function calculateStreetWidthScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
-  if (!buyer.streetWidth || !property.streetWidth) {
-    return { score: 75, details: 'لم يحدد عرض الشارع' };
+  // واجهات مقبولة (شرقية/غربية أو شمالية/جنوبية)
+  const acceptable: Record<string, string[]> = {
+    'شرقية': ['غربية'],
+    'غربية': ['شرقية'],
+    'شمالية': ['جنوبية'],
+    'جنوبية': ['شمالية'],
+  };
+  
+  if (acceptable[buyerFacing]?.includes(propFacing)) {
+    return { score: 50, details: `واجهة مقبولة: ${property.facing}` };
   }
   
-  if (property.streetWidth >= buyer.streetWidth) {
-    return { score: 100, details: `عرض شارع مناسب: ${property.streetWidth}م` };
+  return { score: 0, details: `واجهة غير مناسبة: ${property.facing}` };
+}
+
+// 🚧 عرض الشارع (5%)
+function calculateStreetWidthScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
+  if (!buyer.streetWidth || !property.streetWidth) {
+    return { score: 50, details: 'لم يحدد عرض الشارع' };
   }
   
   const diff = buyer.streetWidth - property.streetWidth;
-  if (diff <= 5) {
-    return { score: 70, details: `عرض شارع أقل قليلاً: ${property.streetWidth}م` };
+  
+  if (diff <= 0) {
+    return { score: 100, details: `مطابق أو أكبر: ${property.streetWidth}م` };
+  } else if (diff <= 2) {
+    return { score: 70, details: `أقل بـ 2م: ${property.streetWidth}م` };
+  } else if (diff <= 4) {
+    return { score: 40, details: `أقل بـ 4م: ${property.streetWidth}م` };
   }
   
-  return { score: 40, details: `عرض شارع أقل من المطلوب: ${property.streetWidth}م` };
+  return { score: 0, details: `أقل من المطلوب: ${property.streetWidth}م` };
 }
 
+// 🏢 الاستخدام (10%)
 function calculatePurposeScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
-  if (!buyer.purpose) {
-    return { score: 80, details: 'لم يحدد الغرض (سكني/استثماري)' };
+  if (!buyer.purpose && !buyer.usage) {
+    return { score: 70, details: 'لم يحدد الاستخدام' };
   }
   
-  if (!property.purpose) {
-    return { score: 70, details: 'العقار غير مصنف' };
+  const buyerUsage = buyer.usage || buyer.purpose;
+  const propUsage = property.usage || property.purpose;
+  
+  if (!propUsage) {
+    return { score: 50, details: 'العقار غير مصنف' };
   }
   
-  if (buyer.purpose === property.purpose) {
-    return { score: 100, details: buyer.purpose === 'residential' ? 'مناسب للسكن' : 'مناسب للاستثمار' };
+  if (buyerUsage === propUsage) {
+    return { score: 100, details: `استخدام مطابق: ${propUsage}` };
   }
   
-  return { score: 50, details: 'غرض مختلف عن المطلوب' };
+  // استخدامات قريبة
+  const similar: { [key: string]: string[] } = {
+    'residential': ['سكني', 'سكن'],
+    'investment': ['استثماري', 'استثمار'],
+    'سكني': ['residential', 'سكن'],
+    'استثماري': ['investment', 'استثمار'],
+  };
+  
+  if (similar[buyerUsage as string]?.includes(propUsage as string)) {
+    return { score: 100, details: `استخدام مطابق: ${propUsage}` };
+  }
+  
+  return { score: 0, details: `استخدام غير مناسب: ${propUsage}` };
 }
 
+// 📈 ROI العائد الاستثماري (10%)
 function calculateROIScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
   if (buyer.purpose !== 'investment') {
-    return { score: 75, details: 'غير مطلوب (ليس استثماري)' };
+    return { score: 70, details: 'غير مطلوب (ليس استثماري)' };
   }
   
   if (!property.rentalIncome || !property.price) {
-    return { score: 50, details: 'لا توجد بيانات عائد' };
+    return { score: 0, details: 'لا توجد بيانات عائد' };
   }
   
   const annualIncome = property.rentalIncome * 12;
-  const roi = (annualIncome / property.price) * 100;
+  const actualROI = (annualIncome / property.price) * 100;
+  const expectedROI = buyer.expectedROI || 6;
   
-  if (roi >= 8) {
-    return { score: 100, details: `عائد ممتاز: ${roi.toFixed(1)}%` };
-  } else if (roi >= 6) {
-    return { score: 85, details: `عائد جيد جداً: ${roi.toFixed(1)}%` };
-  } else if (roi >= 5) {
-    return { score: 70, details: `عائد مقبول: ${roi.toFixed(1)}%` };
-  } else if (roi >= 4) {
-    return { score: 55, details: `عائد متوسط: ${roi.toFixed(1)}%` };
+  const diff = expectedROI - actualROI;
+  
+  if (diff <= 0) {
+    return { score: 100, details: `عائد مطابق أو أعلى: ${actualROI.toFixed(1)}%` };
+  } else if (diff <= 1) {
+    return { score: 80, details: `أقل بـ 1%: ${actualROI.toFixed(1)}%` };
+  } else if (diff <= 2) {
+    return { score: 60, details: `أقل بـ 2%: ${actualROI.toFixed(1)}%` };
   }
   
-  return { score: 30, details: `عائد منخفض: ${roi.toFixed(1)}%` };
-}
-
-function calculateAdditionalScore(buyer: BuyerPreference, property: PropertyListing): { score: number; details: string } {
-  let score = 75;
-  const factors: string[] = [];
-  
-  if (buyer.rooms && property.rooms) {
-    if (property.rooms >= buyer.rooms) {
-      score += 10;
-      factors.push(`عدد غرف مناسب: ${property.rooms}`);
-    } else {
-      score -= 10;
-      factors.push(`غرف أقل: ${property.rooms}`);
-    }
-  }
-  
-  if (buyer.propertyType === property.propertyType) {
-    score += 10;
-    factors.push('نوع العقار مطابق');
-  }
-  
-  score = Math.min(100, Math.max(0, score));
-  
-  return { 
-    score, 
-    details: factors.length > 0 ? factors.join(' | ') : 'لا توجد عوامل إضافية' 
-  };
+  return { score: 0, details: `عائد منخفض: ${actualROI.toFixed(1)}%` };
 }
 
 function formatPrice(price: number): string {
@@ -260,7 +279,7 @@ function formatPrice(price: number): string {
   return `${price} ريال`;
 }
 
-function generateRecommendation(matchScore: number, breakdown: MatchResult['breakdown']): string {
+function generateRecommendation(matchScore: number): string {
   if (matchScore >= 90) {
     return 'مطابقة ممتازة - يُنصح بالتواصل فوراً';
   } else if (matchScore >= 80) {
@@ -284,7 +303,6 @@ export function calculateMatchScore(buyer: BuyerPreference, property: PropertyLi
   const streetWidth = calculateStreetWidthScore(buyer, property);
   const purpose = calculatePurposeScore(buyer, property);
   const roi = calculateROIScore(buyer, property);
-  const additional = calculateAdditionalScore(buyer, property);
   
   const totalScore = Math.round(
     (location.score * WEIGHTS.location) +
@@ -294,8 +312,7 @@ export function calculateMatchScore(buyer: BuyerPreference, property: PropertyLi
     (facing.score * WEIGHTS.facing) +
     (streetWidth.score * WEIGHTS.streetWidth) +
     (purpose.score * WEIGHTS.purpose) +
-    (roi.score * WEIGHTS.roi) +
-    (additional.score * WEIGHTS.additional)
+    (roi.score * WEIGHTS.roi)
   );
   
   const breakdown = {
@@ -307,14 +324,13 @@ export function calculateMatchScore(buyer: BuyerPreference, property: PropertyLi
     streetWidth: { score: streetWidth.score, weight: WEIGHTS.streetWidth * 100, details: streetWidth.details },
     purpose: { score: purpose.score, weight: WEIGHTS.purpose * 100, details: purpose.details },
     roi: { score: roi.score, weight: WEIGHTS.roi * 100, details: roi.details },
-    additional: { score: additional.score, weight: WEIGHTS.additional * 100, details: additional.details },
   };
   
   return {
     property,
-    matchScore: totalScore,
+    matchScore: Math.min(100, totalScore),
     breakdown,
-    recommendation: generateRecommendation(totalScore, breakdown),
+    recommendation: generateRecommendation(totalScore),
   };
 }
 
