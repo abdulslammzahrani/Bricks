@@ -377,12 +377,6 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
         })}
       </div>
 
-      {/* Chat Link */}
-      <p className="text-center text-sm text-muted-foreground mt-6">
-        <button onClick={onSwitchToChat} className="text-primary underline" data-testid="button-switch-to-chat-desktop">
-          أو تحدث مع المساعد الذكي
-        </button>
-      </p>
     </div>
     );
   };
@@ -612,13 +606,6 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
           );
         })}
       </div>
-
-      {/* Chat Link */}
-      <p className="text-center text-xs text-muted-foreground mt-2">
-        <button onClick={onSwitchToChat} className="text-primary underline" data-testid="button-switch-to-chat">
-          تحدث مع المساعد الذكي
-        </button>
-      </p>
     </div>
   );
 
