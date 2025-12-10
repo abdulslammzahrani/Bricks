@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,7 +52,7 @@ interface AdvancedSearchFormProps {
   onSwitchToChat: () => void;
 }
 
-export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
+export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
@@ -615,4 +615,4 @@ export function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchF
       <MobileForm />
     </>
   );
-}
+});

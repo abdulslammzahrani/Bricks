@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +118,6 @@ export default function HeroSection() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
   const [inputText, setInputText] = useState("");
-  const [charIndex, setCharIndex] = useState(0);
   const [conversation, setConversation] = useState<Array<{type: "user" | "system", text: string}>>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -261,7 +260,6 @@ export default function HeroSection() {
   // Reset example index and get new shuffled examples when mode changes
   useEffect(() => {
     setExampleIndex(0);
-    setCharIndex(0);
     setMapMarkers([]);
     setShuffledExamples(getShuffledExamples(mode));
   }, [mode]);
@@ -371,22 +369,21 @@ export default function HeroSection() {
   });
 
   // Typewriter example completion handler
-  const handleExampleComplete = () => {
+  const handleExampleComplete = useCallback(() => {
     setExampleIndex(prev => prev + 1);
-  };
+  }, []);
 
-  const handleModeSwitch = (newMode: UserMode) => {
+  const handleModeSwitch = useCallback((newMode: UserMode) => {
     setMode(newMode);
-    setCharIndex(0);
     setInputText("");
     setUploadedFiles([]);
     setConversation([]);
     setIsComplete(false);
     setExtractedData({});
     setShowSearchForm(newMode === "buyer");
-  };
+  }, []);
 
-  const handleSearchFormSearch = (filters: any) => {
+  const handleSearchFormSearch = useCallback((filters: any) => {
     const queryParts = [];
     
     // Add name if provided
@@ -477,45 +474,11 @@ export default function HeroSection() {
     
     setShowSearchForm(false);
     setIsComplete(true);
-  };
+  }, [toast]);
 
-  const handleSwitchToChat = () => {
+  const handleSwitchToChat = useCallback(() => {
     setShowSearchForm(false);
-  };
-
-  const renderTypedText = () => {
-    let currentPos = 0;
-    const elements: JSX.Element[] = [];
-    
-    for (let i = 0; i < exampleSegments.length; i++) {
-      const segment = exampleSegments[i];
-      const segmentStart = currentPos;
-      const segmentEnd = currentPos + segment.text.length;
-      
-      if (charIndex > segmentStart) {
-        const visibleLength = Math.min(charIndex - segmentStart, segment.text.length);
-        const visibleText = segment.text.substring(0, visibleLength);
-        
-        elements.push(
-          <span 
-            key={i}
-            style={{
-              color: segment.color || "inherit",
-              textDecoration: segment.underline ? "underline" : "none",
-              textUnderlineOffset: "4px",
-              fontWeight: segment.color ? "bold" : "normal",
-            }}
-          >
-            {visibleText}
-          </span>
-        );
-      }
-      
-      currentPos = segmentEnd;
-    }
-    
-    return elements;
-  };
+  }, []);
 
   const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
     let remaining = text;
@@ -2262,26 +2225,14 @@ export default function HeroSection() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                      عميل يطلب الآن:
-                    </p>
-                  </div>
-                  <div 
-                    className="text-center cursor-pointer min-h-[80px] flex items-center justify-center px-2 overflow-hidden"
-                    onClick={() => addSuggestion(fullExampleText)}
-                    data-testid="button-typewriter-example"
-                  >
-                    <p className="text-base leading-relaxed line-clamp-2">
-                      {renderTypedText()}
-                      <span className="text-muted-foreground">...</span>
-                      <span className="animate-pulse text-primary font-bold">|</span>
-                    </p>
-                  </div>
+                  {/* Typewriter Example */}
+                  <TypewriterBanner
+                    segments={exampleSegments}
+                    fullText={fullExampleText}
+                    mode={mode}
+                    onExampleComplete={handleExampleComplete}
+                    onTextClick={addSuggestion}
+                  />
                 </div>
                 
                 <div className="px-3 pb-3">

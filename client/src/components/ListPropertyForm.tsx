@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,7 +48,7 @@ interface ListPropertyFormProps {
   onSubmit: (data: PropertyData) => void;
 }
 
-export function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
+export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [data, setData] = useState<PropertyData>({
@@ -705,4 +705,4 @@ export function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
       <MobileForm />
     </>
   );
-}
+});
