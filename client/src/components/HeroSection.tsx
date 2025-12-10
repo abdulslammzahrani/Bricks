@@ -2096,12 +2096,17 @@ export default function HeroSection() {
                   />
                   
                   {/* Chat Input with Mic and Send */}
-                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
+                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-3 py-2">
                     <Button
                       size="icon"
-                      onClick={handleSubmit}
+                      onClick={() => {
+                        if (inputText.trim()) {
+                          setShowSearchForm(false);
+                          handleSubmit();
+                        }
+                      }}
                       disabled={!inputText.trim()}
-                      className="rounded-full h-9 w-9 flex-shrink-0"
+                      className="rounded-full h-8 w-8 flex-shrink-0"
                       data-testid="button-send-form"
                     >
                       <Send className="h-4 w-4" />
@@ -2112,7 +2117,7 @@ export default function HeroSection() {
                       variant={isRecording ? "destructive" : "ghost"}
                       onClick={isRecording ? stopRecording : startRecording}
                       disabled={isTranscribing}
-                      className={`rounded-full h-9 w-9 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                      className="rounded-full h-8 w-8 flex-shrink-0"
                       data-testid="button-voice-form"
                     >
                       {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -2125,11 +2130,12 @@ export default function HeroSection() {
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && inputText.trim()) {
+                          setShowSearchForm(false);
                           handleSubmit();
                         }
                       }}
                       placeholder="تحدث مع مستشار المبيعات"
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
                       data-testid="input-chat-form"
                     />
                   </div>
@@ -2218,12 +2224,16 @@ export default function HeroSection() {
                   />
                   
                   {/* Chat Input with Mic and Send */}
-                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
+                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-3 py-2">
                     <Button
                       size="icon"
-                      onClick={handleSubmit}
+                      onClick={() => {
+                        if (inputText.trim()) {
+                          handleSubmit();
+                        }
+                      }}
                       disabled={!inputText.trim()}
-                      className="rounded-full h-9 w-9 flex-shrink-0 bg-green-600 hover:bg-green-700"
+                      className="rounded-full h-8 w-8 flex-shrink-0 bg-green-600 hover:bg-green-700"
                       data-testid="button-send-seller-form"
                     >
                       <Send className="h-4 w-4" />
@@ -2234,7 +2244,7 @@ export default function HeroSection() {
                       variant={isRecording ? "destructive" : "ghost"}
                       onClick={isRecording ? stopRecording : startRecording}
                       disabled={isTranscribing}
-                      className={`rounded-full h-9 w-9 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
+                      className="rounded-full h-8 w-8 flex-shrink-0"
                       data-testid="button-voice-seller-form"
                     >
                       {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -2251,7 +2261,7 @@ export default function HeroSection() {
                         }
                       }}
                       placeholder="تحدث مع مستشار العقارات"
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
                       data-testid="input-chat-seller-form"
                     />
                   </div>
