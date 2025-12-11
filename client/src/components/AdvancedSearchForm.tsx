@@ -666,8 +666,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     }));
   };
 
-  // Calculate reliability score
-  const getReliabilityScore = () => {
+  // Calculate reliability score (memoized to prevent unnecessary re-renders)
+  const reliabilityScore = useMemo(() => {
     let score = 0;
     if (filters.name.trim()) score += 10;
     if (filters.phone.trim()) score += 10;
@@ -680,9 +680,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     if (filters.features.length > 0) score += 5;
     if (filters.notes.trim()) score += 5;
     return Math.min(score, 100);
-  };
-
-  const reliabilityScore = getReliabilityScore();
+  }, [filters]);
 
   // Get map center for cities (center on last selected city)
   const cityMapCenter = useMemo(() => {
