@@ -850,25 +850,21 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           center={[districtMapCenter.lat, districtMapCenter.lng]} 
                           zoom={11} 
                         />
-                        <SmartMapClickHandler 
-                          items={districtItems} 
-                          onSelect={toggleDistrict}
-                          maxDistance={0.1}
-                        />
-                        
                         {/* Show only selected districts as markers */}
-                        {Array.from(neighborhoodCoords.entries())
-                          .filter(([name]) => filters.districts.includes(name))
-                          .map(([name, data]) => (
-                          <DistrictMarker
-                            key={name}
-                            name={name}
-                            cityName={data.cityName}
-                            coords={{ lat: data.lat, lng: data.lng }}
-                            isSelected={true}
-                            onToggle={toggleDistrict}
-                          />
-                        ))}
+                        {filters.districts.map(districtName => {
+                          const data = neighborhoodCoords.get(districtName);
+                          if (!data) return null;
+                          return (
+                            <DistrictMarker
+                              key={districtName}
+                              name={districtName}
+                              cityName={data.cityName}
+                              coords={{ lat: data.lat, lng: data.lng }}
+                              isSelected={true}
+                              onToggle={toggleDistrict}
+                            />
+                          );
+                        })}
                       </MapContainer>
                     </div>
 
@@ -1341,24 +1337,21 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     >
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                       <MapCenterChanger center={[districtMapCenter.lat, districtMapCenter.lng]} zoom={11} />
-                      <SmartMapClickHandler 
-                        items={districtItems} 
-                        onSelect={toggleDistrict}
-                        maxDistance={0.1}
-                      />
                       {/* Show only selected districts as markers */}
-                      {Array.from(neighborhoodCoords.entries())
-                        .filter(([name]) => filters.districts.includes(name))
-                        .map(([name, data]) => (
-                        <DistrictMarker
-                          key={name}
-                          name={name}
-                          cityName={data.cityName}
-                          coords={{ lat: data.lat, lng: data.lng }}
-                          isSelected={true}
-                          onToggle={toggleDistrict}
-                        />
-                      ))}
+                      {filters.districts.map(districtName => {
+                        const data = neighborhoodCoords.get(districtName);
+                        if (!data) return null;
+                        return (
+                          <DistrictMarker
+                            key={districtName}
+                            name={districtName}
+                            cityName={data.cityName}
+                            coords={{ lat: data.lat, lng: data.lng }}
+                            isSelected={true}
+                            onToggle={toggleDistrict}
+                          />
+                        );
+                      })}
                     </MapContainer>
                   </div>
 
