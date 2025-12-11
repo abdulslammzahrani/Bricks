@@ -1207,7 +1207,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       )}
 
       {/* Stacked Cards Container - Dynamic height based on content */}
-      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 24) + 220}px` }}>
+      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 24) + 320}px` }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -1389,9 +1389,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </MapContainer>
                   </div>
 
-                  {/* Cities Grid - Show 2-3 rows */}
-                  <div className="grid grid-cols-3 gap-1.5 min-h-[90px] max-h-[150px] overflow-y-auto p-1">
-                    {filteredCities.map((city) => {
+                  {/* Cities Grid - Show exactly 6 main cities in 2 rows */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { name: "الرياض" },
+                      { name: "جدة" },
+                      { name: "مكة المكرمة" },
+                      { name: "المدينة المنورة" },
+                      { name: "الدمام" },
+                      { name: "الخبر" }
+                    ].map((city) => {
                       const isSelected = filters.cities.includes(city.name);
                       return (
                         <button
@@ -1473,9 +1480,9 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </MapContainer>
                   </div>
 
-                  {/* Districts Grid - Show 2-3 rows */}
-                  <div className="grid grid-cols-3 gap-1.5 min-h-[90px] max-h-[150px] overflow-y-auto p-1">
-                    {filteredDistricts.map((district) => {
+                  {/* Districts Grid - Show exactly 6 districts in 2 rows */}
+                  <div className="grid grid-cols-3 gap-1.5 p-1">
+                    {filteredDistricts.slice(0, 6).map((district) => {
                       const isSelected = filters.districts.includes(district.name);
                       return (
                         <button
