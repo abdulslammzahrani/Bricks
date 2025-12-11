@@ -761,7 +761,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* Map with selected city markers */}
-                    <div className="h-[200px] rounded-xl overflow-hidden border-2 border-border">
+                    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
                       <MapContainer
                         center={[cityMapCenter.lat, cityMapCenter.lng]}
                         zoom={filters.cities.length > 0 ? 8 : 5}
@@ -794,7 +794,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
 
                     {/* Cities Grid */}
-                    <div className="h-[200px] overflow-y-auto p-1">
+                    <div className="h-[300px] overflow-y-auto p-1">
                       <div className="grid grid-cols-2 gap-2">
                         {filteredCities.map((city) => {
                           const isSelected = filters.cities.includes(city.name);
@@ -857,7 +857,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
                   <div className="grid grid-cols-2 gap-2">
                     {/* Map with all district markers */}
-                    <div className="h-[200px] rounded-xl overflow-hidden border-2 border-border">
+                    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
                       <MapContainer
                         center={[districtMapCenter.lat, districtMapCenter.lng]}
                         zoom={11}
@@ -891,7 +891,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
 
                     {/* Districts Grid */}
-                    <div className="h-[200px] overflow-y-auto p-1">
+                    <div className="h-[300px] overflow-y-auto p-1">
                       <div className="grid grid-cols-2 gap-2">
                         {filteredDistricts.map((district) => {
                           const isSelected = filters.districts.includes(district.name);
@@ -1269,7 +1269,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Map with selected cities */}
-                  <div className="h-[110px] rounded-lg overflow-hidden border border-border">
+                  <div className="h-[180px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[cityMapCenter.lat, cityMapCenter.lng]}
                       zoom={filters.cities.length > 0 ? 8 : 5}
@@ -1354,7 +1354,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Map with all districts */}
-                  <div className="h-[110px] rounded-lg overflow-hidden border border-border">
+                  <div className="h-[180px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[districtMapCenter.lat, districtMapCenter.lng]}
                       zoom={11}
