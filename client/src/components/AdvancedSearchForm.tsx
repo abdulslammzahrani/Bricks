@@ -1981,7 +1981,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Chat with Consultant - Inside Form (Mobile) - Matches screenshot exactly */}
-      <div className="mt-6 pt-4">
+      <div className="mt-12 pt-6 border-t border-border/40">
         <div className="flex items-center gap-2">
           {/* Text Input - Left side */}
           <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3 border border-border/30">
