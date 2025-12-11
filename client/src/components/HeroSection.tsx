@@ -16,6 +16,7 @@ import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore }
 import { AdvancedSearchForm } from "./AdvancedSearchForm";
 import { ListPropertyForm } from "./ListPropertyForm";
 import { TypewriterBanner } from "./TypewriterBanner";
+import { FullScreenChat } from "./FullScreenChat";
 
 interface AIAnalysisResult {
   success: boolean;
@@ -498,6 +499,7 @@ export default function HeroSection() {
 
   const handleSwitchToChat = useCallback((initialMessage?: string) => {
     setShowSearchForm(false);
+    setIsFullScreenChat(true); // Open fullscreen chat
     if (initialMessage && initialMessage.trim()) {
       // Add the message directly to conversation and trigger AI response
       const trimmedMessage = initialMessage.trim();
@@ -532,6 +534,61 @@ export default function HeroSection() {
           }]);
         });
     }
+  }, [mode]);
+
+  // Close fullscreen chat and return to homepage (reset state)
+  const handleCloseFullScreenChat = useCallback(() => {
+    setIsFullScreenChat(false);
+    // Keep conversation for history but reset to show forms
+    setShowSearchForm(true);
+    setPendingConfirmation(false);
+  }, []);
+
+  // Send message in fullscreen chat
+  const handleSendMessageFullScreen = useCallback((message: string) => {
+    if (!message.trim()) return;
+    
+    setConversation(prev => [...prev, { type: "user" as const, text: message }]);
+    setIsTyping(true);
+    setIsAnalyzing(true);
+    
+    fetch("/api/intake/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        text: message, 
+        context: { role: mode } 
+      }),
+    })
+      .then(res => res.json())
+      .then(result => {
+        setIsTyping(false);
+        setIsAnalyzing(false);
+        const reply = result.assistantReply || result.response;
+        if (reply) {
+          setConversation(prev => [...prev, { type: "system" as const, text: reply }]);
+        }
+        // Extract and update data if present
+        if (result.data) {
+          const filteredData = Object.fromEntries(
+            Object.entries(result.data)
+              .filter(([_, v]) => v != null)
+              .map(([k, v]) => [k, String(v)])
+          ) as Record<string, string>;
+          setExtractedData(prev => ({
+            ...prev,
+            ...filteredData
+          }));
+        }
+      })
+      .catch(() => {
+        setIsTyping(false);
+        setIsAnalyzing(false);
+        setConversation(prev => [...prev, { 
+          type: "system" as const, 
+          text: "عذراً، حدث خطأ. حاول مرة أخرى." 
+        }]);
+      });
   }, [mode]);
 
   const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
@@ -2422,6 +2479,29 @@ export default function HeroSection() {
           />
         </div>
       </section>
+      )}
+      
+      {/* Fullscreen Chat Overlay */}
+      {isFullScreenChat && (
+        <FullScreenChat
+          mode={mode}
+          conversation={conversation.map(msg => ({
+            type: msg.type === "user" ? "user" : "assistant",
+            text: msg.text
+          }))}
+          onClose={handleCloseFullScreenChat}
+          onSendMessage={handleSendMessageFullScreen}
+          isTyping={isTyping}
+          isAnalyzing={isAnalyzing}
+          isTranscribing={isTranscribing}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          extractedData={extractedData}
+          pendingConfirmation={pendingConfirmation}
+          confirmationFields={confirmationFields}
+          isSending={buyerMutation.isPending || sellerMutation.isPending}
+        />
       )}
     </>
   );
