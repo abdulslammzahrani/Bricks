@@ -1013,16 +1013,16 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
             </div>
 
             {/* Card Content */}
-            <div className="p-3">
+            <div className="p-4">
               
               {/* Step 0: Owner */}
               {activeCard === 0 && (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   <Input
                     placeholder="اسم المالك"
                     value={data.ownerName}
                     onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
-                    className="h-10 text-sm text-center rounded-lg"
+                    className="h-11 text-sm text-center rounded-lg"
                     name="name"
                     autoComplete="name"
                     data-testid="input-owner-name-mobile"
@@ -1033,17 +1033,17 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       placeholder="05xxxxxxxx"
                       value={data.ownerPhone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className={`h-10 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-11 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="tel"
                       autoComplete="tel"
                       data-testid="input-owner-phone-mobile"
                     />
                     {phoneError && (
-                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
+                      <p className="text-[10px] text-red-500 mt-1 text-center">{phoneError}</p>
                     )}
                     {isPhoneValid && (
-                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                      <p className="text-[10px] text-green-500 mt-1 text-center flex items-center justify-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> صحيح
                       </p>
                     )}
@@ -1051,20 +1051,20 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                   <div>
                     <Input
                       type="email"
-                      placeholder="البريد الإلكتروني"
+                      placeholder="البريد الإلكتروني (اختياري)"
                       value={data.ownerEmail}
                       onChange={(e) => handleEmailChange(e.target.value)}
-                      className={`h-10 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-11 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="email"
                       autoComplete="email"
                       data-testid="input-owner-email-mobile"
                     />
                     {emailError && (
-                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{emailError}</p>
+                      <p className="text-[10px] text-red-500 mt-1 text-center">{emailError}</p>
                     )}
                     {isEmailValid && (
-                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                      <p className="text-[10px] text-green-500 mt-1 text-center flex items-center justify-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> صحيح
                       </p>
                     )}
@@ -1072,14 +1072,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                   
                   {/* Auto-registration status */}
                   {isAutoRegistering && (
-                    <div className="flex items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-1.5 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
                       <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
                     </div>
                   )}
                   
                   {autoRegisterResult && (
-                    <div className={`p-2 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                    <div className={`p-2.5 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
                       <p className={`text-xs font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                         {autoRegisterResult.message}
                       </p>
@@ -1087,7 +1087,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                   )}
                   
                   {/* Transaction Type - Amber/Orange for seller */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
                     {[
                       { v: "sale", l: "للبيع", icon: Home },
                       { v: "rent", l: "للإيجار", icon: Building2 }
@@ -1095,7 +1095,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       <button
                         key={t.v}
                         onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
-                        className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-center transition-all ${
+                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-center transition-all ${
                           data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
                         }`}
                         data-testid={`button-list-${t.v}-mobile`}
@@ -1107,7 +1107,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                   </div>
                   
                   {/* Category - Amber/Orange for seller */}
-                  <div className="flex justify-center gap-2">
+                  <div className="flex justify-center gap-3">
                     {[
                       { v: "residential", l: "سكني", I: Home },
                       { v: "commercial", l: "تجاري", I: Building2 }
@@ -1115,18 +1115,18 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       <button
                         key={c.v}
                         onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full border-2 text-xs transition-all ${
+                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
                           data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
                         }`}
                         data-testid={`button-list-category-${c.v}-mobile`}
                       >
-                        <c.I className="h-3.5 w-3.5" />
+                        <c.I className="h-4 w-4" />
                         {c.l}
                       </button>
                     ))}
                   </div>
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-0">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-lg text-sm bg-amber-500 hover:bg-amber-600 mt-1" data-testid="button-next-list-mobile-0">
                     التالي
                   </Button>
                 </div>
@@ -1351,24 +1351,24 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       </div>
 
       {/* Chat with Consultant - Inside Form (Mobile) */}
-      <div className="mt-3 pt-3 border-t border-dashed">
-        <div className="flex items-center justify-center gap-1.5 mb-2">
-          <MessageCircle className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+      <div className="mt-4 pt-4 border-t border-dashed">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <MessageCircle className="h-3.5 w-3.5 text-amber-500" />
+          <span className="text-xs text-muted-foreground">تحدث مع مستشار المبيعات</span>
         </div>
-        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-4 py-2.5">
           <Button
             size="icon"
-            className="rounded-full h-7 w-7 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            className="rounded-full h-8 w-8 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
             data-testid="button-send-consultant-seller-mobile"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4" />
           </Button>
           <input
             type="text"
             dir="rtl"
             placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
             data-testid="input-chat-consultant-seller-mobile"
           />
         </div>

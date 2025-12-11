@@ -1485,16 +1485,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             </div>
 
             {/* Card Content */}
-            <div className="p-3">
+            <div className="p-4">
               
               {/* Step 0: Personal */}
               {activeCard === 0 && (
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   <Input
                     placeholder="الاسم"
                     value={filters.name}
                     onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                    className="h-10 text-sm text-center rounded-lg"
+                    className="h-11 text-sm text-center rounded-lg"
                     name="name"
                     autoComplete="name"
                     data-testid="input-name"
@@ -1505,17 +1505,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       placeholder="05xxxxxxxx"
                       value={filters.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className={`h-10 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-11 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="tel"
                       autoComplete="tel"
                       data-testid="input-phone"
                     />
                     {phoneError && (
-                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
+                      <p className="text-[10px] text-red-500 mt-1 text-center">{phoneError}</p>
                     )}
                     {isPhoneValid && (
-                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                      <p className="text-[10px] text-green-500 mt-1 text-center flex items-center justify-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> صحيح
                       </p>
                     )}
@@ -1523,20 +1523,20 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   <div>
                     <Input
                       type="email"
-                      placeholder="البريد الإلكتروني"
+                      placeholder="البريد الإلكتروني (اختياري)"
                       value={filters.email}
                       onChange={(e) => handleEmailChange(e.target.value)}
-                      className={`h-10 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-11 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="email"
                       autoComplete="email"
                       data-testid="input-email"
                     />
                     {emailError && (
-                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{emailError}</p>
+                      <p className="text-[10px] text-red-500 mt-1 text-center">{emailError}</p>
                     )}
                     {isEmailValid && (
-                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                      <p className="text-[10px] text-green-500 mt-1 text-center flex items-center justify-center gap-0.5">
                         <Check className="h-2.5 w-2.5" /> صحيح
                       </p>
                     )}
@@ -1544,14 +1544,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   
                   {/* Auto-registration status */}
                   {isAutoRegistering && (
-                    <div className="flex items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-1.5 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
                       <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
                     </div>
                   )}
                   
                   {autoRegisterResult && (
-                    <div className={`p-2 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                    <div className={`p-2.5 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
                       <p className={`text-xs font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                         {autoRegisterResult.message}
                       </p>
@@ -1559,7 +1559,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   )}
                   
                   {/* Transaction Type - Green for buyer */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
                     {[
                       { v: "sale", l: "للشراء", icon: Home },
                       { v: "rent", l: "للإيجار", icon: Building2 }
@@ -1567,7 +1567,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-center transition-all ${
+                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-center transition-all ${
                           filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border"
                         }`}
                         data-testid={`button-filter-${t.v}`}
@@ -1579,7 +1579,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
                   
                   {/* Category - Green for buyer */}
-                  <div className="flex justify-center gap-2">
+                  <div className="flex justify-center gap-3">
                     {[
                       { v: "residential", l: "سكني", I: Home },
                       { v: "commercial", l: "تجاري", I: Building2 }
@@ -1587,18 +1587,18 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <button
                         key={c.v}
                         onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full border-2 text-xs transition-all ${
+                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
                           filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border"
                         }`}
                         data-testid={`button-category-${c.v}`}
                       >
-                        <c.I className="h-3.5 w-3.5" />
+                        <c.I className="h-4 w-4" />
                         {c.l}
                       </button>
                     ))}
                   </div>
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-green-600 hover:bg-green-700" data-testid="button-next-0">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-lg text-sm bg-green-600 hover:bg-green-700 mt-1" data-testid="button-next-0">
                     التالي
                   </Button>
                 </div>
@@ -2012,26 +2012,26 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Chat with Consultant - Inside Form */}
-      <div className="mt-3 pt-3 border-t border-dashed">
-        <div className="flex items-center justify-center gap-1.5 mb-2">
-          <MessageCircle className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+      <div className="mt-4 pt-4 border-t border-dashed">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+          <span className="text-xs text-muted-foreground">تحدث مع مستشار العقارات</span>
         </div>
-        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-4 py-2.5">
           <Button
             size="icon"
             variant="default"
             onClick={() => onSwitchToChat?.()}
-            className="rounded-full h-7 w-7 flex-shrink-0"
+            className="rounded-full h-8 w-8 flex-shrink-0 bg-green-600 hover:bg-green-700"
             data-testid="button-send-consultant"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4" />
           </Button>
           <input
             type="text"
             dir="rtl"
             placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
             onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant"
           />
