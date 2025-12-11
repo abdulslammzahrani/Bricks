@@ -1015,13 +1015,15 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         />
                         {/* Show all districts as markers for selection */}
                         {filteredDistricts.map(district => {
+                          const coords = neighborhoodCoords.get(district.name);
+                          if (!coords) return null;
                           const isSelected = filters.districts.includes(district.name);
                           return (
                             <DistrictMarker
                               key={`${district.cityName}-${district.name}`}
                               name={district.name}
                               cityName={district.cityName}
-                              coords={{ lat: district.lat, lng: district.lng }}
+                              coords={{ lat: coords.lat, lng: coords.lng }}
                               isSelected={isSelected}
                               onToggle={toggleDistrict}
                             />
