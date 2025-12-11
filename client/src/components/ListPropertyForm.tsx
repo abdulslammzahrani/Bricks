@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useRef, useCallback } from "react";
+import { useState, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,30 +117,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     features: [],
   });
 
-  // Refs for uncontrolled inputs to prevent re-renders on mobile
-  const ownerNameRef = useRef<HTMLInputElement>(null);
-  const ownerPhoneRef = useRef<HTMLInputElement>(null);
-  const ownerNameMobileRef = useRef<HTMLInputElement>(null);
-  const ownerPhoneMobileRef = useRef<HTMLInputElement>(null);
-
-  // Track if owner fields have content (for button enabling without re-renders)
-  const [ownerFieldsFilled, setOwnerFieldsFilled] = useState(false);
-
-  // Check if owner fields are filled (called on input change)
-  const checkOwnerFields = useCallback(() => {
-    const name = ownerNameRef.current?.value || ownerNameMobileRef.current?.value || "";
-    const phone = ownerPhoneRef.current?.value || ownerPhoneMobileRef.current?.value || "";
-    const filled = name.trim() !== "" && phone.trim() !== "";
-    setOwnerFieldsFilled(filled);
-  }, []);
-
-  // Sync data from refs when needed (on blur or before submit)
-  const syncOwnerData = useCallback(() => {
-    const name = ownerNameRef.current?.value || ownerNameMobileRef.current?.value || "";
-    const phone = ownerPhoneRef.current?.value || ownerPhoneMobileRef.current?.value || "";
-    setData(d => ({ ...d, ownerName: name, ownerPhone: phone }));
-    checkOwnerFields();
-  }, [checkOwnerFields]);
 
   // Get map center based on selected city
   const mapCenter = useMemo<[number, number]>(() => {
@@ -214,17 +190,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
 
   const goNext = async () => {
     if (activeCard < totalCards - 1 && !isAnimating) {
-      // Sync owner data from refs before proceeding from step 0
-      if (activeCard === 0) {
-        syncOwnerData();
-      }
-      
       // Auto-register when moving from step 0 (owner info step)
       if (activeCard === 0 && !isAutoRegistered) {
-        // Get values directly from refs for registration
-        const name = ownerNameRef.current?.value || ownerNameMobileRef.current?.value || "";
-        const phone = ownerPhoneRef.current?.value || ownerPhoneMobileRef.current?.value || "";
-        setData(d => ({ ...d, ownerName: name, ownerPhone: phone }));
         await autoRegisterSeller();
       }
       
@@ -252,7 +219,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
 
   const canProceed = () => {
     switch (activeCard) {
-      case 0: return ownerFieldsFilled;
+      case 0: return data.ownerName.trim() !== "" && data.ownerPhone.trim() !== "";
       case 1: return data.city !== "";
       case 2: return data.propertyType !== "";
       case 3: return data.price !== "";
@@ -368,11 +335,9 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     <div>
                       <label className="text-sm font-medium mb-2 block">اسم المالك</label>
                       <Input
-                        ref={ownerNameRef}
                         placeholder="أدخل اسمك"
-                        defaultValue={data.ownerName}
-                        onInput={checkOwnerFields}
-                        onBlur={syncOwnerData}
+                        value={data.ownerName}
+                        onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
                         className="h-12 text-center rounded-xl"
                         data-testid="input-owner-name"
                       />
@@ -380,12 +345,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     <div>
                       <label className="text-sm font-medium mb-2 block">رقم الجوال</label>
                       <Input
-                        ref={ownerPhoneRef}
                         type="tel"
                         placeholder="05xxxxxxxx"
-                        defaultValue={data.ownerPhone}
-                        onInput={checkOwnerFields}
-                        onBlur={syncOwnerData}
+                        value={data.ownerPhone}
+                        onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
                         className="h-12 text-center rounded-xl"
                         dir="ltr"
                         data-testid="input-owner-phone"
@@ -757,21 +720,17 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
               {activeCard === 0 && (
                 <div className="space-y-2">
                   <Input
-                    ref={ownerNameMobileRef}
                     placeholder="اسم المالك"
-                    defaultValue={data.ownerName}
-                    onInput={checkOwnerFields}
-                    onBlur={syncOwnerData}
+                    value={data.ownerName}
+                    onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
                     className="h-10 text-sm text-center rounded-lg"
                     data-testid="input-owner-name-mobile"
                   />
                   <Input
-                    ref={ownerPhoneMobileRef}
                     type="tel"
                     placeholder="رقم الجوال"
-                    defaultValue={data.ownerPhone}
-                    onInput={checkOwnerFields}
-                    onBlur={syncOwnerData}
+                    value={data.ownerPhone}
+                    onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
                     className="h-10 text-sm text-center rounded-lg"
                     dir="ltr"
                     data-testid="input-owner-phone-mobile"
