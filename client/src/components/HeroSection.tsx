@@ -1803,7 +1803,7 @@ export default function HeroSection() {
           </div>
 
           {/* Main Card */}
-          <Card className="max-w-2xl mx-auto overflow-hidden shadow-2xl border-2">
+          <Card className="max-w-2xl mx-auto shadow-2xl border-2">
             {/* Completion Screen - Show when registration is complete */}
             {isComplete ? (
               <div className="p-6">
