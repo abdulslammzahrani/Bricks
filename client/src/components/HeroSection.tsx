@@ -13,7 +13,7 @@ import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
 import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
-import { AdvancedSearchForm } from "./AdvancedSearchForm";
+import { PropertyRequestForm } from "./PropertyRequestForm";
 import { ListPropertyForm } from "./ListPropertyForm";
 import { TypewriterBanner } from "./TypewriterBanner";
 
@@ -2024,8 +2024,8 @@ export default function HeroSection() {
               <div style={{ minHeight: "600px" }}>
                 {/* Buyer Search Form */}
                 {mode === "buyer" && showSearchForm && (
-                  <AdvancedSearchForm 
-                    onSearch={handleSearchFormSearch}
+                  <PropertyRequestForm 
+                    onSubmit={handleSearchFormSearch}
                   />
                 )}
 
