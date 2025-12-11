@@ -91,10 +91,12 @@ const featuresList = [
 
 interface ListPropertyFormProps {
   onSubmit: (data: PropertyData) => void;
+  onSwitchToChat?: (initialMessage?: string) => void;
 }
 
-export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
+export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit, onSwitchToChat }: ListPropertyFormProps) {
   const { toast } = useToast();
+  const [consultantMessage, setConsultantMessage] = useState("");
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isAutoRegistered, setIsAutoRegistered] = useState(false);
@@ -635,6 +637,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
           <Button
             size="icon"
+            onClick={() => {
+              if (consultantMessage.trim()) {
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="rounded-full h-9 w-9 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
             data-testid="button-send-consultant-seller-desktop"
           >
@@ -643,6 +653,15 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
           <input
             type="text"
             dir="rtl"
+            value={consultantMessage}
+            onChange={(e) => setConsultantMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && consultantMessage.trim()) {
+                e.preventDefault();
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              }
+            }}
             placeholder="اكتب رسالتك هنا..."
             className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
             data-testid="input-chat-consultant-seller-desktop"
@@ -992,6 +1011,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
           <Button
             size="icon"
+            onClick={() => {
+              if (consultantMessage.trim()) {
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="rounded-full h-7 w-7 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
             data-testid="button-send-consultant-seller-mobile"
           >
@@ -1000,6 +1027,15 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
           <input
             type="text"
             dir="rtl"
+            value={consultantMessage}
+            onChange={(e) => setConsultantMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && consultantMessage.trim()) {
+                e.preventDefault();
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              }
+            }}
             placeholder="اكتب رسالتك هنا..."
             className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
             data-testid="input-chat-consultant-seller-mobile"

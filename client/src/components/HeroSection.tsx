@@ -2096,7 +2096,7 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                <ListPropertyForm onSubmit={handleListPropertySubmit} />
+                <ListPropertyForm onSubmit={handleListPropertySubmit} onSwitchToChat={handleSwitchToChat} />
               </div>
             )}
 
@@ -2154,11 +2154,28 @@ export default function HeroSection() {
             {/* Conversation area */}
             {(conversation.length > 0 || pendingConfirmation) && (
               <div className="flex flex-col h-[600px]">
-                {/* Reliability Score Header */}
+                {/* Header with Close Button and Reliability Score */}
                 <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <Brain className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">مؤشر اكتمال الطلب</span>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setConversation([]);
+                        setPendingConfirmation(false);
+                        if (mode === "buyer") {
+                          setShowSearchForm(true);
+                        }
+                      }}
+                      className="h-8 w-8"
+                      data-testid="button-close-chat"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Brain className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">مؤشر اكتمال الطلب</span>
+                    </div>
                   </div>
                   <ReliabilityScore 
                     score={calculateReliabilityScore({
