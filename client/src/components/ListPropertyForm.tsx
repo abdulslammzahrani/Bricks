@@ -5,10 +5,47 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   MapPin, User, Home, Building2, 
   Check, Phone, DollarSign,
-  Building, Warehouse, LandPlot, Ruler, BedDouble,
-  Send, Bath, Camera
+  Building, Warehouse, LandPlot, Ruler,
+  Send, Navigation
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+const pinIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+function LocationPinPicker({ 
+  onLocationSelect, 
+  currentPosition 
+}: { 
+  onLocationSelect: (lat: number, lng: number) => void;
+  currentPosition: [number, number] | null;
+}) {
+  useMapEvents({
+    click: (e) => {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  
+  return currentPosition ? (
+    <Marker position={currentPosition} icon={pinIcon} />
+  ) : null;
+}
+
+function MapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  map.setView(center, zoom, { animate: true });
+  return null;
+}
 
 interface PropertyData {
   ownerName: string;
@@ -18,6 +55,8 @@ interface PropertyData {
   propertyCategory: "residential" | "commercial";
   city: string;
   district: string;
+  latitude: number | null;
+  longitude: number | null;
   propertyType: string;
   propertyCondition: "new" | "used" | "under_construction" | "";
   rooms: string;
@@ -54,6 +93,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     propertyCategory: "residential",
     city: "",
     district: "",
+    latitude: null,
+    longitude: null,
     propertyType: "",
     propertyCondition: "",
     rooms: "",
@@ -329,6 +370,56 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </Button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Map for exact location */}
+            {formData.city && selectedCity && (
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  حدد الموقع على الخريطة (اختياري)
+                </label>
+                <div className="h-[200px] rounded-lg overflow-hidden border">
+                  <MapContainer
+                    center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]}
+                    zoom={12}
+                    style={{ height: "100%", width: "100%" }}
+                    scrollWheelZoom={false}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <MapCenterUpdater 
+                      center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]} 
+                      zoom={12} 
+                    />
+                    <LocationPinPicker
+                      onLocationSelect={(lat, lng) => {
+                        setFormData({...formData, latitude: lat, longitude: lng});
+                      }}
+                      currentPosition={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null}
+                    />
+                  </MapContainer>
+                </div>
+                {formData.latitude && formData.longitude && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
+                    <Navigation className="w-4 h-4" />
+                    <span>تم تحديد الموقع</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFormData({...formData, latitude: null, longitude: null})}
+                      className="text-xs text-muted-foreground"
+                    >
+                      إزالة
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  اضغط على الخريطة لتحديد موقع العقار بدقة
+                </p>
               </div>
             )}
           </div>
