@@ -1,4 +1,4 @@
-import { useState, memo, useMemo } from "react";
+import { useState, memo, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ function getNeighborhoodCoords(cityCoords: { lat: number; lng: number }, index: 
 interface PropertyData {
   ownerName: string;
   ownerPhone: string;
+  ownerEmail: string;
   transactionType: "sale" | "rent";
   propertyCategory: "residential" | "commercial";
   city: string;
@@ -39,6 +40,16 @@ interface PropertyData {
   price: string;
   description: string;
   features: string[];
+}
+
+// Phone validation function
+function validateSaudiPhone(phone: string): { isValid: boolean; error: string } {
+  if (!phone.trim()) return { isValid: false, error: "" };
+  const phoneRegex = /^05\d{8}$/;
+  if (!phoneRegex.test(phone)) {
+    return { isValid: false, error: "رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام" };
+  }
+  return { isValid: true, error: "" };
 }
 
 // Custom marker icon for pin location
@@ -190,6 +201,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
   const [data, setData] = useState<PropertyData>({
     ownerName: "",
     ownerPhone: "",
+    ownerEmail: "",
     transactionType: "sale",
     propertyCategory: "residential",
     city: "",
@@ -204,6 +216,120 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     description: "",
     features: [],
   });
+  
+  // Validation states
+  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  
+  // Auto-registration state
+  const [isAutoRegistering, setIsAutoRegistering] = useState(false);
+  const [autoRegisterResult, setAutoRegisterResult] = useState<{
+    success: boolean;
+    message: string;
+    generatedPassword?: string;
+    userId?: string;
+  } | null>(null);
+  const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
+  
+  // Validate email format
+  const validateEmail = (email: string): { isValid: boolean; error: string } => {
+    if (!email.trim()) return { isValid: false, error: "" };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, error: "صيغة البريد الإلكتروني غير صحيحة" };
+    }
+    return { isValid: true, error: "" };
+  };
+
+  // Handle phone change
+  const handlePhoneChange = (value: string) => {
+    const validation = validateSaudiPhone(value);
+    setData(d => ({ ...d, ownerPhone: value }));
+    if (value.trim()) {
+      setPhoneError(validation.isValid ? "" : validation.error);
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  // Handle email change
+  const handleEmailChange = (value: string) => {
+    setData(d => ({ ...d, ownerEmail: value }));
+    if (value.trim()) {
+      const validation = validateEmail(value);
+      setEmailError(validation.error);
+    } else {
+      setEmailError("");
+    }
+  };
+
+  // Check if phone is valid
+  const isPhoneValid = useMemo(() => {
+    if (!data.ownerPhone.trim()) return false;
+    return validateSaudiPhone(data.ownerPhone).isValid;
+  }, [data.ownerPhone]);
+
+  // Check if email is valid
+  const isEmailValid = useMemo(() => {
+    if (!data.ownerEmail.trim()) return false;
+    return validateEmail(data.ownerEmail).isValid;
+  }, [data.ownerEmail]);
+
+  // Check if all personal data is complete for auto-registration
+  const isPersonalDataComplete = useMemo(() => {
+    return data.ownerName.trim().length >= 2 && isPhoneValid && isEmailValid;
+  }, [data.ownerName, isPhoneValid, isEmailValid]);
+
+  // Auto-register user when personal data is complete
+  const autoRegisterRef = useRef(false);
+  
+  useEffect(() => {
+    if (isPersonalDataComplete && !registeredUserId && !isAutoRegistering && !autoRegisterRef.current) {
+      autoRegisterRef.current = true;
+      setIsAutoRegistering(true);
+      
+      fetch('/api/auth/autoregister', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.ownerName,
+          phone: data.ownerPhone,
+          email: data.ownerEmail,
+          role: 'seller'
+        }),
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            setRegisteredUserId(result.user.id);
+            setAutoRegisterResult({
+              success: true,
+              message: result.isExisting ? 'تم تسجيل الدخول بنجاح' : `تم التسجيل! كلمة المرور: ${result.generatedPassword}`,
+              generatedPassword: result.generatedPassword,
+              userId: result.user.id
+            });
+          } else {
+            setAutoRegisterResult({
+              success: false,
+              message: result.error || 'حدث خطأ أثناء التسجيل'
+            });
+            autoRegisterRef.current = false;
+          }
+        })
+        .catch(err => {
+          console.error('Auto-register error:', err);
+          setAutoRegisterResult({
+            success: false,
+            message: 'حدث خطأ أثناء التسجيل'
+          });
+          autoRegisterRef.current = false;
+        })
+        .finally(() => {
+          setIsAutoRegistering(false);
+        });
+    }
+  }, [isPersonalDataComplete, registeredUserId, isAutoRegistering, data.ownerName, data.ownerPhone, data.ownerEmail]);
 
   // Get map center based on selected city
   const mapCenter = useMemo<[number, number]>(() => {
@@ -285,7 +411,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
 
   const canProceed = () => {
     switch (activeCard) {
-      case 0: return data.ownerName.trim() !== "" && data.ownerPhone.trim() !== "";
+      case 0: return data.ownerName.trim() !== "" && isPhoneValid && isEmailValid;
       case 1: return data.city !== "";
       case 2: return data.propertyType !== "";
       case 3: return data.price !== "";
@@ -397,7 +523,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
               {/* Step 0: Owner Info */}
               {activeCard === 0 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-2 block">اسم المالك</label>
                       <Input
@@ -414,13 +540,63 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         type="tel"
                         placeholder="05xxxxxxxx"
                         value={data.ownerPhone}
-                        onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
-                        className="h-12 text-center rounded-xl"
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
                         data-testid="input-owner-phone"
                       />
+                      {phoneError && (
+                        <p className="text-xs text-red-500 mt-1 text-center">{phoneError}</p>
+                      )}
+                      {isPhoneValid && (
+                        <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
+                          <Check className="h-3 w-3" /> رقم صحيح
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">البريد الإلكتروني</label>
+                      <Input
+                        type="email"
+                        placeholder="example@email.com"
+                        value={data.ownerEmail}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        className={`h-12 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                        dir="ltr"
+                        data-testid="input-owner-email"
+                      />
+                      {emailError && (
+                        <p className="text-xs text-red-500 mt-1 text-center">{emailError}</p>
+                      )}
+                      {isEmailValid && (
+                        <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
+                          <Check className="h-3 w-3" /> بريد صحيح
+                        </p>
+                      )}
                     </div>
                   </div>
+                  
+                  {/* Auto-registration status */}
+                  {isAutoRegistering && (
+                    <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                      <span className="text-sm text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
+                    </div>
+                  )}
+                  
+                  {autoRegisterResult && (
+                    <div className={`p-3 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                      <p className={`text-sm font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                        {autoRegisterResult.message}
+                      </p>
+                      {autoRegisterResult.generatedPassword && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          احفظ كلمة المرور هذه للدخول لاحقاً
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { v: "sale", l: "للبيع", icon: DollarSign },
@@ -840,15 +1016,61 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     className="h-10 text-sm text-center rounded-lg"
                     data-testid="input-owner-name-mobile"
                   />
-                  <Input
-                    type="tel"
-                    placeholder="رقم الجوال"
-                    value={data.ownerPhone}
-                    onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
-                    className="h-10 text-sm text-center rounded-lg"
-                    dir="ltr"
-                    data-testid="input-owner-phone-mobile"
-                  />
+                  <div>
+                    <Input
+                      type="tel"
+                      placeholder="05xxxxxxxx"
+                      value={data.ownerPhone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      className={`h-10 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      dir="ltr"
+                      data-testid="input-owner-phone-mobile"
+                    />
+                    {phoneError && (
+                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
+                    )}
+                    {isPhoneValid && (
+                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> صحيح
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Input
+                      type="email"
+                      placeholder="البريد الإلكتروني"
+                      value={data.ownerEmail}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      className={`h-10 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      dir="ltr"
+                      data-testid="input-owner-email-mobile"
+                    />
+                    {emailError && (
+                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{emailError}</p>
+                    )}
+                    {isEmailValid && (
+                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> صحيح
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Auto-registration status */}
+                  {isAutoRegistering && (
+                    <div className="flex items-center justify-center gap-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
+                      <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
+                    </div>
+                  )}
+                  
+                  {autoRegisterResult && (
+                    <div className={`p-2 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                      <p className={`text-xs font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                        {autoRegisterResult.message}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { v: "sale", l: "للبيع" },

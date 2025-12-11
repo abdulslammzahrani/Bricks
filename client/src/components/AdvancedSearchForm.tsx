@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useEffect } from "react";
+import { useState, memo, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +58,7 @@ const redIcon = new L.Icon({
 interface SearchFilters {
   name: string;
   phone: string;
+  email: string;
   transactionType: "sale" | "rent";
   cities: string[];
   districts: string[];
@@ -398,6 +399,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const [filters, setFilters] = useState<SearchFilters>({
     name: "",
     phone: "",
+    email: "",
     transactionType: "sale",
     cities: [],
     districts: [],
@@ -417,6 +419,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     features: [],
     notes: "",
   });
+  
+  // Auto-registration state
+  const [isAutoRegistering, setIsAutoRegistering] = useState(false);
+  const [autoRegisterResult, setAutoRegisterResult] = useState<{
+    success: boolean;
+    message: string;
+    generatedPassword?: string;
+    userId?: string;
+  } | null>(null);
+  const [registeredUserId, setRegisteredUserId] = useState<string | null>(null);
   
   // Get map center for preferred location picker
   const preferredMapCenter = useMemo<[number, number]>(() => {
@@ -439,6 +451,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
+
+  // Validate email format
+  const validateEmail = (email: string): { isValid: boolean; error: string } => {
+    if (!email.trim()) return { isValid: false, error: "" };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, error: "صيغة البريد الإلكتروني غير صحيحة" };
+    }
+    return { isValid: true, error: "" };
+  };
 
   // Validate phone on change
   const handlePhoneChange = (value: string) => {
@@ -451,11 +474,84 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     }
   };
 
+  // Validate email on change
+  const handleEmailChange = (value: string) => {
+    setFilters(f => ({ ...f, email: value }));
+    if (value.trim()) {
+      const validation = validateEmail(value);
+      setEmailError(validation.error);
+    } else {
+      setEmailError("");
+    }
+  };
+
   // Check if phone is valid
   const isPhoneValid = useMemo(() => {
     if (!filters.phone.trim()) return false;
     return validateSaudiPhone(filters.phone).isValid;
   }, [filters.phone]);
+
+  // Check if email is valid
+  const isEmailValid = useMemo(() => {
+    if (!filters.email.trim()) return false;
+    return validateEmail(filters.email).isValid;
+  }, [filters.email]);
+
+  // Check if all personal data is complete for auto-registration
+  const isPersonalDataComplete = useMemo(() => {
+    return filters.name.trim().length >= 2 && isPhoneValid && isEmailValid;
+  }, [filters.name, isPhoneValid, isEmailValid]);
+
+  // Auto-register user when personal data is complete
+  const autoRegisterRef = useRef(false);
+  
+  useEffect(() => {
+    if (isPersonalDataComplete && !registeredUserId && !isAutoRegistering && !autoRegisterRef.current) {
+      autoRegisterRef.current = true;
+      setIsAutoRegistering(true);
+      
+      fetch('/api/auth/autoregister', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: filters.name,
+          phone: filters.phone,
+          email: filters.email,
+          role: 'buyer'
+        }),
+        credentials: 'include'
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setRegisteredUserId(data.user.id);
+            setAutoRegisterResult({
+              success: true,
+              message: data.isExisting ? 'تم تسجيل الدخول بنجاح' : `تم التسجيل! كلمة المرور: ${data.generatedPassword}`,
+              generatedPassword: data.generatedPassword,
+              userId: data.user.id
+            });
+          } else {
+            setAutoRegisterResult({
+              success: false,
+              message: data.error || 'حدث خطأ أثناء التسجيل'
+            });
+            autoRegisterRef.current = false;
+          }
+        })
+        .catch(err => {
+          console.error('Auto-register error:', err);
+          setAutoRegisterResult({
+            success: false,
+            message: 'حدث خطأ أثناء التسجيل'
+          });
+          autoRegisterRef.current = false;
+        })
+        .finally(() => {
+          setIsAutoRegistering(false);
+        });
+    }
+  }, [isPersonalDataComplete, registeredUserId, isAutoRegistering, filters.name, filters.phone, filters.email]);
 
   const propertyTypes = propertyOptions[filters.propertyCategory];
   const totalCards = 8;
@@ -577,7 +673,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
   const canProceed = () => {
     switch (activeCard) {
-      case 0: return filters.name.trim() !== "" && isPhoneValid;
+      case 0: return filters.name.trim() !== "" && isPhoneValid && isEmailValid;
       case 1: return true;
       case 2: return filters.cities.length > 0;
       case 3: return true;
@@ -745,7 +841,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               {/* Step 0: Personal */}
               {activeCard === 0 && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-sm font-medium mb-1.5 block">الاسم</label>
                       <Input
@@ -760,7 +856,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
                       <Input
                         type="tel"
-                        placeholder="رقم الجوال"
+                        placeholder="05xxxxxxxx"
                         value={filters.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
@@ -776,7 +872,49 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         </p>
                       )}
                     </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label>
+                      <Input
+                        type="email"
+                        placeholder="example@email.com"
+                        value={filters.email}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        className={`h-11 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                        dir="ltr"
+                        data-testid="input-email-desktop"
+                      />
+                      {emailError && (
+                        <p className="text-xs text-red-500 mt-1 text-center">{emailError}</p>
+                      )}
+                      {isEmailValid && (
+                        <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
+                          <Check className="h-3 w-3" /> بريد صحيح
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Auto-registration status */}
+                  {isAutoRegistering && (
+                    <div className="flex items-center justify-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                      <span className="text-sm text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
+                    </div>
+                  )}
+                  
+                  {autoRegisterResult && (
+                    <div className={`p-3 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                      <p className={`text-sm font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                        {autoRegisterResult.message}
+                      </p>
+                      {autoRegisterResult.generatedPassword && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          احفظ كلمة المرور هذه للدخول لاحقاً
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
                     التالي
                   </Button>
@@ -1363,7 +1501,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   <div>
                     <Input
                       type="tel"
-                      placeholder="رقم الجوال"
+                      placeholder="05xxxxxxxx"
                       value={filters.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
@@ -1379,6 +1517,42 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </p>
                     )}
                   </div>
+                  <div>
+                    <Input
+                      type="email"
+                      placeholder="البريد الإلكتروني"
+                      value={filters.email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      className={`h-9 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      dir="ltr"
+                      data-testid="input-email"
+                    />
+                    {emailError && (
+                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{emailError}</p>
+                    )}
+                    {isEmailValid && (
+                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> صحيح
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Auto-registration status */}
+                  {isAutoRegistering && (
+                    <div className="flex items-center justify-center gap-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
+                      <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
+                    </div>
+                  )}
+                  
+                  {autoRegisterResult && (
+                    <div className={`p-2 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                      <p className={`text-xs font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                        {autoRegisterResult.message}
+                      </p>
+                    </div>
+                  )}
+                  
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-0">
                     التالي
                   </Button>
