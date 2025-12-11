@@ -967,17 +967,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           center={[districtMapCenter.lat, districtMapCenter.lng]} 
                           zoom={11} 
                         />
-                        {/* Show only selected districts as markers */}
-                        {filters.districts.map(districtName => {
-                          const data = neighborhoodCoords.get(districtName);
-                          if (!data) return null;
+                        {/* Show all districts as markers for selection */}
+                        {filteredDistricts.map(district => {
+                          const isSelected = filters.districts.includes(district.name);
                           return (
                             <DistrictMarker
-                              key={districtName}
-                              name={districtName}
-                              cityName={data.cityName}
-                              coords={{ lat: data.lat, lng: data.lng }}
-                              isSelected={true}
+                              key={`${district.cityName}-${district.name}`}
+                              name={district.name}
+                              cityName={district.cityName}
+                              coords={{ lat: district.lat, lng: district.lng }}
+                              isSelected={isSelected}
                               onToggle={toggleDistrict}
                             />
                           );
