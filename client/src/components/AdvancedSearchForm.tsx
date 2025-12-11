@@ -390,12 +390,29 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const propertyTypes = propertyOptions[filters.propertyCategory];
   const totalCards = 8;
 
-  // Filter cities based on search
+  // Main cities that always show (most popular)
+  const mainCityNames = ["الرياض", "جدة", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر"];
+  
+  // Filter cities - main cities always visible, plus search results
   const filteredCities = useMemo(() => {
-    if (!citySearch.trim()) return saudiCities;
-    return saudiCities.filter(c => 
+    const mainCities = saudiCities.filter(c => mainCityNames.includes(c.name));
+    const otherCities = saudiCities.filter(c => !mainCityNames.includes(c.name));
+    
+    if (!citySearch.trim()) {
+      // No search - show main cities first, then others
+      return [...mainCities, ...otherCities];
+    }
+    
+    // With search - show matching cities, but always include main cities
+    const searchMatches = saudiCities.filter(c => 
       c.name.includes(citySearch) || c.nameEn.toLowerCase().includes(citySearch.toLowerCase())
     );
+    
+    // Combine: search matches first, then remaining main cities not in search
+    const matchNames = new Set(searchMatches.map(c => c.name));
+    const remainingMainCities = mainCities.filter(c => !matchNames.has(c.name));
+    
+    return [...searchMatches, ...remainingMainCities];
   }, [citySearch]);
 
   // City items for map click detection
@@ -1373,7 +1390,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Cities Grid - Show 2-3 rows */}
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[130px] overflow-y-auto p-1">
+                  <div className="grid grid-cols-3 gap-1.5 min-h-[90px] max-h-[150px] overflow-y-auto p-1">
                     {filteredCities.map((city) => {
                       const isSelected = filters.cities.includes(city.name);
                       return (
@@ -1457,7 +1474,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Districts Grid - Show 2-3 rows */}
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[130px] overflow-y-auto p-1">
+                  <div className="grid grid-cols-3 gap-1.5 min-h-[90px] max-h-[150px] overflow-y-auto p-1">
                     {filteredDistricts.map((district) => {
                       const isSelected = filters.districts.includes(district.name);
                       return (
