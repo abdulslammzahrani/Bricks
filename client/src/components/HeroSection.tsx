@@ -476,8 +476,24 @@ export default function HeroSection() {
     setIsComplete(true);
   }, [toast]);
 
-  const handleSwitchToChat = useCallback(() => {
+  const handleSwitchToChat = useCallback((message?: string) => {
     setShowSearchForm(false);
+    if (message && message.trim()) {
+      // Set the input text and trigger submission
+      setInputText(message.trim());
+      // Use setTimeout to allow state to update before submitting
+      setTimeout(() => {
+        // Add user message to conversation
+        setConversation(prev => [
+          ...prev,
+          { type: "user", text: message.trim() }
+        ]);
+        setInputText("");
+        setIsFullScreenChat(true);
+        setIsAnalyzing(true);
+        setIsTyping(true);
+      }, 100);
+    }
   }, []);
 
   const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {

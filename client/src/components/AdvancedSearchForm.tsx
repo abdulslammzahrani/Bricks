@@ -231,7 +231,7 @@ function validateSaudiPhone(phone: string): { isValid: boolean; normalized: stri
 
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
-  onSwitchToChat: () => void;
+  onSwitchToChat: (message?: string) => void;
 }
 
 // Generate approximate coordinates for neighborhoods based on city center with grid distribution
@@ -452,6 +452,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [chatMessage, setChatMessage] = useState("");
 
   // Validate email format
   const validateEmail = (email: string): { isValid: boolean; error: string } => {
@@ -1387,7 +1388,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               dir="rtl"
               placeholder="تحدث مع مستشار العقارات"
               className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              onFocus={() => onSwitchToChat?.()}
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && chatMessage.trim()) {
+                  onSwitchToChat?.(chatMessage.trim());
+                  setChatMessage("");
+                }
+              }}
               data-testid="input-chat-consultant-desktop"
             />
           </div>
@@ -1397,6 +1405,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             size="icon"
             variant="outline"
             className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
+            onClick={() => onSwitchToChat?.()}
             data-testid="button-mic-consultant-desktop"
           >
             <Mic className="h-5 w-5 text-green-600" />
@@ -1406,7 +1415,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <Button
             size="icon"
             variant="default"
-            onClick={() => onSwitchToChat?.()}
+            onClick={() => {
+              if (chatMessage.trim()) {
+                onSwitchToChat?.(chatMessage.trim());
+                setChatMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="h-12 w-12 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant-desktop"
           >
@@ -1990,7 +2006,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               dir="rtl"
               placeholder="تحدث مع مستشار العقارات"
               className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              onFocus={() => onSwitchToChat?.()}
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && chatMessage.trim()) {
+                  onSwitchToChat?.(chatMessage.trim());
+                  setChatMessage("");
+                }
+              }}
               data-testid="input-chat-consultant"
             />
           </div>
@@ -2000,6 +2023,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             size="icon"
             variant="outline"
             className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
+            onClick={() => onSwitchToChat?.()}
             data-testid="button-mic-consultant"
           >
             <Mic className="h-5 w-5 text-green-600" />
@@ -2009,7 +2033,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <Button
             size="icon"
             variant="default"
-            onClick={() => onSwitchToChat?.()}
+            onClick={() => {
+              if (chatMessage.trim()) {
+                onSwitchToChat?.(chatMessage.trim());
+                setChatMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="h-11 w-11 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant"
           >
