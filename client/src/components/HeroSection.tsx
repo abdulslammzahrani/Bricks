@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, FileText, Handshake } from "lucide-react";
+import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, FileText, Handshake, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -1878,6 +1878,24 @@ export default function HeroSection() {
                 : "سجّل بيانات عقارك وسنوصله للمشترين المناسبين"
               }
             </p>
+            
+            {/* Resume Previous Chat Button - Show if there's saved conversation */}
+            {conversation.length > 0 && !pendingConfirmation && !isComplete && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFullScreenChat(true)}
+                  className="gap-2 text-primary border-primary/30 hover:border-primary/50"
+                  data-testid="button-resume-chat"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  استئناف المحادثة السابقة
+                  <Badge variant="secondary" className="text-xs px-2 py-0">
+                    {conversation.length} رسالة
+                  </Badge>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Main Card */}
