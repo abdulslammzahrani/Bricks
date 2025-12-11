@@ -6,7 +6,8 @@ import {
   MapPin, User, Home, Building2, 
   Check, Phone, Camera, DollarSign,
   Building, Warehouse, LandPlot, Ruler, BedDouble,
-  Send, MessageCircle, Navigation, Target, Search, Mic
+  Send, MessageCircle, Navigation, Target, Search, Mic,
+  Bath, Settings2, FileText, Hammer, Clock, CheckCircle2
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -34,6 +35,7 @@ interface PropertyData {
   latitude: number | null;
   longitude: number | null;
   propertyType: string;
+  propertyCondition: "new" | "used" | "under_construction" | "";
   rooms: string;
   bathrooms: string;
   area: string;
@@ -89,9 +91,9 @@ function MapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: nu
   return null;
 }
 
-// Custom icons for cities and districts
-const greenIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+// Custom icons for cities and districts - Orange theme for seller
+const orangeIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -108,7 +110,7 @@ const greyIcon = new L.Icon({
   shadowSize: [33, 33]
 });
 
-// City marker component for seller form - ALL markers are GREEN
+// City marker component for seller form - Orange theme
 function SellerCityMarker({ 
   city, 
   isSelected, 
@@ -121,20 +123,20 @@ function SellerCityMarker({
   return (
     <Marker 
       position={[city.coordinates.lat, city.coordinates.lng]}
-      icon={greenIcon}
+      icon={isSelected ? orangeIcon : greyIcon}
       eventHandlers={{
         click: () => onSelect(city.name)
       }}
     >
       <Popup>
         <div className="text-center text-sm font-bold">{city.name}</div>
-        {isSelected && <div className="text-xs text-green-600">محدد</div>}
+        {isSelected && <div className="text-xs text-amber-600">محدد</div>}
       </Popup>
     </Marker>
   );
 }
 
-// District marker component for seller form - ALL markers are GREEN
+// District marker component for seller form - Orange theme
 function SellerDistrictMarker({ 
   name, 
   coords, 
@@ -146,7 +148,6 @@ function SellerDistrictMarker({
   isSelected: boolean;
   onSelect: (name: string) => void;
 }) {
-  // Validate coordinates
   if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number' || isNaN(coords.lat) || isNaN(coords.lng)) {
     return null;
   }
@@ -156,8 +157,8 @@ function SellerDistrictMarker({
       center={[coords.lat, coords.lng]}
       radius={isSelected ? 12 : 8}
       pathOptions={{
-        color: '#22c55e',
-        fillColor: '#22c55e',
+        color: '#f59e0b',
+        fillColor: '#f59e0b',
         fillOpacity: isSelected ? 0.9 : 0.6,
         weight: isSelected ? 3 : 2
       }}
@@ -191,6 +192,8 @@ const featuresList = [
   "مصعد", "موقف سيارات", "حديقة", "مسبح", "غرفة خادمة", "غرفة سائق", "مكيفات", "مطبخ مجهز"
 ];
 
+const SAUDI_CENTER = { lat: 24.7136, lng: 46.6753 };
+
 interface ListPropertyFormProps {
   onSubmit: (data: PropertyData) => void;
 }
@@ -209,6 +212,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     latitude: null,
     longitude: null,
     propertyType: "",
+    propertyCondition: "",
     rooms: "",
     bathrooms: "",
     area: "",
@@ -342,7 +346,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         return [city.coordinates.lat, city.coordinates.lng];
       }
     }
-    return [24.7136, 46.6753]; // Default: Riyadh
+    return [24.7136, 46.6753];
   }, [data.city, data.latitude, data.longitude]);
 
   // Get available districts for selected city with coordinates
@@ -375,14 +379,17 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
   };
 
   const propertyTypes = propertyOptions[data.propertyCategory];
-  const totalCards = 4;
-  const progress = ((activeCard) / totalCards) * 100;
+  const totalCards = 7;
 
+  // 7 cards matching AdvancedSearchForm structure with amber/orange theme
   const cards = [
-    { id: 0, icon: User, title: "بيانات المالك", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
-    { id: 1, icon: MapPin, title: "الموقع", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
-    { id: 2, icon: Home, title: "تفاصيل العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
-    { id: 3, icon: DollarSign, title: "السعر والوصف", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
+    { id: 0, icon: User, title: "بيانات المالك", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
+    { id: 1, icon: MapPin, title: "المدينة", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
+    { id: 2, icon: Navigation, title: "الحي", color: "bg-yellow-500", lightColor: "bg-yellow-100 dark:bg-yellow-900/40" },
+    { id: 3, icon: Home, title: "نوع العقار", color: "bg-amber-600", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
+    { id: 4, icon: Hammer, title: "حالة العقار", color: "bg-orange-600", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
+    { id: 5, icon: Settings2, title: "المواصفات", color: "bg-yellow-600", lightColor: "bg-yellow-100 dark:bg-yellow-900/40" },
+    { id: 6, icon: FileText, title: "السعر والوصف", color: "bg-amber-700", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
   ];
 
   const goNext = () => {
@@ -413,8 +420,11 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     switch (activeCard) {
       case 0: return data.ownerName.trim() !== "" && isPhoneValid && isEmailValid;
       case 1: return data.city !== "";
-      case 2: return data.propertyType !== "";
-      case 3: return data.price !== "";
+      case 2: return true;
+      case 3: return data.propertyType !== "";
+      case 4: return true;
+      case 5: return true;
+      case 6: return data.price !== "";
       default: return true;
     }
   };
@@ -429,24 +439,32 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
   };
 
   // Calculate match index score based on completed data
-  const matchIndexScore = (() => {
+  const getReliabilityScore = () => {
     let score = 0;
-    // Step 1: Owner data (25%)
-    if (data.ownerName.trim()) score += 12;
-    if (data.ownerPhone.trim().length >= 10) score += 13;
-    // Step 2: Location (25%)
+    if (data.ownerName.trim()) score += 10;
+    if (data.ownerPhone.trim()) score += 10;
     if (data.city) score += 15;
-    if (data.district) score += 10;
-    // Step 3: Property details (25%)
-    if (data.propertyType) score += 10;
+    if (data.district) score += 15;
+    if (data.propertyType) score += 15;
+    if (data.propertyCondition) score += 5;
     if (data.rooms) score += 5;
     if (data.bathrooms) score += 5;
     if (data.area) score += 5;
-    // Step 4: Price & description (25%)
-    if (data.price) score += 15;
-    if (data.description.trim()) score += 10;
-    return Math.min(100, score);
-  })();
+    if (data.price) score += 10;
+    if (data.features.length > 0) score += 5;
+    return Math.min(score, 100);
+  };
+
+  const reliabilityScore = getReliabilityScore();
+
+  // Get map center for cities
+  const cityMapCenter = useMemo(() => {
+    if (data.city) {
+      const city = saudiCities.find(c => c.name === data.city);
+      if (city) return city.coordinates;
+    }
+    return SAUDI_CENTER;
+  }, [data.city]);
 
   // ==================== DESKTOP VERSION ====================
   const DesktopForm = () => (
@@ -456,22 +474,22 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         <div className="mb-6 max-w-md mx-auto">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">مؤشر التطابق</span>
-            <span className="text-sm font-bold text-amber-600">{matchIndexScore}%</span>
+            <span className="text-sm font-bold text-amber-600">{reliabilityScore}%</span>
           </div>
           <div className="h-3 bg-muted rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-              style={{ width: `${matchIndexScore}%` }}
+              style={{ width: `${reliabilityScore}%` }}
             />
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            كلما أكملت بياناتك، زادت فرص التطابق
+            كلما أكملت بياناتك، زادت فرص التطابق مع المشترين
           </p>
         </div>
       )}
 
-      {/* Desktop Stacked Cards */}
-      <div className="relative max-w-lg mx-auto" style={{ minHeight: "420px" }}>
+      {/* Desktop Stacked Cards Container - Same minHeight as AdvancedSearchForm */}
+      <div className="relative max-w-lg mx-auto" style={{ minHeight: "480px" }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -603,7 +621,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </div>
                   )}
                   
-                  {/* Transaction Type - Amber/Orange for seller (Desktop) - text only, no icons */}
+                  {/* Transaction Type */}
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { v: "sale", l: "للبيع" },
@@ -612,10 +630,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       <button
                         key={t.v}
                         onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
-                        className={`py-4 rounded-xl border-2 text-center font-bold transition-all ${
+                        className={`py-3 rounded-xl border-2 text-center font-bold text-sm transition-all ${
                           data.transactionType === t.v 
                             ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" 
-                            : "border-border hover:border-amber-300 text-foreground"
+                            : "border-border text-foreground"
                         }`}
                         data-testid={`button-list-${t.v}`}
                       >
@@ -624,142 +642,185 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     ))}
                   </div>
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl font-bold bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-0">
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-0"
+                  >
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 1: Location */}
+              {/* Step 1: City */}
               {activeCard === 1 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* City Map with all markers */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block text-center">اختر المدينة من الخريطة</label>
-                      <div className="h-[200px] rounded-xl overflow-hidden border-2 border-border">
+                  <p className="text-center text-muted-foreground text-sm mb-2">
+                    اختر المدينة من الخريطة أو القائمة
+                  </p>
+                  
+                  {/* City Map */}
+                  <div className="h-[180px] rounded-xl overflow-hidden border border-border">
+                    <MapContainer
+                      center={[24.7136, 46.6753]}
+                      zoom={5}
+                      style={{ height: "100%", width: "100%" }}
+                      zoomControl={false}
+                    >
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      {saudiCities.map(city => (
+                        <SellerCityMarker
+                          key={city.name}
+                          city={city}
+                          isSelected={data.city === city.name}
+                          onSelect={handleCitySelect}
+                        />
+                      ))}
+                    </MapContainer>
+                  </div>
+                  
+                  {/* City Grid */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {saudiCities.map((city) => (
+                      <button
+                        key={city.name}
+                        onClick={() => handleCitySelect(city.name)}
+                        className={`py-2 px-2 rounded-xl border-2 text-xs font-bold transition-all ${
+                          data.city === city.name 
+                            ? "border-amber-500 bg-amber-500 text-white" 
+                            : "border-border hover:border-amber-300"
+                        }`}
+                        data-testid={`button-city-${city.name}`}
+                      >
+                        {city.name}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-1"
+                  >
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 2: District */}
+              {activeCard === 2 && (
+                <div className="space-y-4">
+                  {data.city ? (
+                    <>
+                      <p className="text-center text-muted-foreground text-sm mb-2">
+                        اختر الحي في {data.city}
+                      </p>
+                      
+                      {/* District Map */}
+                      <div className="h-[180px] rounded-xl overflow-hidden border border-border">
                         <MapContainer
-                          center={[24.7136, 46.6753]}
-                          zoom={5}
+                          center={mapCenter}
+                          zoom={12}
                           style={{ height: "100%", width: "100%" }}
-                          scrollWheelZoom={true}
+                          zoomControl={false}
                         >
                           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                          {saudiCities.map(city => (
-                            <SellerCityMarker
-                              key={city.name}
-                              city={city}
-                              isSelected={data.city === city.name}
-                              onSelect={handleCitySelect}
+                          <MapCenterUpdater center={mapCenter} zoom={12} />
+                          {availableDistricts.map(district => (
+                            <SellerDistrictMarker
+                              key={district.name}
+                              name={district.name}
+                              coords={{ lat: district.lat, lng: district.lng }}
+                              isSelected={data.district === district.name}
+                              onSelect={handleDistrictSelect}
                             />
                           ))}
+                          <LocationPicker 
+                            onLocationSelect={handleLocationSelect}
+                            currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
+                          />
                         </MapContainer>
                       </div>
-                    </div>
-                    
-                    {/* City List */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block text-center">أو اختر من القائمة</label>
-                      <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-1">
-                        {saudiCities.slice(0, 20).map((city) => (
+                      
+                      {/* District Grid */}
+                      <div className="grid grid-cols-3 gap-2 max-h-[120px] overflow-y-auto">
+                        {availableDistricts.map(district => (
                           <button
-                            key={city.name}
-                            onClick={() => handleCitySelect(city.name)}
-                            className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                              data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            key={district.name}
+                            onClick={() => handleDistrictSelect(district.name)}
+                            className={`py-2 px-2 rounded-lg text-xs font-medium transition-all ${
+                              data.district === district.name 
+                                ? "bg-amber-500 text-white" 
+                                : "bg-muted hover:bg-amber-100 dark:hover:bg-amber-900/30"
                             }`}
-                            data-testid={`button-list-city-${city.name}`}
+                            data-testid={`button-district-${district.name}`}
                           >
-                            {city.name}
+                            {district.name}
                           </button>
                         ))}
                       </div>
-                    </div>
-                  </div>
-                  
-                  {/* Districts Map and List - Shows when city is selected */}
-                  {data.city && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium block text-center">اختر الحي</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Districts Map */}
-                        <div>
-                          <div className="h-[180px] rounded-xl overflow-hidden border-2 border-border">
-                            <MapContainer
-                              center={mapCenter}
-                              zoom={12}
-                              style={{ height: "100%", width: "100%" }}
-                              scrollWheelZoom={true}
-                            >
-                              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                              <MapCenterUpdater center={mapCenter} zoom={12} />
-                              {/* Show all districts as markers */}
-                              {availableDistricts.map(district => (
-                                <SellerDistrictMarker
-                                  key={district.name}
-                                  name={district.name}
-                                  coords={{ lat: district.lat, lng: district.lng }}
-                                  isSelected={data.district === district.name}
-                                  onSelect={handleDistrictSelect}
-                                />
-                              ))}
-                              {/* Allow manual pin placement */}
-                              <LocationPicker 
-                                onLocationSelect={handleLocationSelect}
-                                currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
-                              />
-                            </MapContainer>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground text-center mt-1">انقر على الدائرة لاختيار الحي أو انقر في أي مكان لتحديد موقع دقيق</p>
-                        </div>
-                        
-                        {/* Districts List */}
-                        <div className="max-h-[200px] overflow-y-auto">
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {availableDistricts.map(district => (
-                              <button
-                                key={district.name}
-                                onClick={() => handleDistrictSelect(district.name)}
-                                className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition-all ${
-                                  data.district === district.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                                }`}
-                                data-testid={`button-list-district-${district.name}`}
-                              >
-                                {district.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
                       
                       {data.latitude && data.longitude && (
-                        <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Navigation className="h-3 w-3 text-amber-500" />
-                            <span>الموقع: {data.district || 'موقع مخصص'} ({data.latitude.toFixed(4)}, {data.longitude.toFixed(4)})</span>
-                          </div>
+                        <div className="flex items-center justify-between text-sm bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
+                          <span>{data.district || 'موقع مخصص'}</span>
                           <button 
                             onClick={() => setData(d => ({ ...d, district: "", latitude: null, longitude: null }))}
-                            className="text-xs text-red-500 hover:underline"
+                            className="text-red-500 text-xs"
                             data-testid="button-clear-location"
                           >
                             مسح
                           </button>
                         </div>
                       )}
-                    </div>
+                    </>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      اختر المدينة أولاً
+                    </p>
                   )}
-
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-1">
+                  
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-2"
+                  >
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 2: Property Details */}
-              {activeCard === 2 && (
+              {/* Step 3: Property Type */}
+              {activeCard === 3 && (
                 <div className="space-y-4">
-                  <label className="text-sm font-medium block text-center">نوع العقار</label>
+                  {/* Property Category */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { v: "residential", l: "سكني", icon: Home },
+                      { v: "commercial", l: "تجاري", icon: Building2 }
+                    ].map(cat => {
+                      const Icon = cat.icon;
+                      return (
+                        <button
+                          key={cat.v}
+                          onClick={() => setData(d => ({ ...d, propertyCategory: cat.v as "residential" | "commercial", propertyType: "" }))}
+                          className={`py-4 rounded-xl border-2 text-center transition-all flex flex-col items-center gap-2 ${
+                            data.propertyCategory === cat.v 
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" 
+                              : "border-border"
+                          }`}
+                          data-testid={`button-category-${cat.v}`}
+                        >
+                          <Icon className={`h-6 w-6 ${data.propertyCategory === cat.v ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <span className="text-sm font-bold">{cat.l}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Property Type */}
                   <div className="grid grid-cols-4 gap-3">
                     {propertyTypes.map((type) => {
                       const Icon = type.icon;
@@ -767,93 +828,171 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         <button
                           key={type.value}
                           onClick={() => setData(d => ({ ...d, propertyType: type.value }))}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            data.propertyType === type.value ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${
+                            data.propertyType === type.value 
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" 
+                              : "border-border"
                           }`}
-                          data-testid={`button-list-type-${type.value}`}
+                          data-testid={`button-type-${type.value}`}
                         >
-                          <Icon className={`h-7 w-7 mx-auto ${data.propertyType === type.value ? "text-amber-600" : "text-muted-foreground"}`} />
-                          <div className="text-sm font-medium mt-2">{type.label}</div>
+                          <Icon className={`h-6 w-6 mx-auto ${data.propertyType === type.value ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <div className="text-xs font-bold mt-2">{type.label}</div>
                         </button>
                       );
                     })}
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs font-medium mb-1 block text-center">الغرف</label>
-                      <div className="flex justify-center gap-1">
-                        {["1", "2", "3", "4", "5+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setData(d => ({ ...d, rooms: n }))}
-                            className={`w-9 h-9 rounded-full border-2 text-xs font-bold transition-all ${
-                              data.rooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                            }`}
-                            data-testid={`button-list-rooms-${n}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium mb-1 block text-center">دورات المياه</label>
-                      <div className="flex justify-center gap-1">
-                        {["1", "2", "3", "4+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setData(d => ({ ...d, bathrooms: n }))}
-                            className={`w-9 h-9 rounded-full border-2 text-xs font-bold transition-all ${
-                              data.bathrooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                            }`}
-                            data-testid={`button-list-bathrooms-${n}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium mb-1 block text-center">المساحة م²</label>
-                      <Input
-                        type="number"
-                        placeholder="150"
-                        value={data.area}
-                        onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
-                        className="h-9 text-center rounded-lg text-sm"
-                        data-testid="input-area"
-                      />
-                    </div>
-                  </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-2">
+                  
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-3"
+                  >
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 3: Price & Description */}
-              {activeCard === 3 && (
+              {/* Step 4: Property Condition */}
+              {activeCard === 4 && (
                 <div className="space-y-4">
+                  <p className="text-center text-muted-foreground text-sm mb-2">
+                    ما هي حالة العقار؟
+                  </p>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { v: "new", l: "جديد", icon: CheckCircle2 },
+                      { v: "used", l: "مستعمل", icon: Clock },
+                      { v: "under_construction", l: "تحت الإنشاء", icon: Hammer }
+                    ].map(cond => {
+                      const Icon = cond.icon;
+                      return (
+                        <button
+                          key={cond.v}
+                          onClick={() => setData(d => ({ ...d, propertyCondition: cond.v as "new" | "used" | "under_construction" }))}
+                          className={`py-4 rounded-xl border-2 text-center transition-all flex flex-col items-center gap-2 ${
+                            data.propertyCondition === cond.v 
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" 
+                              : "border-border"
+                          }`}
+                          data-testid={`button-condition-${cond.v}`}
+                        >
+                          <Icon className={`h-6 w-6 ${data.propertyCondition === cond.v ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <span className="text-sm font-bold">{cond.l}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-4"
+                  >
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 5: Specifications */}
+              {activeCard === 5 && (
+                <div className="space-y-4">
+                  {/* Rooms */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">السعر (ريال)</label>
+                    <label className="text-sm font-medium mb-2 block text-center">عدد الغرف</label>
+                    <div className="flex justify-center gap-2">
+                      {["1", "2", "3", "4", "5", "6+"].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setData(d => ({ ...d, rooms: n }))}
+                          className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
+                            data.rooms === n 
+                              ? "border-amber-500 bg-amber-500 text-white" 
+                              : "border-border"
+                          }`}
+                          data-testid={`button-rooms-${n}`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Bathrooms */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-center">عدد دورات المياه</label>
+                    <div className="flex justify-center gap-2">
+                      {["1", "2", "3", "4", "5+"].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setData(d => ({ ...d, bathrooms: n }))}
+                          className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
+                            data.bathrooms === n 
+                              ? "border-amber-500 bg-amber-500 text-white" 
+                              : "border-border"
+                          }`}
+                          data-testid={`button-bathrooms-${n}`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Area */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-center">المساحة (م²)</label>
                     <Input
                       type="number"
-                      placeholder={data.transactionType === "rent" ? "الإيجار الشهري" : "سعر البيع"}
+                      placeholder="مثال: 200"
+                      value={data.area}
+                      onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
+                      className="h-12 text-center rounded-xl text-lg"
+                      data-testid="input-area"
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={goNext} 
+                    disabled={!canProceed()} 
+                    className="w-full h-12 rounded-xl text-base font-bold bg-amber-500 hover:bg-amber-600"
+                    data-testid="button-next-step-5"
+                  >
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 6: Price & Description */}
+              {activeCard === 6 && (
+                <div className="space-y-4">
+                  {/* Price */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block text-center">السعر بالريال</label>
+                    <Input
+                      type="number"
+                      placeholder="مثال: 500000"
                       value={data.price}
                       onChange={(e) => setData(d => ({ ...d, price: e.target.value }))}
-                      className="h-12 text-center rounded-xl text-lg font-bold"
+                      className="h-14 text-center rounded-xl text-xl font-bold"
                       data-testid="input-price"
                     />
                   </div>
+                  
+                  {/* Features */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">المميزات</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="text-sm font-medium mb-2 block text-center">المميزات</label>
+                    <div className="flex flex-wrap justify-center gap-2">
                       {featuresList.map((feature) => (
                         <button
                           key={feature}
                           onClick={() => toggleFeature(feature)}
-                          className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                            data.features.includes(feature) ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                          className={`px-3 py-1.5 rounded-full border-2 text-xs font-medium transition-all ${
+                            data.features.includes(feature) 
+                              ? "border-amber-500 bg-amber-500 text-white" 
+                              : "border-border"
                           }`}
                           data-testid={`button-feature-${feature}`}
                         >
@@ -862,10 +1001,12 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       ))}
                     </div>
                   </div>
+                  
+                  {/* Description */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">وصف إضافي (اختياري)</label>
+                    <label className="text-sm font-medium mb-2 block text-center">وصف إضافي (اختياري)</label>
                     <Textarea
-                      placeholder="أضف تفاصيل إضافية عن العقار..."
+                      placeholder="أضف أي تفاصيل إضافية عن العقار..."
                       value={data.description}
                       onChange={(e) => setData(d => ({ ...d, description: e.target.value }))}
                       className="rounded-xl resize-none"
@@ -873,7 +1014,13 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       data-testid="input-description"
                     />
                   </div>
-                  <Button onClick={handleSubmit} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-amber-500 to-orange-500" data-testid="button-submit-property">
+                  
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={!canProceed()} 
+                    className="w-full h-14 rounded-xl text-lg font-bold gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                    data-testid="button-submit-property"
+                  >
                     <Camera className="h-5 w-5" />
                     اعرض عقارك
                   </Button>
@@ -889,83 +1036,47 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
           return (
             <div
               key={card.id}
-              className="absolute inset-x-2 pointer-events-none"
+              className="absolute inset-x-1 pointer-events-none"
               style={{
-                top: `${(activeCard * 44) + 340 + (idx * 24)}px`,
+                top: `${(activeCard * 44) + 320 + (idx * 20)}px`,
                 zIndex: -idx - 1,
-                opacity: 0.5 - (idx * 0.15),
+                opacity: 0.4 - (idx * 0.1),
               }}
             >
-              <div className="bg-muted/60 rounded-xl p-3 flex items-center gap-3 border border-border/40">
-                <div className={`w-9 h-9 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
-                  <Icon className="w-5 h-5 text-muted-foreground" />
+              <div className="bg-muted/50 rounded-2xl p-3 flex items-center gap-3 border border-border/30">
+                <div className={`w-8 h-8 rounded-xl ${card.lightColor} flex items-center justify-center opacity-60`}>
+                  <Icon className="w-4 h-4 text-muted-foreground" />
                 </div>
-                <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+                <span className="text-sm text-muted-foreground">{card.title}</span>
               </div>
             </div>
           );
         })}
-      </div>
-
-      {/* Chat with Consultant - Inside Form (Desktop) - Matches screenshot exactly */}
-      <div className="mt-6 pt-4 max-w-lg mx-auto">
-        <div className="flex items-center gap-2">
-          {/* Text Input - Left side */}
-          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/30">
-            <input
-              type="text"
-              dir="rtl"
-              placeholder="تحدث مع مستشار المبيعات"
-              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              data-testid="input-chat-consultant-seller-desktop"
-            />
-          </div>
-          
-          {/* Mic Button - Middle */}
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
-            data-testid="button-mic-consultant-seller-desktop"
-          >
-            <Mic className="h-5 w-5 text-green-600" />
-          </Button>
-          
-          {/* Send Button - Right side (Green) */}
-          <Button
-            size="icon"
-            variant="default"
-            className="h-12 w-12 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
-            data-testid="button-send-consultant-seller-desktop"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </div>
       </div>
     </div>
   );
 
   // ==================== MOBILE VERSION ====================
   const MobileForm = () => (
-    <div className="md:hidden relative px-3 py-3">
+    <div className="md:hidden p-4">
       {/* Match Index - Shows after step 1 */}
       {activeCard >= 1 && (
-        <div className="mb-2 px-1">
+        <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium">مؤشر التطابق</span>
-            <span className="text-xs font-bold text-amber-600">{matchIndexScore}%</span>
+            <span className="text-xs font-bold text-amber-600">{reliabilityScore}%</span>
           </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
-              style={{ width: `${matchIndexScore}%` }}
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+              style={{ width: `${reliabilityScore}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Stacked Cards - Dynamic height */}
-      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 28) + 240}px` }}>
+      {/* Mobile Stacked Cards Container */}
+      <div className="relative" style={{ minHeight: "380px" }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -994,10 +1105,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         >
           <div className="bg-card border rounded-xl shadow-md">
             
-            {/* Card Header - Minimal like design */}
+            {/* Card Header */}
             <div className="flex items-center justify-between p-4">
               <span className="text-2xl font-bold text-muted-foreground/40">{activeCard + 1}</span>
-              <div className={`w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center`}>
+              <div className={`w-10 h-10 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
                 {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-amber-600" />; })()}
               </div>
             </div>
@@ -1060,23 +1171,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     )}
                   </div>
                   
-                  {/* Auto-registration status */}
-                  {isAutoRegistering && (
-                    <div className="flex items-center justify-center gap-1.5 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
-                      <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
-                    </div>
-                  )}
-                  
-                  {autoRegisterResult && (
-                    <div className={`p-2.5 rounded-lg ${autoRegisterResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
-                      <p className={`text-xs font-medium ${autoRegisterResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                        {autoRegisterResult.message}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {/* Transaction Type - Amber/Orange for seller (text only, no icons) */}
+                  {/* Transaction Type */}
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { v: "sale", l: "للبيع" },
@@ -1103,10 +1198,9 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                 </div>
               )}
 
-              {/* Step 1: Location */}
+              {/* Step 1: City */}
               {activeCard === 1 && (
                 <div className="space-y-2">
-                  {/* City Map with markers - Mobile */}
                   <div className="h-[100px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[24.7136, 46.6753]}
@@ -1126,7 +1220,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </MapContainer>
                   </div>
                   
-                  {/* City Grid - Mobile */}
                   <div className="grid grid-cols-4 gap-1.5 max-h-[60px] overflow-y-auto">
                     {saudiCities.slice(0, 12).map((city) => (
                       <button
@@ -1142,10 +1235,18 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     ))}
                   </div>
                   
-                  {/* Districts Map and List - Mobile */}
-                  {data.city && (
-                    <div className="space-y-1">
-                      <p className="text-[10px] text-center font-medium">اختر الحي من الخريطة أو القائمة</p>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-1">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 2: District */}
+              {activeCard === 2 && (
+                <div className="space-y-2">
+                  {data.city ? (
+                    <>
+                      <p className="text-[10px] text-center font-medium">اختر الحي في {data.city}</p>
                       <div className="h-[100px] rounded-lg overflow-hidden border border-border">
                         <MapContainer
                           center={mapCenter}
@@ -1171,7 +1272,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         </MapContainer>
                       </div>
                       
-                      {/* Districts Grid - Mobile */}
                       <div className="grid grid-cols-3 gap-1 max-h-[60px] overflow-y-auto">
                         {availableDistricts.slice(0, 9).map(district => (
                           <button
@@ -1186,31 +1286,42 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                           </button>
                         ))}
                       </div>
-                      
-                      {data.latitude && data.longitude && (
-                        <div className="flex items-center justify-between text-[10px] bg-amber-50 dark:bg-amber-900/20 rounded p-1">
-                          <span>{data.district || 'موقع مخصص'}: {data.latitude.toFixed(4)}</span>
-                          <button 
-                            onClick={() => setData(d => ({ ...d, district: "", latitude: null, longitude: null }))}
-                            className="text-red-500"
-                            data-testid="button-clear-location-mobile"
-                          >
-                            مسح
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    </>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4 text-xs">
+                      اختر المدينة أولاً
+                    </p>
                   )}
-
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-1">
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-2">
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 2: Property */}
-              {activeCard === 2 && (
+              {/* Step 3: Property Type */}
+              {activeCard === 3 && (
                 <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { v: "residential", l: "سكني" },
+                      { v: "commercial", l: "تجاري" }
+                    ].map(cat => (
+                      <button
+                        key={cat.v}
+                        onClick={() => setData(d => ({ ...d, propertyCategory: cat.v as "residential" | "commercial", propertyType: "" }))}
+                        className={`py-2 rounded-lg border-2 text-center text-xs font-bold transition-all ${
+                          data.propertyCategory === cat.v 
+                            ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" 
+                            : "border-border"
+                        }`}
+                        data-testid={`button-category-${cat.v}-mobile`}
+                      >
+                        {cat.l}
+                      </button>
+                    ))}
+                  </div>
+                  
                   <div className="grid grid-cols-4 gap-1.5">
                     {propertyTypes.map((type) => {
                       const Icon = type.icon;
@@ -1229,6 +1340,50 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       );
                     })}
                   </div>
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-3">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 4: Property Condition */}
+              {activeCard === 4 && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { v: "new", l: "جديد", icon: CheckCircle2 },
+                      { v: "used", l: "مستعمل", icon: Clock },
+                      { v: "under_construction", l: "تحت الإنشاء", icon: Hammer }
+                    ].map(cond => {
+                      const Icon = cond.icon;
+                      return (
+                        <button
+                          key={cond.v}
+                          onClick={() => setData(d => ({ ...d, propertyCondition: cond.v as "new" | "used" | "under_construction" }))}
+                          className={`py-3 rounded-lg border-2 text-center transition-all flex flex-col items-center gap-1 ${
+                            data.propertyCondition === cond.v 
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" 
+                              : "border-border"
+                          }`}
+                          data-testid={`button-condition-${cond.v}-mobile`}
+                        >
+                          <Icon className={`h-5 w-5 ${data.propertyCondition === cond.v ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <span className="text-[10px] font-bold">{cond.l}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-4">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 5: Specifications */}
+              {activeCard === 5 && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <div className="text-[10px] text-center mb-1">الغرف</div>
@@ -1247,23 +1402,42 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         ))}
                       </div>
                     </div>
-                    <Input
-                      type="number"
-                      placeholder="المساحة"
-                      value={data.area}
-                      onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
-                      className="w-20 h-8 text-center text-xs rounded-lg"
-                      data-testid="input-area-mobile"
-                    />
+                    <div className="flex-1">
+                      <div className="text-[10px] text-center mb-1">دورات المياه</div>
+                      <div className="flex justify-center gap-1">
+                        {["1", "2", "3", "4+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setData(d => ({ ...d, bathrooms: n }))}
+                            className={`w-7 h-7 rounded-full border text-[10px] font-bold transition-all ${
+                              data.bathrooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            }`}
+                            data-testid={`button-list-bathrooms-${n}-mobile`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-2">
+                  
+                  <Input
+                    type="number"
+                    placeholder="المساحة (م²)"
+                    value={data.area}
+                    onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
+                    className="h-10 text-center text-sm rounded-lg"
+                    data-testid="input-area-mobile"
+                  />
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-5">
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 3: Price */}
-              {activeCard === 3 && (
+              {/* Step 6: Price */}
+              {activeCard === 6 && (
                 <div className="space-y-2">
                   <Input
                     type="number"
@@ -1319,42 +1493,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
             </div>
           );
         })}
-      </div>
-
-      {/* Chat with Consultant - Inside Form (Mobile) - Matches screenshot exactly */}
-      <div className="mt-12 pt-6 border-t border-border/40">
-        <div className="flex items-center gap-2">
-          {/* Text Input - Left side */}
-          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3 border border-border/30">
-            <input
-              type="text"
-              dir="rtl"
-              placeholder="تحدث مع مستشار المبيعات"
-              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              data-testid="input-chat-consultant-seller-mobile"
-            />
-          </div>
-          
-          {/* Mic Button - Middle */}
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
-            data-testid="button-mic-consultant-seller-mobile"
-          >
-            <Mic className="h-5 w-5 text-green-600" />
-          </Button>
-          
-          {/* Send Button - Right side (Green) */}
-          <Button
-            size="icon"
-            variant="default"
-            className="h-11 w-11 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
-            data-testid="button-send-consultant-seller-mobile"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </div>
       </div>
     </div>
   );
