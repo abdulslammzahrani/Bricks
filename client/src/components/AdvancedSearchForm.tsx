@@ -1410,20 +1410,20 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               {/* Step 4: Property Type */}
               {activeCard === 4 && (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-4 gap-1">
+                  <div className="grid grid-cols-4 gap-2">
                     {propertyTypes.map((type) => {
                       const Icon = type.icon;
                       return (
                         <button
                           key={type.value}
                           onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                          className={`p-1.5 rounded-lg border text-center transition-all ${
-                            filters.propertyType === type.value ? "border-primary bg-primary/10" : "border-border"
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${
+                            filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
                           }`}
                           data-testid={`button-type-${type.value}`}
                         >
-                          <Icon className={`h-4 w-4 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="text-[9px] font-medium mt-0.5">{type.label}</div>
+                          <Icon className={`h-7 w-7 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="text-xs font-medium mt-1">{type.label}</div>
                         </button>
                       );
                     })}
