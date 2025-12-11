@@ -2019,39 +2019,40 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Buyer Search Form */}
-            {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
-              <div>
-                <AdvancedSearchForm 
-                  onSearch={handleSearchFormSearch}
-                  onSwitchToChat={handleSwitchToChat}
-                />
-              </div>
-            )}
+            {/* Forms Container - Fixed height to prevent page jump */}
+            {conversation.length === 0 && !pendingConfirmation && (
+              <div style={{ minHeight: "600px" }}>
+                {/* Buyer Search Form */}
+                {mode === "buyer" && showSearchForm && (
+                  <AdvancedSearchForm 
+                    onSearch={handleSearchFormSearch}
+                    onSwitchToChat={handleSwitchToChat}
+                  />
+                )}
 
-            {/* Seller Property Form */}
-            {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
-              <div>
-                <ListPropertyForm 
-                  onSubmit={(propertyData) => {
-                    toast({
-                      title: "تم استلام طلبك",
-                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                    });
-                    setIsComplete(true);
-                    setExtractedData({
-                      name: propertyData.ownerName,
-                      phone: propertyData.ownerPhone,
-                      city: propertyData.city,
-                      district: propertyData.district,
-                      propertyType: propertyData.propertyType,
-                      transactionType: propertyData.transactionType,
-                      rooms: propertyData.rooms,
-                      area: propertyData.area,
-                      price: propertyData.price,
-                    });
-                  }}
-                />
+                {/* Seller Property Form */}
+                {mode === "seller" && (
+                  <ListPropertyForm 
+                    onSubmit={(propertyData) => {
+                      toast({
+                        title: "تم استلام طلبك",
+                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                      });
+                      setIsComplete(true);
+                      setExtractedData({
+                        name: propertyData.ownerName,
+                        phone: propertyData.ownerPhone,
+                        city: propertyData.city,
+                        district: propertyData.district,
+                        propertyType: propertyData.propertyType,
+                        transactionType: propertyData.transactionType,
+                        rooms: propertyData.rooms,
+                        area: propertyData.area,
+                        price: propertyData.price,
+                      });
+                    }}
+                  />
+                )}
               </div>
             )}
 
