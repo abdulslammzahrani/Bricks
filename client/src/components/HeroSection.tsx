@@ -1984,34 +1984,38 @@ export default function HeroSection() {
             {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Live Stats and Map Section - First */}
-                <div className="bg-muted/30 p-3">
-                  {/* Stats Row */}
-                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
-                        {requestsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>طلب</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {dealsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>صفقة</span>
-                    </div>
+                {/* Stats Bar - Compact Top */}
+                <div className="bg-primary/5 px-3 py-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-b">
+                  <div className="flex items-center gap-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                    <span>يتصفحون</span>
                   </div>
-                  
+                  <div className="h-3 w-px bg-border"></div>
+                  <div className="flex items-center gap-1">
+                    <FileText className={`h-3 w-3 text-amber-500 ${requestsAnimating ? 'scale-125' : ''}`} />
+                    <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                    <span>طلب</span>
+                  </div>
+                  <div className="h-3 w-px bg-border"></div>
+                  <div className="flex items-center gap-1">
+                    <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
+                    <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
+                    <span>صفقة</span>
+                  </div>
+                </div>
+                
+                {/* Search Form - Main Focus */}
+                <AdvancedSearchForm 
+                  onSearch={handleSearchFormSearch}
+                  onSwitchToChat={handleSwitchToChat}
+                />
+                
+                {/* Map and Examples Section */}
+                <div className="border-t bg-muted/20 p-3">
                   {/* Typewriter Example */}
                   <TypewriterBanner
                     segments={exampleSegments}
@@ -2024,21 +2028,14 @@ export default function HeroSection() {
                   {/* Map */}
                   <SaudiMap 
                     markers={mapMarkers} 
-                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                    className="h-28 md:h-36 rounded-lg border border-border/30 shadow-sm"
                   />
                 </div>
                 
-                {/* Search Form - Second */}
-                <div className="border-t">
-                  <AdvancedSearchForm 
-                    onSearch={handleSearchFormSearch}
-                    onSwitchToChat={handleSwitchToChat}
-                  />
-                </div>
-                
-                {/* Chat Input with Mic and Send - Bottom */}
-                <div className="border-t bg-muted/30 p-3">
-                  <div className="flex items-center gap-2 bg-card border rounded-full px-3 py-2">
+                {/* Chat Input - Alternative */}
+                <div className="border-t bg-card p-3">
+                  <p className="text-[10px] text-muted-foreground text-center mb-2">أو تحدث مع مستشار المبيعات</p>
+                  <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
                     <Button
                       size="icon"
                       onClick={() => {
@@ -2076,7 +2073,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder="تحدث مع مستشار المبيعات"
+                      placeholder="اكتب رسالتك هنا..."
                       className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
                       data-testid="input-chat-form"
                     />
@@ -2088,34 +2085,54 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Live Stats and Map Section for Seller - First */}
-                <div className="bg-muted/30 p-3">
-                  {/* Stats Row */}
-                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Building2 className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {requestsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>عقار</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {dealsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>صفقة</span>
-                    </div>
+                {/* Stats Bar - Compact Top */}
+                <div className="bg-green-500/5 px-3 py-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-b">
+                  <div className="flex items-center gap-1">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                    <span>يتصفحون</span>
                   </div>
-                  
+                  <div className="h-3 w-px bg-border"></div>
+                  <div className="flex items-center gap-1">
+                    <Building2 className={`h-3 w-3 text-green-500 ${requestsAnimating ? 'scale-125' : ''}`} />
+                    <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                    <span>عقار</span>
+                  </div>
+                  <div className="h-3 w-px bg-border"></div>
+                  <div className="flex items-center gap-1">
+                    <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
+                    <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
+                    <span>صفقة</span>
+                  </div>
+                </div>
+                
+                {/* Property Form - Main Focus */}
+                <ListPropertyForm 
+                  onSubmit={(propertyData) => {
+                    toast({
+                      title: "تم استلام طلبك",
+                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                    });
+                    setIsComplete(true);
+                    setExtractedData({
+                      name: propertyData.ownerName,
+                      phone: propertyData.ownerPhone,
+                      city: propertyData.city,
+                      district: propertyData.district,
+                      propertyType: propertyData.propertyType,
+                      transactionType: propertyData.transactionType,
+                      rooms: propertyData.rooms,
+                      area: propertyData.area,
+                      price: propertyData.price,
+                    });
+                  }}
+                />
+                
+                {/* Map and Examples Section */}
+                <div className="border-t bg-muted/20 p-3">
                   {/* Typewriter Example for Seller */}
                   <TypewriterBanner
                     segments={exampleSegments}
@@ -2128,37 +2145,14 @@ export default function HeroSection() {
                   {/* Map */}
                   <SaudiMap 
                     markers={mapMarkers} 
-                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                    className="h-28 md:h-36 rounded-lg border border-border/30 shadow-sm"
                   />
                 </div>
                 
-                {/* Property Form - Second */}
-                <div className="border-t">
-                  <ListPropertyForm 
-                    onSubmit={(propertyData) => {
-                      toast({
-                        title: "تم استلام طلبك",
-                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                      });
-                      setIsComplete(true);
-                      setExtractedData({
-                        name: propertyData.ownerName,
-                        phone: propertyData.ownerPhone,
-                        city: propertyData.city,
-                        district: propertyData.district,
-                        propertyType: propertyData.propertyType,
-                        transactionType: propertyData.transactionType,
-                        rooms: propertyData.rooms,
-                        area: propertyData.area,
-                        price: propertyData.price,
-                      });
-                    }}
-                  />
-                </div>
-                
-                {/* Chat Input with Mic and Send - Bottom */}
-                <div className="border-t bg-muted/30 p-3">
-                  <div className="flex items-center gap-2 bg-card border rounded-full px-3 py-2">
+                {/* Chat Input - Alternative */}
+                <div className="border-t bg-card p-3">
+                  <p className="text-[10px] text-muted-foreground text-center mb-2">أو تحدث مع مستشار العقارات</p>
+                  <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
                     <Button
                       size="icon"
                       onClick={() => {
@@ -2194,7 +2188,7 @@ export default function HeroSection() {
                           handleSubmit();
                         }
                       }}
-                      placeholder="تحدث مع مستشار العقارات"
+                      placeholder="اكتب رسالتك هنا..."
                       className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
                       data-testid="input-chat-seller-form"
                     />
