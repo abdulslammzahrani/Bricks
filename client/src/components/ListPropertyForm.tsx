@@ -2,18 +2,36 @@ import { useState, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import { 
   MapPin, User, Home, Building2, 
-  Check, Phone, DollarSign, ChevronUp, ChevronDown,
-  Building, Warehouse, LandPlot, Ruler, Mail,
-  Send, Navigation
+  Check, Phone, Camera, DollarSign,
+  Building, Warehouse, LandPlot, Ruler, BedDouble,
+  Send, MessageCircle, Navigation, Target
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+interface PropertyData {
+  ownerName: string;
+  ownerPhone: string;
+  transactionType: "sale" | "rent";
+  propertyCategory: "residential" | "commercial";
+  city: string;
+  district: string;
+  latitude: number | null;
+  longitude: number | null;
+  propertyType: string;
+  rooms: string;
+  bathrooms: string;
+  area: string;
+  price: string;
+  description: string;
+  features: string[];
+}
+
+// Custom marker icon for pin location
 const pinIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -24,7 +42,8 @@ const pinIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-function LocationPinPicker({ 
+// Map click handler for placing pin
+function LocationPicker({ 
   onLocationSelect, 
   currentPosition 
 }: { 
@@ -42,54 +61,42 @@ function LocationPinPicker({
   ) : null;
 }
 
+// Map center changer
 function MapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   map.setView(center, zoom, { animate: true });
   return null;
 }
 
-interface PropertyData {
-  ownerName: string;
-  ownerPhone: string;
-  ownerEmail: string;
-  transactionType: "sale" | "rent";
-  propertyCategory: "residential" | "commercial";
-  city: string;
-  district: string;
-  latitude: number | null;
-  longitude: number | null;
-  propertyType: string;
-  propertyCondition: "new" | "used" | "under_construction" | "";
-  rooms: string;
-  bathrooms: string;
-  area: string;
-  price: string;
-  description: string;
-}
+const propertyOptions = {
+  residential: [
+    { value: "apartment", label: "شقة", icon: Building },
+    { value: "villa", label: "فيلا", icon: Home },
+    { value: "floor", label: "دور", icon: Building2 },
+    { value: "land", label: "أرض", icon: LandPlot },
+  ],
+  commercial: [
+    { value: "office", label: "مكتب", icon: Building },
+    { value: "warehouse", label: "مستودع", icon: Warehouse },
+    { value: "shop", label: "محل", icon: Building2 },
+    { value: "land", label: "أرض تجارية", icon: LandPlot },
+  ],
+};
 
-function validateSaudiPhone(phone: string): { isValid: boolean; error: string } {
-  if (!phone.trim()) return { isValid: false, error: "" };
-  const phoneRegex = /^05\d{8}$/;
-  if (!phoneRegex.test(phone)) {
-    return { isValid: false, error: "رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام" };
-  }
-  return { isValid: true, error: "" };
-}
+const featuresList = [
+  "مصعد", "موقف سيارات", "حديقة", "مسبح", "غرفة خادمة", "غرفة سائق", "مكيفات", "مطبخ مجهز"
+];
 
 interface ListPropertyFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: PropertyData) => void;
 }
 
 export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
   const [activeCard, setActiveCard] = useState(0);
-  const [phoneError, setPhoneError] = useState("");
-  const [citySearch, setCitySearch] = useState("");
-  const [districtSearch, setDistrictSearch] = useState("");
-  
-  const [formData, setFormData] = useState<PropertyData>({
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [data, setData] = useState<PropertyData>({
     ownerName: "",
     ownerPhone: "",
-    ownerEmail: "",
     transactionType: "sale",
     propertyCategory: "residential",
     city: "",
@@ -97,544 +104,829 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     latitude: null,
     longitude: null,
     propertyType: "",
-    propertyCondition: "",
     rooms: "",
     bathrooms: "",
     area: "",
     price: "",
-    description: ""
+    description: "",
+    features: [],
   });
 
+  // Get map center based on selected city
+  const mapCenter = useMemo<[number, number]>(() => {
+    if (data.latitude && data.longitude) {
+      return [data.latitude, data.longitude];
+    }
+    if (data.city) {
+      const city = saudiCities.find(c => c.name === data.city);
+      if (city) {
+        return [city.coordinates.lat, city.coordinates.lng];
+      }
+    }
+    return [24.7136, 46.6753]; // Default: Riyadh
+  }, [data.city, data.latitude, data.longitude]);
+
+  // Handle location selection from map click
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setData(d => ({ ...d, latitude: lat, longitude: lng }));
+  };
+
+  const propertyTypes = propertyOptions[data.propertyCategory];
+  const totalCards = 4;
+  const progress = ((activeCard) / totalCards) * 100;
+
   const cards = [
-    { id: "personal", title: "بيانات المالك", icon: User, color: "bg-green-600", lightColor: "bg-green-100" },
-    { id: "type", title: "نوع العقار", icon: Home, color: "bg-emerald-600", lightColor: "bg-emerald-100" },
-    { id: "location", title: "الموقع", icon: MapPin, color: "bg-teal-600", lightColor: "bg-teal-100" },
-    { id: "specs", title: "المواصفات", icon: Building2, color: "bg-green-700", lightColor: "bg-green-100" },
-    { id: "price", title: "السعر والوصف", icon: DollarSign, color: "bg-emerald-700", lightColor: "bg-emerald-100" },
+    { id: 0, icon: User, title: "بيانات المالك", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
+    { id: 1, icon: MapPin, title: "الموقع", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
+    { id: 2, icon: Home, title: "تفاصيل العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
+    { id: 3, icon: DollarSign, title: "السعر والوصف", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
   ];
 
-  const residentialTypes = [
-    { id: "apartment", label: "شقة", icon: Building },
-    { id: "villa", label: "فيلا", icon: Home },
-    { id: "duplex", label: "دوبلكس", icon: Building2 },
-    { id: "floor", label: "دور", icon: Building },
-    { id: "land", label: "أرض", icon: LandPlot },
-  ];
-
-  const commercialTypes = [
-    { id: "office", label: "مكتب", icon: Building },
-    { id: "shop", label: "محل", icon: Warehouse },
-    { id: "warehouse", label: "مستودع", icon: Warehouse },
-    { id: "building", label: "عمارة", icon: Building2 },
-    { id: "land", label: "أرض تجارية", icon: LandPlot },
-  ];
-
-  const propertyConditions = [
-    { id: "new", label: "جديد" },
-    { id: "used", label: "مستخدم" },
-    { id: "under_construction", label: "تحت الإنشاء" },
-  ];
-
-  const selectedCity = saudiCities.find(c => c.name === formData.city);
-  const filteredCities = useMemo(() => saudiCities.filter(c => 
-    c.name.includes(citySearch) || c.nameEn.toLowerCase().includes(citySearch.toLowerCase())
-  ), [citySearch]);
-  const filteredDistricts = useMemo(() => selectedCity?.neighborhoods.filter(n =>
-    n.name.includes(districtSearch)
-  ) || [], [selectedCity, districtSearch]);
-
-  const propertyTypes = formData.propertyCategory === "residential" ? residentialTypes : commercialTypes;
-
-  const canProceed = () => {
-    switch (activeCard) {
-      case 0: return formData.ownerName.trim() && formData.ownerPhone.trim() && !phoneError;
-      case 1: return formData.propertyType;
-      case 2: return formData.city && formData.district;
-      case 3: return formData.area;
-      case 4: return formData.price;
-      default: return false;
+  const goNext = () => {
+    if (activeCard < totalCards - 1 && !isAnimating) {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setActiveCard(prev => prev + 1);
+        setIsAnimating(false);
+      }, 150);
     }
   };
 
-  const handleNext = () => {
-    if (activeCard < cards.length - 1 && canProceed()) {
-      setActiveCard(activeCard + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (activeCard > 0) {
-      setActiveCard(activeCard - 1);
+  const goBack = (index: number) => {
+    if (index < activeCard && !isAnimating) {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setActiveCard(index);
+        setIsAnimating(false);
+      }, 100);
     }
   };
 
   const handleSubmit = () => {
-    onSubmit({ ...formData, type: "listing" });
+    onSubmit(data);
   };
 
-  const currentCard = cards[activeCard];
-  const Icon = currentCard.icon;
+  const canProceed = () => {
+    switch (activeCard) {
+      case 0: return data.ownerName.trim() !== "" && data.ownerPhone.trim() !== "";
+      case 1: return data.city !== "";
+      case 2: return data.propertyType !== "";
+      case 3: return data.price !== "";
+      default: return true;
+    }
+  };
 
-  return (
-    <div className="p-4 relative">
-      {/* Progress indicator */}
-      <div className="flex items-center justify-center gap-1 mb-4">
-        {cards.map((card, idx) => (
-          <div
-            key={card.id}
-            className={`h-1.5 rounded-full transition-all ${
-              idx === activeCard ? "w-8 bg-green-600" : 
-              idx < activeCard ? "w-4 bg-green-600/60" : "w-4 bg-muted"
-            }`}
-          />
-        ))}
-      </div>
+  const toggleFeature = (feature: string) => {
+    setData(d => ({
+      ...d,
+      features: d.features.includes(feature) 
+        ? d.features.filter(f => f !== feature)
+        : [...d.features, feature]
+    }));
+  };
 
-      {/* Cards Stack */}
-      <div className="relative" style={{ minHeight: "480px" }}>
-        {/* Previous cards preview */}
-        {activeCard > 0 && (
-          <div 
-            className="absolute inset-x-2 -top-2 cursor-pointer"
-            onClick={handlePrev}
-          >
-            <div className="bg-muted/60 rounded-t-lg p-2 flex items-center justify-center gap-2 border-x border-t">
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{cards[activeCard - 1].title}</span>
-            </div>
+  // Calculate match index score based on completed data
+  const matchIndexScore = (() => {
+    let score = 0;
+    // Step 1: Owner data (25%)
+    if (data.ownerName.trim()) score += 12;
+    if (data.ownerPhone.trim().length >= 10) score += 13;
+    // Step 2: Location (25%)
+    if (data.city) score += 15;
+    if (data.district) score += 10;
+    // Step 3: Property details (25%)
+    if (data.propertyType) score += 10;
+    if (data.rooms) score += 5;
+    if (data.bathrooms) score += 5;
+    if (data.area) score += 5;
+    // Step 4: Price & description (25%)
+    if (data.price) score += 15;
+    if (data.description.trim()) score += 10;
+    return Math.min(100, score);
+  })();
+
+  // ==================== DESKTOP VERSION ====================
+  const DesktopForm = () => (
+    <div className="hidden md:block p-6">
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-6 max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">مؤشر التطابق</span>
+            <span className="text-sm font-bold text-amber-600">{matchIndexScore}%</span>
           </div>
-        )}
+          <div className="h-3 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+              style={{ width: `${matchIndexScore}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            كلما أكملت بياناتك، زادت فرص التطابق
+          </p>
+        </div>
+      )}
+
+      {/* Desktop Stacked Cards */}
+      <div className="relative max-w-lg mx-auto" style={{ minHeight: "420px" }}>
+        
+        {/* Completed Cards */}
+        {cards.slice(0, activeCard).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              onClick={() => goBack(card.id)}
+              className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+              style={{ top: `${idx * 44}px`, zIndex: idx + 1 }}
+            >
+              <div className={`${card.lightColor} rounded-2xl p-4 flex items-center gap-4 border-2 border-amber-500/30 shadow-sm`}>
+                <div className={`w-10 h-10 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
+                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
+                </div>
+                <span className="text-sm font-bold truncate flex-1">{card.title}</span>
+                <span className="text-xs text-amber-600 font-medium">تعديل</span>
+              </div>
+            </div>
+          );
+        })}
 
         {/* Active Card */}
-        <Card className={`relative z-10 overflow-hidden ${activeCard > 0 ? "mt-6" : ""}`}>
-          {/* Card Header */}
-          <div className={`${currentCard.color} text-white p-4`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Icon className="w-5 h-5" />
+        <div
+          className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+          style={{ top: `${activeCard * 44}px`, zIndex: 10 }}
+        >
+          <div className="bg-card border-2 rounded-2xl shadow-lg">
+            
+            {/* Card Header */}
+            <div className="flex items-center gap-4 p-5 border-b">
+              <div className={`w-12 h-12 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-6 h-6 text-amber-600" />; })()}
               </div>
-              <div>
-                <h3 className="font-bold text-lg">{currentCard.title}</h3>
-                <p className="text-white/80 text-xs">
-                  الخطوة {activeCard + 1} من {cards.length}
-                </p>
+              <div className="flex-1">
+                <h3 className="font-bold text-lg">{cards[activeCard].title}</h3>
+                <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
+              </div>
+              <div className="flex items-center gap-1">
+                {cards.map((_, i) => (
+                  <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all ${i <= activeCard ? 'bg-amber-500' : 'bg-muted'}`} />
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Card Content */}
-          <div className="p-4 space-y-4">
-            {/* Card 1: Owner Data */}
-            {activeCard === 0 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">اسم المالك *</label>
-                  <div className="relative">
-                    <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="أدخل اسمك"
-                      value={formData.ownerName}
-                      onChange={(e) => setFormData({...formData, ownerName: e.target.value})}
-                      className="pr-10"
-                      data-testid="input-owner-name"
-                    />
+            {/* Card Content */}
+            <div className="p-5">
+              
+              {/* Step 0: Owner Info */}
+              {activeCard === 0 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">اسم المالك</label>
+                      <Input
+                        placeholder="أدخل اسمك"
+                        value={data.ownerName}
+                        onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
+                        className="h-12 text-center rounded-xl"
+                        data-testid="input-owner-name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">رقم الجوال</label>
+                      <Input
+                        type="tel"
+                        placeholder="05xxxxxxxx"
+                        value={data.ownerPhone}
+                        onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
+                        className="h-12 text-center rounded-xl"
+                        dir="ltr"
+                        data-testid="input-owner-phone"
+                      />
+                    </div>
                   </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">رقم الجوال *</label>
-                  <div className="relative">
-                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="05xxxxxxxx"
-                      value={formData.ownerPhone}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        setFormData({...formData, ownerPhone: val});
-                        setPhoneError(validateSaudiPhone(val).error);
-                      }}
-                      className="pr-10"
-                      data-testid="input-owner-phone"
-                    />
-                  </div>
-                  {phoneError && <p className="text-xs text-destructive mt-1">{phoneError}</p>}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني (اختياري)</label>
-                  <div className="relative">
-                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      placeholder="example@email.com"
-                      value={formData.ownerEmail}
-                      onChange={(e) => setFormData({...formData, ownerEmail: e.target.value})}
-                      className="pr-10"
-                      data-testid="input-owner-email"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Card 2: Property Type */}
-            {activeCard === 1 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">نوع العرض</label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={formData.transactionType === "sale" ? "default" : "outline"}
-                      onClick={() => setFormData({...formData, transactionType: "sale"})}
-                      className={`flex-1 ${formData.transactionType === "sale" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                      data-testid="button-sale"
-                    >
-                      بيع
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={formData.transactionType === "rent" ? "default" : "outline"}
-                      onClick={() => setFormData({...formData, transactionType: "rent"})}
-                      className={`flex-1 ${formData.transactionType === "rent" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                      data-testid="button-rent"
-                    >
-                      إيجار
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">تصنيف العقار</label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={formData.propertyCategory === "residential" ? "default" : "outline"}
-                      onClick={() => setFormData({...formData, propertyCategory: "residential", propertyType: ""})}
-                      className={`flex-1 ${formData.propertyCategory === "residential" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                      data-testid="button-residential"
-                    >
-                      سكني
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={formData.propertyCategory === "commercial" ? "default" : "outline"}
-                      onClick={() => setFormData({...formData, propertyCategory: "commercial", propertyType: ""})}
-                      className={`flex-1 ${formData.propertyCategory === "commercial" ? "bg-green-600 hover:bg-green-700" : ""}`}
-                      data-testid="button-commercial"
-                    >
-                      تجاري
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">نوع العقار *</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {propertyTypes.map(type => {
-                      const TypeIcon = type.icon;
-                      return (
-                        <Button
-                          key={type.id}
-                          type="button"
-                          variant={formData.propertyType === type.id ? "default" : "outline"}
-                          onClick={() => setFormData({...formData, propertyType: type.id})}
-                          className={`flex flex-col gap-1 h-auto py-3 ${formData.propertyType === type.id ? "bg-green-600 hover:bg-green-700" : ""}`}
-                          data-testid={`button-type-${type.id}`}
-                        >
-                          <TypeIcon className="w-5 h-5" />
-                          <span className="text-xs">{type.label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Card 3: Location */}
-            {activeCard === 2 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">المدينة *</label>
-                  <Input
-                    placeholder="ابحث عن المدينة..."
-                    value={citySearch}
-                    onChange={(e) => setCitySearch(e.target.value)}
-                    className="mb-2"
-                    data-testid="input-city-search"
-                  />
-                  <div className="grid grid-cols-3 gap-2 max-h-[120px] overflow-y-auto">
-                    {filteredCities.slice(0, 12).map(city => (
-                      <Button
-                        key={city.name}
-                        type="button"
-                        variant={formData.city === city.name ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          setFormData({...formData, city: city.name, district: "", latitude: null, longitude: null});
-                          setCitySearch("");
-                        }}
-                        className={`text-xs ${formData.city === city.name ? "bg-green-600 hover:bg-green-700" : ""}`}
-                        data-testid={`button-city-${city.name}`}
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { v: "sale", l: "للبيع", icon: DollarSign },
+                      { v: "rent", l: "للإيجار", icon: Home }
+                    ].map(t => (
+                      <button
+                        key={t.v}
+                        onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
+                        className={`p-4 rounded-xl border-2 text-center transition-all flex items-center justify-center gap-3 ${
+                          data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                        }`}
+                        data-testid={`button-list-${t.v}`}
                       >
-                        {city.name}
-                      </Button>
+                        <t.icon className={`h-5 w-5 ${data.transactionType === t.v ? "text-amber-600" : "text-muted-foreground"}`} />
+                        <span className="font-bold">{t.l}</span>
+                      </button>
                     ))}
                   </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-0">
+                    التالي
+                  </Button>
                 </div>
+              )}
 
-                {formData.city && selectedCity && (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">الحي *</label>
-                      <Input
-                        placeholder="ابحث عن الحي..."
-                        value={districtSearch}
-                        onChange={(e) => setDistrictSearch(e.target.value)}
-                        className="mb-2"
-                        data-testid="input-district-search"
-                      />
-                      <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto">
-                        {filteredDistricts.slice(0, 12).map(district => (
-                          <Button
-                            key={district.name}
-                            type="button"
-                            variant={formData.district === district.name ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setFormData({...formData, district: district.name})}
-                            className={`text-xs ${formData.district === district.name ? "bg-green-600 hover:bg-green-700" : ""}`}
-                            data-testid={`button-district-${district.name}`}
+              {/* Step 1: Location */}
+              {activeCard === 1 && (
+                <div className="space-y-4">
+                  <div className="flex justify-center gap-3 mb-2">
+                    {[
+                      { v: "residential", l: "سكني", I: Home },
+                      { v: "commercial", l: "تجاري", I: Building2 }
+                    ].map(c => (
+                      <button
+                        key={c.v}
+                        onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
+                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-list-category-${c.v}`}
+                      >
+                        <c.I className="h-4 w-4" />
+                        {c.l}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-sm font-medium mb-2 block text-center">اختر المدينة</label>
+                  <div className="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto p-1">
+                    {saudiCities.slice(0, 20).map((city) => (
+                      <button
+                        key={city.name}
+                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
+                        className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
+                          data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-list-city-${city.name}`}
+                      >
+                        {city.name}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Interactive Map for Pin Placement */}
+                  {data.city && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium flex items-center gap-1">
+                          <Target className="h-4 w-4 text-amber-500" />
+                          حدد الموقع بالنقر على الخريطة
+                        </label>
+                        {data.latitude && data.longitude && (
+                          <button 
+                            onClick={() => setData(d => ({ ...d, latitude: null, longitude: null }))}
+                            className="text-xs text-red-500 hover:underline"
+                            data-testid="button-clear-location"
                           >
-                            {district.name}
-                            {formData.district === district.name && <Check className="w-3 h-3 mr-1" />}
-                          </Button>
-                        ))}
+                            مسح الموقع
+                          </button>
+                        )}
                       </div>
-                    </div>
-
-                    {/* Map */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">حدد الموقع على الخريطة (اختياري)</label>
-                      <div className="h-[150px] rounded-lg overflow-hidden border">
+                      <div className="h-[180px] rounded-xl overflow-hidden border-2 border-border">
                         <MapContainer
-                          center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]}
-                          zoom={12}
+                          center={mapCenter}
+                          zoom={data.latitude ? 15 : 12}
                           style={{ height: "100%", width: "100%" }}
-                          scrollWheelZoom={false}
+                          scrollWheelZoom={true}
                         >
-                          <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-                          <MapCenterUpdater 
-                            center={[selectedCity.coordinates.lat, selectedCity.coordinates.lng]} 
-                            zoom={12} 
-                          />
-                          <LocationPinPicker
-                            onLocationSelect={(lat, lng) => {
-                              setFormData({...formData, latitude: lat, longitude: lng});
-                            }}
-                            currentPosition={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null}
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          <MapCenterUpdater center={mapCenter} zoom={data.latitude ? 15 : 12} />
+                          <LocationPicker 
+                            onLocationSelect={handleLocationSelect}
+                            currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
                           />
                         </MapContainer>
                       </div>
-                      {formData.latitude && formData.longitude && (
-                        <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
-                          <Navigation className="w-4 h-4" />
-                          <span>تم تحديد الموقع</span>
+                      {data.latitude && data.longitude && (
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
+                          <Navigation className="h-3 w-3 text-amber-500" />
+                          <span>تم تحديد الموقع: {data.latitude.toFixed(5)}, {data.longitude.toFixed(5)}</span>
                         </div>
                       )}
                     </div>
-                  </>
-                )}
-              </>
-            )}
+                  )}
 
-            {/* Card 4: Specifications */}
-            {activeCard === 3 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">حالة العقار</label>
-                  <div className="flex gap-2">
-                    {propertyConditions.map(cond => (
-                      <Button
-                        key={cond.id}
-                        type="button"
-                        variant={formData.propertyCondition === cond.id ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setFormData({...formData, propertyCondition: cond.id as any})}
-                        className={`flex-1 ${formData.propertyCondition === cond.id ? "bg-green-600 hover:bg-green-700" : ""}`}
-                        data-testid={`button-condition-${cond.id}`}
-                      >
-                        {cond.label}
-                      </Button>
-                    ))}
-                  </div>
+                  <Input
+                    placeholder="اسم الحي (اختياري)"
+                    value={data.district}
+                    onChange={(e) => setData(d => ({ ...d, district: e.target.value }))}
+                    className="h-12 text-center rounded-xl"
+                    data-testid="input-district"
+                  />
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-1">
+                    التالي
+                  </Button>
                 </div>
+              )}
 
-                {formData.propertyType !== "land" && (
-                  <div className="grid grid-cols-2 gap-4">
+              {/* Step 2: Property Details */}
+              {activeCard === 2 && (
+                <div className="space-y-4">
+                  <label className="text-sm font-medium block text-center">نوع العقار</label>
+                  <div className="grid grid-cols-4 gap-3">
+                    {propertyTypes.map((type) => {
+                      const Icon = type.icon;
+                      return (
+                        <button
+                          key={type.value}
+                          onClick={() => setData(d => ({ ...d, propertyType: type.value }))}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            data.propertyType === type.value ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                          }`}
+                          data-testid={`button-list-type-${type.value}`}
+                        >
+                          <Icon className={`h-7 w-7 mx-auto ${data.propertyType === type.value ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <div className="text-sm font-medium mt-2">{type.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-2 block">عدد الغرف</label>
-                      <div className="flex gap-1">
-                        {["1", "2", "3", "4", "5+"].map(num => (
-                          <Button
-                            key={num}
-                            type="button"
-                            variant={formData.rooms === num ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setFormData({...formData, rooms: num})}
-                            className={`flex-1 px-2 ${formData.rooms === num ? "bg-green-600 hover:bg-green-700" : ""}`}
-                            data-testid={`button-rooms-${num}`}
+                      <label className="text-xs font-medium mb-1 block text-center">الغرف</label>
+                      <div className="flex justify-center gap-1">
+                        {["1", "2", "3", "4", "5+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setData(d => ({ ...d, rooms: n }))}
+                            className={`w-9 h-9 rounded-full border-2 text-xs font-bold transition-all ${
+                              data.rooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            }`}
+                            data-testid={`button-list-rooms-${n}`}
                           >
-                            {num}
-                          </Button>
+                            {n}
+                          </button>
                         ))}
                       </div>
                     </div>
-
                     <div>
-                      <label className="text-sm font-medium mb-2 block">دورات المياه</label>
-                      <div className="flex gap-1">
-                        {["1", "2", "3", "4+"].map(num => (
-                          <Button
-                            key={num}
-                            type="button"
-                            variant={formData.bathrooms === num ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setFormData({...formData, bathrooms: num})}
-                            className={`flex-1 px-2 ${formData.bathrooms === num ? "bg-green-600 hover:bg-green-700" : ""}`}
-                            data-testid={`button-bathrooms-${num}`}
+                      <label className="text-xs font-medium mb-1 block text-center">دورات المياه</label>
+                      <div className="flex justify-center gap-1">
+                        {["1", "2", "3", "4+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setData(d => ({ ...d, bathrooms: n }))}
+                            className={`w-9 h-9 rounded-full border-2 text-xs font-bold transition-all ${
+                              data.bathrooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            }`}
+                            data-testid={`button-list-bathrooms-${n}`}
                           >
-                            {num}
-                          </Button>
+                            {n}
+                          </button>
                         ))}
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1 block text-center">المساحة م²</label>
+                      <Input
+                        type="number"
+                        placeholder="150"
+                        value={data.area}
+                        onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
+                        className="h-9 text-center rounded-lg text-sm"
+                        data-testid="input-area"
+                      />
+                    </div>
                   </div>
-                )}
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">المساحة (م²) *</label>
-                  <div className="relative">
-                    <Ruler className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="مثال: 200"
-                      value={formData.area}
-                      onChange={(e) => setFormData({...formData, area: e.target.value.replace(/\D/g, "")})}
-                      className="pr-10"
-                      data-testid="input-area"
-                    />
-                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-2">
+                    التالي
+                  </Button>
                 </div>
-              </>
-            )}
+              )}
 
-            {/* Card 5: Price */}
-            {activeCard === 4 && (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    السعر {formData.transactionType === "rent" ? "(شهري)" : ""} (ريال) *
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              {/* Step 3: Price & Description */}
+              {activeCard === 3 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">السعر (ريال)</label>
                     <Input
-                      placeholder="مثال: 500000"
-                      value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value.replace(/\D/g, "")})}
-                      className="pr-10"
+                      type="number"
+                      placeholder={data.transactionType === "rent" ? "الإيجار الشهري" : "سعر البيع"}
+                      value={data.price}
+                      onChange={(e) => setData(d => ({ ...d, price: e.target.value }))}
+                      className="h-12 text-center rounded-xl text-lg font-bold"
                       data-testid="input-price"
                     />
                   </div>
-                  {formData.price && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {parseInt(formData.price).toLocaleString('ar-SA')} ريال
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">وصف العقار</label>
-                  <Textarea
-                    placeholder="أضف وصفاً تفصيلياً للعقار..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows={3}
-                    data-testid="input-description"
-                  />
-                </div>
-
-                {/* Summary */}
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 space-y-1 border border-green-200 dark:border-green-800">
-                  <h4 className="font-medium text-sm text-green-700 dark:text-green-300 mb-2">ملخص العرض:</h4>
-                  <div className="text-xs space-y-1 text-green-600 dark:text-green-400">
-                    <p>النوع: {formData.transactionType === "sale" ? "بيع" : "إيجار"} - {formData.propertyCategory === "residential" ? "سكني" : "تجاري"}</p>
-                    <p>الموقع: {formData.city} - {formData.district}</p>
-                    <p>نوع العقار: {propertyTypes.find(t => t.id === formData.propertyType)?.label || "غير محدد"}</p>
-                    {formData.area && <p>المساحة: {formData.area} م²</p>}
-                    {formData.rooms && <p>الغرف: {formData.rooms}</p>}
-                    {formData.price && (
-                      <p className="font-bold text-green-700 dark:text-green-300">
-                        السعر: {parseInt(formData.price).toLocaleString('ar-SA')} ريال
-                      </p>
-                    )}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">المميزات</label>
+                    <div className="flex flex-wrap gap-2">
+                      {featuresList.map((feature) => (
+                        <button
+                          key={feature}
+                          onClick={() => toggleFeature(feature)}
+                          className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                            data.features.includes(feature) ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                          }`}
+                          data-testid={`button-feature-${feature}`}
+                        >
+                          {feature}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">وصف إضافي (اختياري)</label>
+                    <Textarea
+                      placeholder="أضف تفاصيل إضافية عن العقار..."
+                      value={data.description}
+                      onChange={(e) => setData(d => ({ ...d, description: e.target.value }))}
+                      className="rounded-xl resize-none"
+                      rows={3}
+                      data-testid="input-description"
+                    />
+                  </div>
+                  <Button onClick={handleSubmit} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-amber-500 to-orange-500" data-testid="button-submit-property">
+                    <Camera className="h-5 w-5" />
+                    اعرض عقارك
+                  </Button>
                 </div>
-              </>
-            )}
-          </div>
-
-          {/* Card Footer - Navigation */}
-          <div className="p-4 pt-0 flex gap-2">
-            {activeCard > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrev}
-                className="flex-1"
-                data-testid="button-prev"
-              >
-                السابق
-              </Button>
-            )}
-            
-            {activeCard < cards.length - 1 ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                data-testid="button-next"
-              >
-                التالي
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canProceed()}
-                className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                data-testid="button-submit"
-              >
-                <Send className="w-4 h-4" />
-                نشر العقار
-              </Button>
-            )}
-          </div>
-        </Card>
-
-        {/* Next cards preview */}
-        {activeCard < cards.length - 1 && (
-          <div className="absolute inset-x-2 -bottom-2 pointer-events-none">
-            <div className={`${cards[activeCard + 1].lightColor} rounded-b-lg p-2 flex items-center justify-center gap-2 border-x border-b opacity-60`}>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">{cards[activeCard + 1].title}</span>
+              )}
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Upcoming Cards Preview */}
+        {cards.slice(activeCard + 1).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              className="absolute inset-x-2 pointer-events-none"
+              style={{
+                top: `${(activeCard * 44) + 340 + (idx * 24)}px`,
+                zIndex: -idx - 1,
+                opacity: 0.5 - (idx * 0.15),
+              }}
+            >
+              <div className="bg-muted/60 rounded-xl p-3 flex items-center gap-3 border border-border/40">
+                <div className={`w-9 h-9 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
+                  <Icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Chat with Consultant - Inside Form (Desktop) */}
+      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+          <Button
+            size="icon"
+            className="rounded-full h-9 w-9 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            data-testid="button-send-consultant-seller-desktop"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            data-testid="input-chat-consultant-seller-desktop"
+          />
+        </div>
       </div>
     </div>
+  );
+
+  // ==================== MOBILE VERSION ====================
+  const MobileForm = () => (
+    <div className="md:hidden relative px-3 py-3">
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-2 px-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium">مؤشر التطابق</span>
+            <span className="text-xs font-bold text-amber-600">{matchIndexScore}%</span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
+              style={{ width: `${matchIndexScore}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Stacked Cards - Dynamic height */}
+      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 28) + 240}px` }}>
+        
+        {/* Completed Cards */}
+        {cards.slice(0, activeCard).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              onClick={() => goBack(card.id)}
+              className="absolute inset-x-0 cursor-pointer transition-all duration-200"
+              style={{ top: `${idx * 28}px`, zIndex: idx + 1 }}
+            >
+              <div className={`${card.lightColor} rounded-xl p-2.5 flex items-center gap-2 border border-amber-500/20`}>
+                <div className={`w-7 h-7 rounded-lg ${card.color} flex items-center justify-center`}>
+                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                </div>
+                <span className="text-xs font-medium truncate flex-1">{card.title}</span>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Active Card */}
+        <div
+          className={`absolute inset-x-0 transition-all duration-200 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+          style={{ top: `${activeCard * 28}px`, zIndex: 10 }}
+        >
+          <div className="bg-card border rounded-xl shadow-md">
+            
+            {/* Card Header */}
+            <div className="flex items-center gap-3 p-3 border-b">
+              <div className={`w-9 h-9 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-amber-600" />; })()}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
+              </div>
+              <span className="text-xl font-bold text-muted-foreground/30">{activeCard + 1}</span>
+            </div>
+
+            {/* Card Content */}
+            <div className="p-3">
+              
+              {/* Step 0: Owner */}
+              {activeCard === 0 && (
+                <div className="space-y-2">
+                  <Input
+                    placeholder="اسم المالك"
+                    value={data.ownerName}
+                    onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
+                    className="h-10 text-sm text-center rounded-lg"
+                    data-testid="input-owner-name-mobile"
+                  />
+                  <Input
+                    type="tel"
+                    placeholder="رقم الجوال"
+                    value={data.ownerPhone}
+                    onChange={(e) => setData(d => ({ ...d, ownerPhone: e.target.value }))}
+                    className="h-10 text-sm text-center rounded-lg"
+                    dir="ltr"
+                    data-testid="input-owner-phone-mobile"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { v: "sale", l: "للبيع" },
+                      { v: "rent", l: "للإيجار" }
+                    ].map(t => (
+                      <button
+                        key={t.v}
+                        onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
+                        className={`p-2 rounded-lg border-2 text-center text-sm font-medium transition-all ${
+                          data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                        }`}
+                        data-testid={`button-list-${t.v}-mobile`}
+                      >
+                        {t.l}
+                      </button>
+                    ))}
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-0">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 1: Location */}
+              {activeCard === 1 && (
+                <div className="space-y-2">
+                  <div className="flex justify-center gap-2">
+                    {[
+                      { v: "residential", l: "سكني" },
+                      { v: "commercial", l: "تجاري" }
+                    ].map(c => (
+                      <button
+                        key={c.v}
+                        onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                        className={`px-4 py-2 rounded-full border-2 text-xs transition-all ${
+                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-list-category-${c.v}-mobile`}
+                      >
+                        {c.l}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5 max-h-[80px] overflow-y-auto">
+                    {saudiCities.slice(0, 16).map((city) => (
+                      <button
+                        key={city.name}
+                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
+                        className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
+                          data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-list-city-${city.name}-mobile`}
+                      >
+                        {city.name}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Interactive Map for Mobile */}
+                  {data.city && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] font-medium flex items-center gap-1">
+                          <Target className="h-3 w-3 text-amber-500" />
+                          انقر لتحديد الموقع
+                        </span>
+                        {data.latitude && (
+                          <button 
+                            onClick={() => setData(d => ({ ...d, latitude: null, longitude: null }))}
+                            className="text-[10px] text-red-500"
+                            data-testid="button-clear-location-mobile"
+                          >
+                            مسح
+                          </button>
+                        )}
+                      </div>
+                      <div className="h-[120px] rounded-lg overflow-hidden border border-border">
+                        <MapContainer
+                          center={mapCenter}
+                          zoom={data.latitude ? 15 : 12}
+                          style={{ height: "100%", width: "100%" }}
+                          scrollWheelZoom={true}
+                        >
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          <MapCenterUpdater center={mapCenter} zoom={data.latitude ? 15 : 12} />
+                          <LocationPicker 
+                            onLocationSelect={handleLocationSelect}
+                            currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
+                          />
+                        </MapContainer>
+                      </div>
+                      {data.latitude && data.longitude && (
+                        <div className="text-[10px] text-center text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-1">
+                          تم التحديد: {data.latitude.toFixed(4)}, {data.longitude.toFixed(4)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-1">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 2: Property */}
+              {activeCard === 2 && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {propertyTypes.map((type) => {
+                      const Icon = type.icon;
+                      return (
+                        <button
+                          key={type.value}
+                          onClick={() => setData(d => ({ ...d, propertyType: type.value }))}
+                          className={`p-2 rounded-lg border text-center transition-all ${
+                            data.propertyType === type.value ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                          }`}
+                          data-testid={`button-list-type-${type.value}-mobile`}
+                        >
+                          <Icon className={`h-5 w-5 mx-auto ${data.propertyType === type.value ? "text-amber-600" : "text-muted-foreground"}`} />
+                          <div className="text-[10px] font-medium mt-1">{type.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-center mb-1">الغرف</div>
+                      <div className="flex justify-center gap-1">
+                        {["1", "2", "3", "4", "5+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setData(d => ({ ...d, rooms: n }))}
+                            className={`w-7 h-7 rounded-full border text-[10px] font-bold transition-all ${
+                              data.rooms === n ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            }`}
+                            data-testid={`button-list-rooms-${n}-mobile`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <Input
+                      type="number"
+                      placeholder="المساحة"
+                      value={data.area}
+                      onChange={(e) => setData(d => ({ ...d, area: e.target.value }))}
+                      className="w-20 h-8 text-center text-xs rounded-lg"
+                      data-testid="input-area-mobile"
+                    />
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-2">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 3: Price */}
+              {activeCard === 3 && (
+                <div className="space-y-2">
+                  <Input
+                    type="number"
+                    placeholder="السعر بالريال"
+                    value={data.price}
+                    onChange={(e) => setData(d => ({ ...d, price: e.target.value }))}
+                    className="h-10 text-center rounded-lg text-lg font-bold"
+                    data-testid="input-price-mobile"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {featuresList.slice(0, 6).map((feature) => (
+                      <button
+                        key={feature}
+                        onClick={() => toggleFeature(feature)}
+                        className={`px-2 py-1 rounded-full border text-[10px] font-medium transition-all ${
+                          data.features.includes(feature) ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-feature-${feature}-mobile`}
+                      >
+                        {feature}
+                      </button>
+                    ))}
+                  </div>
+                  <Button onClick={handleSubmit} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500" data-testid="button-submit-property-mobile">
+                    <Camera className="h-4 w-4" />
+                    اعرض عقارك
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming Cards Preview */}
+        {cards.slice(activeCard + 1).map((card, idx) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.id}
+              className="absolute inset-x-1 pointer-events-none"
+              style={{
+                top: `${(activeCard * 28) + 240 + (idx * 16)}px`,
+                zIndex: -idx - 1,
+                opacity: 0.4 - (idx * 0.15),
+              }}
+            >
+              <div className="bg-muted/50 rounded-xl p-2 flex items-center gap-2 border border-border/30">
+                <div className={`w-7 h-7 rounded-lg ${card.lightColor} flex items-center justify-center opacity-60`}>
+                  <Icon className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <span className="text-xs text-muted-foreground">{card.title}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Chat with Consultant - Inside Form (Mobile) */}
+      <div className="mt-3 pt-3 border-t border-dashed">
+        <div className="flex items-center justify-center gap-1.5 mb-2">
+          <MessageCircle className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+          <Button
+            size="icon"
+            className="rounded-full h-7 w-7 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            data-testid="button-send-consultant-seller-mobile"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+            data-testid="input-chat-consultant-seller-mobile"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <DesktopForm />
+      <MobileForm />
+    </>
   );
 });

@@ -13,7 +13,7 @@ import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
 import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
-import { PropertyRequestForm } from "./PropertyRequestForm";
+import { AdvancedSearchForm } from "./AdvancedSearchForm";
 import { ListPropertyForm } from "./ListPropertyForm";
 import { TypewriterBanner } from "./TypewriterBanner";
 
@@ -476,24 +476,8 @@ export default function HeroSection() {
     setIsComplete(true);
   }, [toast]);
 
-  const handleSwitchToChat = useCallback((message?: string) => {
+  const handleSwitchToChat = useCallback(() => {
     setShowSearchForm(false);
-    if (message && message.trim()) {
-      // Set the input text and trigger submission
-      setInputText(message.trim());
-      // Use setTimeout to allow state to update before submitting
-      setTimeout(() => {
-        // Add user message to conversation
-        setConversation(prev => [
-          ...prev,
-          { type: "user", text: message.trim() }
-        ]);
-        setInputText("");
-        setIsFullScreenChat(true);
-        setIsAnalyzing(true);
-        setIsTyping(true);
-      }, 100);
-    }
   }, []);
 
   const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
@@ -1495,7 +1479,6 @@ export default function HeroSection() {
               setExtractedData({});
               setPendingConfirmation(false);
               setIsComplete(false);
-              setShowSearchForm(true);
             }}
             className="text-primary-foreground"
             data-testid="button-back-chat"
@@ -1751,7 +1734,6 @@ export default function HeroSection() {
                 setConversation([]);
                 setExtractedData({});
                 setIsComplete(false);
-                setShowSearchForm(true);
               }}
               data-testid="button-new-request"
             >
@@ -1954,7 +1936,7 @@ export default function HeroSection() {
             ) : (
               <>
             {/* Map Section - Shared between buyer and seller */}
-            {((mode === "buyer" && showSearchForm) || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
+            {(mode === "buyer" || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
               <div className="bg-muted/20 p-3">
                 <SaudiMap 
                   markers={mapMarkers} 
@@ -2019,39 +2001,39 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Forms Container - Fixed height to prevent page jump */}
-            {conversation.length === 0 && !pendingConfirmation && (
-              <div style={{ minHeight: "600px" }}>
-                {/* Buyer Search Form */}
-                {mode === "buyer" && showSearchForm && (
-                  <PropertyRequestForm 
-                    onSubmit={handleSearchFormSearch}
-                  />
-                )}
+            {/* Buyer Search Form */}
+            {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
+              <div>
+                <AdvancedSearchForm 
+                  onSearch={handleSearchFormSearch}
+                  onSwitchToChat={handleSwitchToChat}
+                />
+              </div>
+            )}
 
-                {/* Seller Property Form */}
-                {mode === "seller" && (
-                  <ListPropertyForm 
-                    onSubmit={(propertyData) => {
-                      toast({
-                        title: "تم استلام طلبك",
-                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                      });
-                      setIsComplete(true);
-                      setExtractedData({
-                        name: propertyData.ownerName,
-                        phone: propertyData.ownerPhone,
-                        city: propertyData.city,
-                        district: propertyData.district,
-                        propertyType: propertyData.propertyType,
-                        transactionType: propertyData.transactionType,
-                        rooms: propertyData.rooms,
-                        area: propertyData.area,
-                        price: propertyData.price,
-                      });
-                    }}
-                  />
-                )}
+            {/* Seller Property Form */}
+            {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
+              <div>
+                <ListPropertyForm 
+                  onSubmit={(propertyData) => {
+                    toast({
+                      title: "تم استلام طلبك",
+                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                    });
+                    setIsComplete(true);
+                    setExtractedData({
+                      name: propertyData.ownerName,
+                      phone: propertyData.ownerPhone,
+                      city: propertyData.city,
+                      district: propertyData.district,
+                      propertyType: propertyData.propertyType,
+                      transactionType: propertyData.transactionType,
+                      rooms: propertyData.rooms,
+                      area: propertyData.area,
+                      price: propertyData.price,
+                    });
+                  }}
+                />
               </div>
             )}
 
@@ -2207,8 +2189,8 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Input area - hidden when forms are shown */}
-            {!((mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) || (mode === "seller" && conversation.length === 0 && !pendingConfirmation)) && (
+            {/* Input area - hidden when search form is shown */}
+            {!(mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) && (
               <div 
                 className="p-4 border-t"
                 style={{
