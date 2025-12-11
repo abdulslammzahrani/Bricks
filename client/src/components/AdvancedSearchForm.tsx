@@ -1469,32 +1469,32 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         {/* Active Card */}
         <div
           className={`absolute inset-x-0 transition-all duration-200 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-          style={{ top: `${activeCard * 24}px`, zIndex: 10 }}
+          style={{ top: `${activeCard * 28}px`, zIndex: 10 }}
         >
           <div className="bg-card border rounded-xl shadow-md">
             
             {/* Card Header */}
-            <div className="flex items-center gap-2 p-2.5 border-b">
-              <div className={`w-8 h-8 rounded-lg ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-4 h-4 text-primary" />; })()}
+            <div className="flex items-center gap-3 p-3 border-b">
+              <div className={`w-9 h-9 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-green-600" />; })()}
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
               </div>
-              <span className="text-lg font-bold text-muted-foreground/30">{activeCard + 1}</span>
+              <span className="text-xl font-bold text-muted-foreground/30">{activeCard + 1}</span>
             </div>
 
             {/* Card Content */}
-            <div className="p-2.5">
+            <div className="p-3">
               
               {/* Step 0: Personal */}
               {activeCard === 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <Input
                     placeholder="الاسم"
                     value={filters.name}
                     onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                    className="h-9 text-sm text-center rounded-lg"
+                    className="h-10 text-sm text-center rounded-lg"
                     name="name"
                     autoComplete="name"
                     data-testid="input-name"
@@ -1505,7 +1505,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       placeholder="05xxxxxxxx"
                       value={filters.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-10 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="tel"
                       autoComplete="tel"
@@ -1526,7 +1526,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       placeholder="البريد الإلكتروني"
                       value={filters.email}
                       onChange={(e) => handleEmailChange(e.target.value)}
-                      className={`h-9 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-10 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
                       name="email"
                       autoComplete="email"
@@ -1544,7 +1544,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   
                   {/* Auto-registration status */}
                   {isAutoRegistering && (
-                    <div className="flex items-center justify-center gap-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
                       <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
                     </div>
@@ -1587,18 +1587,18 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <button
                         key={c.v}
                         onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full border-2 text-xs transition-all ${
                           filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border"
                         }`}
                         data-testid={`button-category-${c.v}`}
                       >
-                        <c.I className="h-3 w-3" />
+                        <c.I className="h-3.5 w-3.5" />
                         {c.l}
                       </button>
                     ))}
                   </div>
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm bg-green-600 hover:bg-green-700" data-testid="button-next-0">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-green-600 hover:bg-green-700" data-testid="button-next-0">
                     التالي
                   </Button>
                 </div>

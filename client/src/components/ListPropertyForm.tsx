@@ -1017,7 +1017,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
               
               {/* Step 0: Owner */}
               {activeCard === 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <Input
                     placeholder="اسم المالك"
                     value={data.ownerName}
@@ -1072,7 +1072,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                   
                   {/* Auto-registration status */}
                   {isAutoRegistering && (
-                    <div className="flex items-center justify-center gap-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center gap-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-500 border-t-transparent"></div>
                       <span className="text-xs text-blue-600 dark:text-blue-400">جاري التسجيل...</span>
                     </div>
@@ -1115,12 +1115,12 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       <button
                         key={c.v}
                         onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-full border-2 text-xs transition-all ${
                           data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
                         }`}
                         data-testid={`button-list-category-${c.v}-mobile`}
                       >
-                        <c.I className="h-3 w-3" />
+                        <c.I className="h-3.5 w-3.5" />
                         {c.l}
                       </button>
                     ))}
