@@ -9,7 +9,8 @@ import {
   Check, Castle, Hotel, Store, Factory, Blocks, Navigation,
   BedDouble, Bath, Wallet, Settings2, FileText,
   Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X,
-  Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send
+  Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send,
+  Hammer, Clock, CheckCircle2
 } from "lucide-react";
 import { saudiCities, type Neighborhood } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -62,6 +63,7 @@ interface SearchFilters {
   districts: string[];
   propertyCategory: "residential" | "commercial";
   propertyType: string;
+  propertyCondition: "new" | "used" | "under_construction" | "";
   rooms: string;
   bathrooms: string;
   minPrice: string;
@@ -352,6 +354,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     districts: [],
     propertyCategory: "residential",
     propertyType: "",
+    propertyCondition: "",
     rooms: "",
     bathrooms: "",
     minPrice: "",
@@ -385,7 +388,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   }, [filters.phone]);
 
   const propertyTypes = propertyOptions[filters.propertyCategory];
-  const totalCards = 7;
+  const totalCards = 8;
 
   // Filter cities based on search
   const filteredCities = useMemo(() => {
@@ -455,8 +458,9 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     { id: 2, icon: MapPin, title: "المدينة", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
     { id: 3, icon: Navigation, title: "الحي", color: "bg-teal-500", lightColor: "bg-teal-100 dark:bg-teal-900/40" },
     { id: 4, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
-    { id: 5, icon: Settings2, title: "المواصفات", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
-    { id: 6, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
+    { id: 5, icon: Hammer, title: "حالة العقار", color: "bg-cyan-500", lightColor: "bg-cyan-100 dark:bg-cyan-900/40" },
+    { id: 6, icon: Settings2, title: "المواصفات", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
+    { id: 7, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
   ];
 
   const goNext = () => {
@@ -956,8 +960,41 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 5: Specifications */}
+              {/* Step 5: Property Condition */}
               {activeCard === 5 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block text-center">حالة العقار</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: "new", label: "جديد", icon: CheckCircle2 },
+                      { value: "used", label: "مستخدم", icon: Clock },
+                      { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
+                    ].map((condition) => {
+                      const Icon = condition.icon;
+                      const isSelected = filters.propertyCondition === condition.value;
+                      return (
+                        <button
+                          key={condition.value}
+                          onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-condition-desktop-${condition.value}`}
+                        >
+                          <Icon className={`h-8 w-8 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="text-sm font-medium mt-2">{condition.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 6: Specifications */}
+              {activeCard === 6 && (
                 <div className="space-y-4">
                   {/* Rooms */}
                   <div>
@@ -1031,8 +1068,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 6: Additional Details */}
-              {activeCard === 6 && (
+              {/* Step 7: Additional Details */}
+              {activeCard === 7 && (
                 <div className="space-y-4">
                   {/* Features */}
                   <div>
@@ -1441,8 +1478,40 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 5: Specifications */}
+              {/* Step 5: Property Condition */}
               {activeCard === 5 && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: "new", label: "جديد", icon: CheckCircle2 },
+                      { value: "used", label: "مستخدم", icon: Clock },
+                      { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
+                    ].map((condition) => {
+                      const Icon = condition.icon;
+                      const isSelected = filters.propertyCondition === condition.value;
+                      return (
+                        <button
+                          key={condition.value}
+                          onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
+                          className={`p-3 rounded-xl border-2 text-center transition-all ${
+                            isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-condition-${condition.value}`}
+                        >
+                          <Icon className={`h-7 w-7 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="text-xs font-medium mt-1">{condition.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-5">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 6: Specifications */}
+              {activeCard === 6 && (
                 <div className="space-y-3">
                   {/* Rooms */}
                   <div>
@@ -1516,8 +1585,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 6: Additional Details */}
-              {activeCard === 6 && (
+              {/* Step 7: Additional Details */}
+              {activeCard === 7 && (
                 <div className="space-y-3">
                   {/* Features */}
                   <div>
