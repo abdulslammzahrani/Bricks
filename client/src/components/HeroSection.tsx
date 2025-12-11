@@ -2026,7 +2026,6 @@ export default function HeroSection() {
                 {mode === "buyer" && showSearchForm && (
                   <AdvancedSearchForm 
                     onSearch={handleSearchFormSearch}
-                    onSwitchToChat={handleSwitchToChat}
                   />
                 )}
 

@@ -10,7 +10,7 @@ import {
   BedDouble, Bath, Wallet, Settings2, FileText,
   Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X,
   Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send,
-  Hammer, Clock, CheckCircle2, Mic, MicOff, MessageCircle
+  Hammer, Clock, CheckCircle2
 } from "lucide-react";
 import { saudiCities, type Neighborhood } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -231,7 +231,6 @@ function validateSaudiPhone(phone: string): { isValid: boolean; normalized: stri
 
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
-  onSwitchToChat: (message?: string) => void;
 }
 
 // Generate approximate coordinates for neighborhoods based on city center with grid distribution
@@ -393,7 +392,7 @@ function SmartMapClickHandler({
   return null;
 }
 
-export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
+export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }: AdvancedSearchFormProps) {
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
@@ -452,7 +451,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [chatMessage, setChatMessage] = useState("");
 
   // Validate email format
   const validateEmail = (email: string): { isValid: boolean; error: string } => {
