@@ -1938,10 +1938,49 @@ export default function HeroSection() {
             {/* Map Section - Shared between buyer and seller */}
             {(mode === "buyer" || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
               <div className="bg-muted/20 p-3">
-                <SaudiMap 
-                  markers={mapMarkers} 
-                  className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
-                />
+                {/* Map with Stats Row */}
+                <div className="flex gap-3">
+                  {/* Map */}
+                  <div className="flex-1">
+                    <SaudiMap 
+                      markers={mapMarkers} 
+                      className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                    />
+                  </div>
+                  
+                  {/* Stats Column beside map */}
+                  <div className="flex flex-col justify-center gap-2 min-w-[90px] md:min-w-[110px]">
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-background/80 border border-border/30">
+                      <div className="flex items-center gap-1">
+                        <Eye className={`h-4 w-4 text-blue-500 transition-transform duration-500 ${viewersAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-sm text-foreground transition-all duration-500 ${viewersAnimating ? 'scale-125 text-blue-600' : ''}`}>
+                          {liveViewers.toLocaleString('ar-EG')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">يتصفحون الآن</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-background/80 border border-border/30">
+                      <div className="flex items-center gap-1">
+                        <FileText className={`h-4 w-4 text-amber-500 transition-transform duration-500 ${requestsAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-sm text-foreground transition-all duration-500 ${requestsAnimating ? 'scale-125 text-amber-600' : ''}`}>
+                          {requestsToday.toLocaleString('ar-EG')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">طلب اليوم</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-background/80 border border-border/30">
+                      <div className="flex items-center gap-1">
+                        <Handshake className={`h-4 w-4 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-sm text-foreground transition-all duration-500 ${dealsAnimating ? 'scale-125 text-green-600' : ''}`}>
+                          {dealsToday.toLocaleString('ar-EG')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">صفقة اليوم</span>
+                    </div>
+                  </div>
+                </div>
                 
                 {/* Typewriter Example */}
                 <div className="mt-2">
