@@ -1378,59 +1378,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         })}
       </div>
 
-      {/* Chat with Consultant - Inside Form (Desktop) - Matches screenshot exactly */}
-      <div className="mt-6 pt-4 max-w-lg mx-auto">
-        <div className="flex items-center gap-2">
-          {/* Text Input - Left side */}
-          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/30">
-            <input
-              type="text"
-              dir="rtl"
-              placeholder="تحدث مع مستشار العقارات"
-              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && chatMessage.trim()) {
-                  onSwitchToChat?.(chatMessage.trim());
-                  setChatMessage("");
-                }
-              }}
-              data-testid="input-chat-consultant-desktop"
-            />
-          </div>
-          
-          {/* Mic Button - Middle (decorative - voice recording available in chat) */}
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card opacity-50 cursor-not-allowed"
-            disabled
-            data-testid="button-mic-consultant-desktop"
-            title="التسجيل الصوتي متاح في المحادثة"
-          >
-            <Mic className="h-5 w-5 text-muted-foreground" />
-          </Button>
-          
-          {/* Send Button - Right side (Green) */}
-          <Button
-            size="icon"
-            variant="default"
-            onClick={() => {
-              if (chatMessage.trim()) {
-                onSwitchToChat?.(chatMessage.trim());
-                setChatMessage("");
-              } else {
-                onSwitchToChat?.();
-              }
-            }}
-            className="h-12 w-12 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
-            data-testid="button-send-consultant-desktop"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
     </div>
 
     {/* ==================== MOBILE VERSION ==================== */}
@@ -1997,59 +1944,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         })}
       </div>
 
-      {/* Chat with Consultant - Inside Form (Mobile) - Matches screenshot exactly */}
-      <div className="mt-12 pt-6 border-t border-border/40">
-        <div className="flex items-center gap-2">
-          {/* Text Input - Left side */}
-          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3 border border-border/30">
-            <input
-              type="text"
-              dir="rtl"
-              placeholder="تحدث مع مستشار العقارات"
-              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && chatMessage.trim()) {
-                  onSwitchToChat?.(chatMessage.trim());
-                  setChatMessage("");
-                }
-              }}
-              data-testid="input-chat-consultant"
-            />
-          </div>
-          
-          {/* Mic Button - Middle (decorative - voice recording available in chat) */}
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card opacity-50 cursor-not-allowed"
-            disabled
-            data-testid="button-mic-consultant"
-            title="التسجيل الصوتي متاح في المحادثة"
-          >
-            <Mic className="h-5 w-5 text-muted-foreground" />
-          </Button>
-          
-          {/* Send Button - Right side (Green) */}
-          <Button
-            size="icon"
-            variant="default"
-            onClick={() => {
-              if (chatMessage.trim()) {
-                onSwitchToChat?.(chatMessage.trim());
-                setChatMessage("");
-              } else {
-                onSwitchToChat?.();
-              }
-            }}
-            className="h-11 w-11 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
-            data-testid="button-send-consultant"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
     </div>
     </>
   );
