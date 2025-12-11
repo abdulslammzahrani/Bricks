@@ -256,8 +256,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     return Math.min(100, score);
   })();
 
-  // ==================== DESKTOP VERSION ====================
-  const DesktopForm = () => (
+  // ==================== RENDER ====================
+  return (
+    <>
+    {/* ==================== DESKTOP VERSION ==================== */}
     <div className="hidden md:block p-6">
       {/* Match Index - Shows after step 1 */}
       {activeCard >= 1 && (
@@ -651,10 +653,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       {/* Bottom spacing */}
       <div className="pb-4" />
     </div>
-  );
 
-  // ==================== MOBILE VERSION ====================
-  const MobileForm = () => (
+    {/* ==================== MOBILE VERSION ==================== */}
     <div className="md:hidden relative px-3 py-3">
       {/* Match Index - Shows after step 1 */}
       {activeCard >= 1 && (
@@ -1010,12 +1010,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       {/* Bottom spacing */}
       <div className="pb-4" />
     </div>
-  );
-
-  return (
-    <>
-      <DesktopForm />
-      <MobileForm />
     </>
   );
 });
