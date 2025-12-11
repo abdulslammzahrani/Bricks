@@ -61,6 +61,8 @@ interface SearchFilters {
   transactionType: "sale" | "rent";
   cities: string[];
   districts: string[];
+  preferredLatitude: number | null;
+  preferredLongitude: number | null;
   propertyCategory: "residential" | "commercial";
   propertyType: string;
   propertyCondition: "new" | "used" | "under_construction" | "";
@@ -74,6 +76,48 @@ interface SearchFilters {
   rentPeriod: "all" | "yearly" | "monthly";
   features: string[];
   notes: string;
+}
+
+// Custom pin icon for preferred location
+const preferredLocationIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Preferred location picker component
+function PreferredLocationPicker({ 
+  onLocationSelect, 
+  currentPosition 
+}: { 
+  onLocationSelect: (lat: number, lng: number) => void;
+  currentPosition: [number, number] | null;
+}) {
+  useMapEvents({
+    click: (e) => {
+      onLocationSelect(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  
+  return currentPosition ? (
+    <Marker position={currentPosition} icon={preferredLocationIcon}>
+      <Popup>
+        <div className="text-center text-sm">
+          <strong>المنطقة المفضلة</strong>
+        </div>
+      </Popup>
+    </Marker>
+  ) : null;
+}
+
+// Map center updater for buyer form
+function BuyerMapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  map.setView(center, zoom, { animate: true });
+  return null;
 }
 
 const propertyOptions = {
@@ -352,6 +396,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     transactionType: "sale",
     cities: [],
     districts: [],
+    preferredLatitude: null,
+    preferredLongitude: null,
     propertyCategory: "residential",
     propertyType: "",
     propertyCondition: "",
@@ -366,6 +412,25 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     features: [],
     notes: "",
   });
+  
+  // Get map center for preferred location picker
+  const preferredMapCenter = useMemo<[number, number]>(() => {
+    if (filters.preferredLatitude && filters.preferredLongitude) {
+      return [filters.preferredLatitude, filters.preferredLongitude];
+    }
+    if (filters.cities.length > 0) {
+      const city = saudiCities.find(c => c.name === filters.cities[0]);
+      if (city) {
+        return [city.coordinates.lat, city.coordinates.lng];
+      }
+    }
+    return [24.7136, 46.6753]; // Default: Riyadh
+  }, [filters.cities, filters.preferredLatitude, filters.preferredLongitude]);
+
+  // Handle preferred location selection
+  const handlePreferredLocationSelect = (lat: number, lng: number) => {
+    setFilters(f => ({ ...f, preferredLatitude: lat, preferredLongitude: lng }));
+  };
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
@@ -886,7 +951,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {/* Map with all district markers */}
+                    {/* Map with all district markers + preferred location picker */}
                     <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
                       <MapContainer
                         center={[districtMapCenter.lat, districtMapCenter.lng]}
@@ -917,6 +982,13 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                             />
                           );
                         })}
+                        {/* Preferred location picker */}
+                        <PreferredLocationPicker 
+                          onLocationSelect={handlePreferredLocationSelect}
+                          currentPosition={filters.preferredLatitude && filters.preferredLongitude 
+                            ? [filters.preferredLatitude, filters.preferredLongitude] 
+                            : null}
+                        />
                       </MapContainer>
                     </div>
 
@@ -944,6 +1016,30 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </div>
                     </div>
                   </div>
+
+                  {/* Preferred Location Info */}
+                  {filters.preferredLatitude && filters.preferredLongitude && (
+                    <div className="flex items-center justify-between bg-primary/10 rounded-lg p-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Navigation className="h-4 w-4 text-primary" />
+                        <span>تم تحديد منطقة مفضلة</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({filters.preferredLatitude.toFixed(4)}, {filters.preferredLongitude.toFixed(4)})
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => setFilters(f => ({ ...f, preferredLatitude: null, preferredLongitude: null }))}
+                        className="text-xs text-destructive hover:underline"
+                        data-testid="button-clear-preferred-location-desktop"
+                      >
+                        مسح
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    انقر على الخريطة لتحديد موقع مفضل بدقة (اختياري)
+                  </p>
 
                   <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-3">
                     {filters.districts.length > 0 ? `التالي (${filters.districts.length} حي)` : "تخطي"}
@@ -1452,7 +1548,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     />
                   </div>
 
-                  {/* Map with all districts */}
+                  {/* Map with all districts + preferred location */}
                   <div className="h-[140px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[districtMapCenter.lat, districtMapCenter.lng]}
@@ -1477,8 +1573,32 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           />
                         );
                       })}
+                      {/* Preferred location picker */}
+                      <PreferredLocationPicker 
+                        onLocationSelect={handlePreferredLocationSelect}
+                        currentPosition={filters.preferredLatitude && filters.preferredLongitude 
+                          ? [filters.preferredLatitude, filters.preferredLongitude] 
+                          : null}
+                      />
                     </MapContainer>
                   </div>
+
+                  {/* Preferred Location Info - Mobile */}
+                  {filters.preferredLatitude && filters.preferredLongitude && (
+                    <div className="flex items-center justify-between bg-primary/10 rounded p-1.5">
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <Navigation className="h-3 w-3 text-primary" />
+                        <span>منطقة مفضلة</span>
+                      </div>
+                      <button 
+                        onClick={() => setFilters(f => ({ ...f, preferredLatitude: null, preferredLongitude: null }))}
+                        className="text-[10px] text-destructive"
+                        data-testid="button-clear-preferred-location-mobile"
+                      >
+                        مسح
+                      </button>
+                    </div>
+                  )}
 
                   {/* Districts Grid - Show exactly 6 districts in 2 rows */}
                   <div className="grid grid-cols-3 gap-1.5 p-1">
@@ -1499,6 +1619,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       );
                     })}
                   </div>
+
+                  <p className="text-[9px] text-muted-foreground text-center">انقر على الخريطة لتحديد موقع مفضل</p>
 
                   <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-3">
                     {filters.districts.length > 0 ? `التالي (${filters.districts.length})` : "تخطي"}
