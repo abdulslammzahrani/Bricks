@@ -1956,30 +1956,39 @@ export default function HeroSection() {
               </div>
             )}
             
-            {/* Mode Toggle - Between Map and Form */}
+            {/* Smart Matching Section with Mode Toggle */}
             {conversation.length === 0 && !pendingConfirmation && (
-              <div className="flex justify-center py-3 border-t border-b bg-background">
-                <div className="inline-flex rounded-full border border-border p-1 bg-muted/30">
-                  <Button
-                    size="sm"
-                    variant={mode === "buyer" ? "default" : "ghost"}
-                    onClick={() => handleModeSwitch("buyer")}
-                    className="gap-1.5 rounded-full px-4 text-xs"
-                    data-testid="button-mode-buyer"
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                    أبحث عن عقار
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={mode === "seller" ? "default" : "ghost"}
-                    onClick={() => handleModeSwitch("seller")}
-                    className="gap-1.5 rounded-full px-4 text-xs"
-                    data-testid="button-mode-seller"
-                  >
-                    <Building2 className="h-3.5 w-3.5" />
-                    اعرض عقارك
-                  </Button>
+              <div className="p-4 border-t bg-background">
+                {/* Title */}
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Brain className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold text-lg">المطابقة الذكية</h3>
+                </div>
+                
+                {/* Mode Toggle */}
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-full border border-border p-1 bg-muted/30">
+                    <Button
+                      size="sm"
+                      variant={mode === "buyer" ? "default" : "ghost"}
+                      onClick={() => handleModeSwitch("buyer")}
+                      className="gap-1.5 rounded-full px-4 text-xs"
+                      data-testid="button-mode-buyer"
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      أبحث عن عقار
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={mode === "seller" ? "default" : "ghost"}
+                      onClick={() => handleModeSwitch("seller")}
+                      className="gap-1.5 rounded-full px-4 text-xs"
+                      data-testid="button-mode-seller"
+                    >
+                      <Building2 className="h-3.5 w-3.5" />
+                      اعرض عقارك
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
