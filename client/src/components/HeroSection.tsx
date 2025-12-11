@@ -476,9 +476,42 @@ export default function HeroSection() {
     setIsComplete(true);
   }, [toast]);
 
-  const handleSwitchToChat = useCallback(() => {
+  const handleSwitchToChat = useCallback((initialMessage?: string) => {
     setShowSearchForm(false);
-  }, []);
+    if (initialMessage && initialMessage.trim()) {
+      // Add the message directly to conversation and trigger AI response
+      const trimmedMessage = initialMessage.trim();
+      setConversation(prev => [...prev, { type: "user" as const, text: trimmedMessage }]);
+      setIsTyping(true);
+      setIsAnalyzing(true);
+      
+      // Trigger AI response
+      fetch("/api/intake/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          text: trimmedMessage, 
+          context: { role: mode } 
+        }),
+      })
+        .then(res => res.json())
+        .then(result => {
+          setIsTyping(false);
+          setIsAnalyzing(false);
+          if (result.response) {
+            setConversation(prev => [...prev, { type: "system" as const, text: result.response }]);
+          }
+        })
+        .catch(() => {
+          setIsTyping(false);
+          setIsAnalyzing(false);
+          setConversation(prev => [...prev, { 
+            type: "system" as const, 
+            text: "أهلاً! أنا مستشارك العقاري. كيف يمكنني مساعدتك اليوم؟" 
+          }]);
+        });
+    }
+  }, [mode]);
 
   const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
     let remaining = text;

@@ -232,7 +232,7 @@ function validateSaudiPhone(phone: string): { isValid: boolean; normalized: stri
 
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
-  onSwitchToChat: () => void;
+  onSwitchToChat: (initialMessage?: string) => void;
 }
 
 // Generate approximate coordinates for neighborhoods based on city center with grid distribution
@@ -439,6 +439,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [consultantMessage, setConsultantMessage] = useState("");
 
   // Validate phone on change
   const handlePhoneChange = (value: string) => {
@@ -1313,7 +1314,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <Button
             size="icon"
             variant="default"
-            onClick={() => onSwitchToChat?.()}
+            onClick={() => {
+              if (consultantMessage.trim()) {
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="rounded-full h-9 w-9 flex-shrink-0"
             data-testid="button-send-consultant-desktop"
           >
@@ -1322,9 +1330,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <input
             type="text"
             dir="rtl"
+            value={consultantMessage}
+            onChange={(e) => setConsultantMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && consultantMessage.trim()) {
+                e.preventDefault();
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              }
+            }}
             placeholder="اكتب رسالتك هنا..."
             className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
-            onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant-desktop"
           />
         </div>
@@ -1892,7 +1908,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <Button
             size="icon"
             variant="default"
-            onClick={() => onSwitchToChat?.()}
+            onClick={() => {
+              if (consultantMessage.trim()) {
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              } else {
+                onSwitchToChat?.();
+              }
+            }}
             className="rounded-full h-7 w-7 flex-shrink-0"
             data-testid="button-send-consultant"
           >
@@ -1901,9 +1924,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <input
             type="text"
             dir="rtl"
+            value={consultantMessage}
+            onChange={(e) => setConsultantMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && consultantMessage.trim()) {
+                e.preventDefault();
+                onSwitchToChat?.(consultantMessage.trim());
+                setConsultantMessage("");
+              }
+            }}
             placeholder="اكتب رسالتك هنا..."
             className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
-            onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant"
           />
         </div>
