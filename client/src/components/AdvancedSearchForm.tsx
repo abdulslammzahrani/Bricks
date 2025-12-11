@@ -544,12 +544,21 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
   const reliabilityScore = getReliabilityScore();
 
-  // Get map center for districts (center of first selected city)
+  // Get map center for districts (center on last selected district, or first city)
   const districtMapCenter = useMemo(() => {
+    // If there are selected districts, center on the last one
+    if (filters.districts.length > 0) {
+      const lastDistrict = filters.districts[filters.districts.length - 1];
+      const coords = neighborhoodCoords.get(lastDistrict);
+      if (coords) {
+        return { lat: coords.lat, lng: coords.lng };
+      }
+    }
+    // Otherwise center on first selected city
     if (filters.cities.length === 0) return SAUDI_CENTER;
     const firstCity = saudiCities.find(c => c.name === filters.cities[0]);
     return firstCity?.coordinates || SAUDI_CENTER;
-  }, [filters.cities]);
+  }, [filters.cities, filters.districts, neighborhoodCoords]);
 
   return (
     <>
