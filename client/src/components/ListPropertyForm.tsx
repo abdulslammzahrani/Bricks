@@ -572,7 +572,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       </div>
 
       {/* Chat with Consultant - Inside Form (Desktop) */}
-      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+      <div className="mt-10 pt-6 border-t border-dashed max-w-md mx-auto">
         <div className="flex items-center justify-center gap-2 mb-3">
           <MessageCircle className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
@@ -901,7 +901,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       </div>
 
       {/* Chat with Consultant - Inside Form (Mobile) */}
-      <div className="mt-3 pt-3 border-t border-dashed">
+      <div className="mt-8 pt-4 border-t border-dashed">
         <div className="flex items-center justify-center gap-1.5 mb-2">
           <MessageCircle className="h-3 w-3 text-muted-foreground" />
           <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
