@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   MapPin, User, Home, Building2, 
   Check, Phone, Camera, DollarSign,
-  Building, Warehouse, LandPlot, Ruler, BedDouble
+  Building, Warehouse, LandPlot, Ruler, BedDouble,
+  Send, MessageCircle
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 
@@ -471,6 +472,30 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
           );
         })}
       </div>
+
+      {/* Chat with Consultant - Inside Form (Desktop) */}
+      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+          <Button
+            size="icon"
+            className="rounded-full h-9 w-9 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            data-testid="button-send-consultant-seller-desktop"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            data-testid="input-chat-consultant-seller-desktop"
+          />
+        </div>
+      </div>
     </div>
   );
 
@@ -738,6 +763,30 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
             </div>
           );
         })}
+      </div>
+
+      {/* Chat with Consultant - Inside Form (Mobile) */}
+      <div className="mt-3 pt-3 border-t border-dashed">
+        <div className="flex items-center justify-center gap-1.5 mb-2">
+          <MessageCircle className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+          <Button
+            size="icon"
+            className="rounded-full h-7 w-7 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            data-testid="button-send-consultant-seller-mobile"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+            data-testid="input-chat-consultant-seller-mobile"
+          />
+        </div>
       </div>
     </div>
   );

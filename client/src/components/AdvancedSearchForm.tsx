@@ -10,7 +10,7 @@ import {
   BedDouble, Bath, Wallet, Settings2, FileText,
   Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X,
   Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send,
-  Hammer, Clock, CheckCircle2
+  Hammer, Clock, CheckCircle2, Mic, MicOff, MessageCircle
 } from "lucide-react";
 import { saudiCities, type Neighborhood } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -1150,6 +1150,33 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           );
         })}
       </div>
+
+      {/* Chat with Consultant - Inside Form (Desktop) */}
+      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+          <Button
+            size="icon"
+            variant="default"
+            onClick={() => onSwitchToChat?.()}
+            className="rounded-full h-9 w-9 flex-shrink-0"
+            data-testid="button-send-consultant-desktop"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            onFocus={() => onSwitchToChat?.()}
+            data-testid="input-chat-consultant-desktop"
+          />
+        </div>
+      </div>
     </div>
 
     {/* ==================== MOBILE VERSION ==================== */}
@@ -1676,6 +1703,33 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             </div>
           );
         })}
+      </div>
+
+      {/* Chat with Consultant - Inside Form */}
+      <div className="mt-3 pt-3 border-t border-dashed">
+        <div className="flex items-center justify-center gap-1.5 mb-2">
+          <MessageCircle className="h-3 w-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+        </div>
+        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+          <Button
+            size="icon"
+            variant="default"
+            onClick={() => onSwitchToChat?.()}
+            className="rounded-full h-7 w-7 flex-shrink-0"
+            data-testid="button-send-consultant"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+          <input
+            type="text"
+            dir="rtl"
+            placeholder="اكتب رسالتك هنا..."
+            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+            onFocus={() => onSwitchToChat?.()}
+            data-testid="input-chat-consultant"
+          />
+        </div>
       </div>
     </div>
     </>

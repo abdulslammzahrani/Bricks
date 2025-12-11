@@ -2028,60 +2028,12 @@ export default function HeroSection() {
                   </div>
                 </div>
                 
-                {/* Search Form - Main Action */}
+                {/* Search Form - Main Action (includes chat inside) */}
                 <div className="border-t">
                   <AdvancedSearchForm 
                     onSearch={handleSearchFormSearch}
                     onSwitchToChat={handleSwitchToChat}
                   />
-                </div>
-                
-                {/* Chat Input - Alternative - Compact */}
-                <div className="border-t bg-muted/30 px-3 py-2">
-                  <p className="text-[10px] text-muted-foreground text-center mb-1.5">أو تحدث مع مستشار المبيعات</p>
-                  <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
-                    <Button
-                      size="icon"
-                      onClick={() => {
-                        if (inputText.trim()) {
-                          setShowSearchForm(false);
-                          handleSubmit();
-                        }
-                      }}
-                      disabled={!inputText.trim()}
-                      className="rounded-full h-7 w-7 flex-shrink-0"
-                      data-testid="button-send-form"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </Button>
-                    
-                    <Button
-                      size="icon"
-                      variant={isRecording ? "destructive" : "ghost"}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={isTranscribing}
-                      className="rounded-full h-7 w-7 flex-shrink-0"
-                      data-testid="button-voice-form"
-                    >
-                      {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-                    </Button>
-                    
-                    <input
-                      type="text"
-                      dir="rtl"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && inputText.trim()) {
-                          setShowSearchForm(false);
-                          handleSubmit();
-                        }
-                      }}
-                      placeholder="اكتب رسالتك هنا..."
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
-                      data-testid="input-chat-form"
-                    />
-                  </div>
                 </div>
               </div>
             )}
@@ -2133,7 +2085,7 @@ export default function HeroSection() {
                   </div>
                 </div>
                 
-                {/* Property Form - Main Action */}
+                {/* Property Form - Main Action (includes chat inside) */}
                 <div className="border-t">
                   <ListPropertyForm 
                     onSubmit={(propertyData) => {
@@ -2155,52 +2107,6 @@ export default function HeroSection() {
                       });
                     }}
                   />
-                </div>
-                
-                {/* Chat Input - Alternative - Compact */}
-                <div className="border-t bg-muted/30 px-3 py-2">
-                  <p className="text-[10px] text-muted-foreground text-center mb-1.5">أو تحدث مع مستشار العقارات</p>
-                  <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
-                    <Button
-                      size="icon"
-                      onClick={() => {
-                        if (inputText.trim()) {
-                          handleSubmit();
-                        }
-                      }}
-                      disabled={!inputText.trim()}
-                      className="rounded-full h-7 w-7 flex-shrink-0 bg-green-600 hover:bg-green-700"
-                      data-testid="button-send-seller-form"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </Button>
-                    
-                    <Button
-                      size="icon"
-                      variant={isRecording ? "destructive" : "ghost"}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={isTranscribing}
-                      className="rounded-full h-7 w-7 flex-shrink-0"
-                      data-testid="button-voice-seller-form"
-                    >
-                      {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-                    </Button>
-                    
-                    <input
-                      type="text"
-                      dir="rtl"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && inputText.trim()) {
-                          handleSubmit();
-                        }
-                      }}
-                      placeholder="اكتب رسالتك هنا..."
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
-                      data-testid="input-chat-seller-form"
-                    />
-                  </div>
                 </div>
               </div>
             )}
