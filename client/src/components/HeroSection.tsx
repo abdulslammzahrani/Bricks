@@ -1984,51 +1984,55 @@ export default function HeroSection() {
             {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Stats Bar - Compact Top */}
-                <div className="bg-primary/5 px-3 py-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-b">
-                  <div className="flex items-center gap-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
-                    <span>يتصفحون</span>
+                {/* Map and Stats Section - Top for Trust */}
+                <div className="bg-muted/20 p-3">
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-center gap-4 mb-3 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="h-3 w-px bg-border"></div>
+                    <div className="flex items-center gap-1">
+                      <FileText className={`h-3 w-3 text-amber-500 ${requestsAnimating ? 'scale-125' : ''}`} />
+                      <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                      <span>طلب</span>
+                    </div>
+                    <div className="h-3 w-px bg-border"></div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
+                      <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
+                      <span>صفقة</span>
+                    </div>
                   </div>
-                  <div className="h-3 w-px bg-border"></div>
-                  <div className="flex items-center gap-1">
-                    <FileText className={`h-3 w-3 text-amber-500 ${requestsAnimating ? 'scale-125' : ''}`} />
-                    <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
-                    <span>طلب</span>
-                  </div>
-                  <div className="h-3 w-px bg-border"></div>
-                  <div className="flex items-center gap-1">
-                    <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
-                    <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
-                    <span>صفقة</span>
-                  </div>
-                </div>
-                
-                {/* Search Form - Main Focus */}
-                <AdvancedSearchForm 
-                  onSearch={handleSearchFormSearch}
-                  onSwitchToChat={handleSwitchToChat}
-                />
-                
-                {/* Map and Examples Section */}
-                <div className="border-t bg-muted/20 p-3">
-                  {/* Typewriter Example */}
-                  <TypewriterBanner
-                    segments={exampleSegments}
-                    fullText={fullExampleText}
-                    mode={mode}
-                    onExampleComplete={handleExampleComplete}
-                    onTextClick={addSuggestion}
-                  />
                   
                   {/* Map */}
                   <SaudiMap 
                     markers={mapMarkers} 
-                    className="h-28 md:h-36 rounded-lg border border-border/30 shadow-sm"
+                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                  />
+                  
+                  {/* Typewriter Example */}
+                  <div className="mt-2">
+                    <TypewriterBanner
+                      segments={exampleSegments}
+                      fullText={fullExampleText}
+                      mode={mode}
+                      onExampleComplete={handleExampleComplete}
+                      onTextClick={addSuggestion}
+                    />
+                  </div>
+                </div>
+                
+                {/* Search Form - Main Action */}
+                <div className="border-t">
+                  <AdvancedSearchForm 
+                    onSearch={handleSearchFormSearch}
+                    onSwitchToChat={handleSwitchToChat}
                   />
                 </div>
                 
@@ -2085,67 +2089,71 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Stats Bar - Compact Top */}
-                <div className="bg-green-500/5 px-3 py-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground border-b">
-                  <div className="flex items-center gap-1">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
-                    <span>يتصفحون</span>
+                {/* Map and Stats Section - Top for Trust */}
+                <div className="bg-muted/20 p-3">
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-center gap-4 mb-3 text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
+                      <span>يتصفحون</span>
+                    </div>
+                    <div className="h-3 w-px bg-border"></div>
+                    <div className="flex items-center gap-1">
+                      <Building2 className={`h-3 w-3 text-green-500 ${requestsAnimating ? 'scale-125' : ''}`} />
+                      <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
+                      <span>عقار</span>
+                    </div>
+                    <div className="h-3 w-px bg-border"></div>
+                    <div className="flex items-center gap-1">
+                      <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
+                      <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
+                      <span>صفقة</span>
+                    </div>
                   </div>
-                  <div className="h-3 w-px bg-border"></div>
-                  <div className="flex items-center gap-1">
-                    <Building2 className={`h-3 w-3 text-green-500 ${requestsAnimating ? 'scale-125' : ''}`} />
-                    <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
-                    <span>عقار</span>
-                  </div>
-                  <div className="h-3 w-px bg-border"></div>
-                  <div className="flex items-center gap-1">
-                    <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
-                    <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
-                    <span>صفقة</span>
-                  </div>
-                </div>
-                
-                {/* Property Form - Main Focus */}
-                <ListPropertyForm 
-                  onSubmit={(propertyData) => {
-                    toast({
-                      title: "تم استلام طلبك",
-                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                    });
-                    setIsComplete(true);
-                    setExtractedData({
-                      name: propertyData.ownerName,
-                      phone: propertyData.ownerPhone,
-                      city: propertyData.city,
-                      district: propertyData.district,
-                      propertyType: propertyData.propertyType,
-                      transactionType: propertyData.transactionType,
-                      rooms: propertyData.rooms,
-                      area: propertyData.area,
-                      price: propertyData.price,
-                    });
-                  }}
-                />
-                
-                {/* Map and Examples Section */}
-                <div className="border-t bg-muted/20 p-3">
-                  {/* Typewriter Example for Seller */}
-                  <TypewriterBanner
-                    segments={exampleSegments}
-                    fullText={fullExampleText}
-                    mode={mode}
-                    onExampleComplete={handleExampleComplete}
-                    onTextClick={addSuggestion}
-                  />
                   
                   {/* Map */}
                   <SaudiMap 
                     markers={mapMarkers} 
-                    className="h-28 md:h-36 rounded-lg border border-border/30 shadow-sm"
+                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                  />
+                  
+                  {/* Typewriter Example for Seller */}
+                  <div className="mt-2">
+                    <TypewriterBanner
+                      segments={exampleSegments}
+                      fullText={fullExampleText}
+                      mode={mode}
+                      onExampleComplete={handleExampleComplete}
+                      onTextClick={addSuggestion}
+                    />
+                  </div>
+                </div>
+                
+                {/* Property Form - Main Action */}
+                <div className="border-t">
+                  <ListPropertyForm 
+                    onSubmit={(propertyData) => {
+                      toast({
+                        title: "تم استلام طلبك",
+                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                      });
+                      setIsComplete(true);
+                      setExtractedData({
+                        name: propertyData.ownerName,
+                        phone: propertyData.ownerPhone,
+                        city: propertyData.city,
+                        district: propertyData.district,
+                        propertyType: propertyData.propertyType,
+                        transactionType: propertyData.transactionType,
+                        rooms: propertyData.rooms,
+                        area: propertyData.area,
+                        price: propertyData.price,
+                      });
+                    }}
                   />
                 </div>
                 
