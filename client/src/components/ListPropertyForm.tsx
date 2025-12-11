@@ -603,6 +603,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </div>
                   )}
                   
+                  {/* Transaction Type - Amber/Orange for seller (Desktop) */}
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       { v: "sale", l: "للبيع", icon: DollarSign },
@@ -612,25 +613,18 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         key={t.v}
                         onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
                         className={`p-4 rounded-xl border-2 text-center transition-all flex items-center justify-center gap-3 ${
-                          data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
+                          data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border hover:border-amber-300"
                         }`}
                         data-testid={`button-list-${t.v}`}
                       >
                         <t.icon className={`h-5 w-5 ${data.transactionType === t.v ? "text-amber-600" : "text-muted-foreground"}`} />
-                        <span className="font-bold">{t.l}</span>
+                        <span className={`font-bold ${data.transactionType === t.v ? "text-amber-700 dark:text-amber-400" : ""}`}>{t.l}</span>
                       </button>
                     ))}
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-0">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 1: Location */}
-              {activeCard === 1 && (
-                <div className="space-y-4">
-                  <div className="flex justify-center gap-3 mb-2">
+                  
+                  {/* Category - Amber/Orange for seller (Desktop) */}
+                  <div className="flex justify-center gap-3">
                     {[
                       { v: "residential", l: "سكني", I: Home },
                       { v: "commercial", l: "تجاري", I: Building2 }
@@ -639,7 +633,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         key={c.v}
                         onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
-                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border hover:border-amber-300"
                         }`}
                         data-testid={`button-list-category-${c.v}`}
                       >
@@ -649,6 +643,15 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     ))}
                   </div>
                   
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-0">
+                    التالي
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 1: Location */}
+              {activeCard === 1 && (
+                <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     {/* City Map with all markers */}
                     <div>
@@ -1083,23 +1086,46 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </div>
                   )}
                   
+                  {/* Transaction Type - Amber/Orange for seller */}
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { v: "sale", l: "للبيع" },
-                      { v: "rent", l: "للإيجار" }
+                      { v: "sale", l: "للبيع", icon: Home },
+                      { v: "rent", l: "للإيجار", icon: Building2 }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setData(d => ({ ...d, transactionType: t.v as "sale" | "rent" }))}
-                        className={`p-2 rounded-lg border-2 text-center text-sm font-medium transition-all ${
+                        className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-center transition-all ${
                           data.transactionType === t.v ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-border"
                         }`}
                         data-testid={`button-list-${t.v}-mobile`}
                       >
-                        {t.l}
+                        <t.icon className={`h-4 w-4 ${data.transactionType === t.v ? "text-amber-600" : "text-muted-foreground"}`} />
+                        <span className={`font-bold text-sm ${data.transactionType === t.v ? "text-amber-700 dark:text-amber-400" : ""}`}>{t.l}</span>
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Category - Amber/Orange for seller */}
+                  <div className="flex justify-center gap-2">
+                    {[
+                      { v: "residential", l: "سكني", I: Home },
+                      { v: "commercial", l: "تجاري", I: Building2 }
+                    ].map(c => (
+                      <button
+                        key={c.v}
+                        onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
+                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                        }`}
+                        data-testid={`button-list-category-${c.v}-mobile`}
+                      >
+                        <c.I className="h-3 w-3" />
+                        {c.l}
+                      </button>
+                    ))}
+                  </div>
+                  
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-0">
                     التالي
                   </Button>
@@ -1109,24 +1135,6 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
               {/* Step 1: Location */}
               {activeCard === 1 && (
                 <div className="space-y-2">
-                  <div className="flex justify-center gap-2">
-                    {[
-                      { v: "residential", l: "سكني" },
-                      { v: "commercial", l: "تجاري" }
-                    ].map(c => (
-                      <button
-                        key={c.v}
-                        onClick={() => setData(d => ({ ...d, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`px-4 py-2 rounded-full border-2 text-xs transition-all ${
-                          data.propertyCategory === c.v ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                        }`}
-                        data-testid={`button-list-category-${c.v}-mobile`}
-                      >
-                        {c.l}
-                      </button>
-                    ))}
-                  </div>
-                  
                   {/* City Map with markers - Mobile */}
                   <div className="h-[100px] rounded-lg overflow-hidden border border-border">
                     <MapContainer

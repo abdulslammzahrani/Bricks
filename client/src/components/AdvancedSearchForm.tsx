@@ -637,14 +637,13 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   }, [neighborhoodCoords]);
 
   const cards = [
-    { id: 0, icon: User, title: "البيانات", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
-    { id: 1, icon: Sparkles, title: "نوع الطلب", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
-    { id: 2, icon: MapPin, title: "المدينة", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
-    { id: 3, icon: Navigation, title: "الحي", color: "bg-teal-500", lightColor: "bg-teal-100 dark:bg-teal-900/40" },
-    { id: 4, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
-    { id: 5, icon: Hammer, title: "حالة العقار", color: "bg-cyan-500", lightColor: "bg-cyan-100 dark:bg-cyan-900/40" },
-    { id: 6, icon: Settings2, title: "المواصفات", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
-    { id: 7, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
+    { id: 0, icon: User, title: "بياناتك وطلبك", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
+    { id: 1, icon: MapPin, title: "المدينة", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
+    { id: 2, icon: Navigation, title: "الحي", color: "bg-teal-500", lightColor: "bg-teal-100 dark:bg-teal-900/40" },
+    { id: 3, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
+    { id: 4, icon: Hammer, title: "حالة العقار", color: "bg-cyan-500", lightColor: "bg-cyan-100 dark:bg-cyan-900/40" },
+    { id: 5, icon: Settings2, title: "المواصفات", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
+    { id: 6, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
   ];
 
   const goNext = () => {
@@ -674,12 +673,11 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
   const canProceed = () => {
     switch (activeCard) {
       case 0: return filters.name.trim() !== "" && isPhoneValid && isEmailValid;
-      case 1: return true;
-      case 2: return filters.cities.length > 0;
+      case 1: return filters.cities.length > 0;
+      case 2: return true;
       case 3: return true;
       case 4: return true;
       case 5: return true;
-      case 6: return true;
       default: return true;
     }
   };
@@ -921,34 +919,28 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   )}
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 1: Type */}
-              {activeCard === 1 && (
-                <div className="space-y-3">
+                  {/* Transaction Type - Green for buyer (Desktop) */}
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { v: "sale", l: "شراء", desc: "أبحث عن عقار للشراء", icon: Home },
-                      { v: "rent", l: "إيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
+                      { v: "sale", l: "للشراء", desc: "أبحث عن عقار للشراء", icon: Home },
+                      { v: "rent", l: "للإيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
                         className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md" : "border-border hover:border-green-300"
                         }`}
                         data-testid={`button-filter-${t.v}-desktop`}
                       >
-                        <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                        <div className="font-bold text-sm">{t.l}</div>
+                        <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
+                        <div className={`font-bold text-sm ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</div>
                         <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Category - Green for buyer (Desktop) */}
                   <div className="flex justify-center gap-2">
                     {[
                       { v: "residential", l: "سكني", I: Home },
@@ -958,7 +950,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         key={c.v}
                         onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
                         className={`flex items-center gap-1.5 px-5 py-2 rounded-full border-2 text-sm transition-all ${
-                          filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                          filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border hover:border-green-300"
                         }`}
                         data-testid={`button-category-${c.v}-desktop`}
                       >
@@ -967,14 +959,15 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </button>
                     ))}
                   </div>
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-1">
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl bg-green-600 hover:bg-green-700" data-testid="button-next-desktop-0">
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 2: City with Smart Map - Multiple Selection */}
-              {activeCard === 2 && (
+              {/* Step 1: City with Smart Map - Multiple Selection */}
+              {activeCard === 1 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium block text-center">اختر المدن</label>
                   <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
@@ -1069,7 +1062,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 3: District with Smart Map - Multiple Selection */}
-              {activeCard === 3 && filters.cities.length > 0 && (
+              {activeCard === 2 && filters.cities.length > 0 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium block text-center">اختر الأحياء</label>
                   <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
@@ -1196,7 +1189,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 4: Property Type */}
-              {activeCard === 4 && (
+              {activeCard === 3 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium block text-center">نوع العقار</label>
                   <div className="grid grid-cols-4 gap-2">
@@ -1224,7 +1217,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 5: Property Condition */}
-              {activeCard === 5 && (
+              {activeCard === 4 && (
                 <div className="space-y-3">
                   <label className="text-sm font-medium block text-center">حالة العقار</label>
                   <div className="grid grid-cols-3 gap-3">
@@ -1257,7 +1250,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 6: Specifications */}
-              {activeCard === 6 && (
+              {activeCard === 5 && (
                 <div className="space-y-4">
                   {/* Rooms */}
                   <div>
@@ -1332,7 +1325,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 7: Additional Details */}
-              {activeCard === 7 && (
+              {activeCard === 6 && (
                 <div className="space-y-4">
                   {/* Features */}
                   <div>
@@ -1565,33 +1558,27 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   )}
                   
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-0">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 1: Type */}
-              {activeCard === 1 && (
-                <div className="space-y-2">
+                  {/* Transaction Type - Green for buyer */}
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { v: "sale", l: "شراء", icon: Home },
-                      { v: "rent", l: "إيجار", icon: Building2 }
+                      { v: "sale", l: "للشراء", icon: Home },
+                      { v: "rent", l: "للإيجار", icon: Building2 }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
+                        className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 text-center transition-all ${
+                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border"
                         }`}
                         data-testid={`button-filter-${t.v}`}
                       >
-                        <t.icon className={`h-5 w-5 mx-auto ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                        <div className="font-bold text-xs mt-1">{t.l}</div>
+                        <t.icon className={`h-4 w-4 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
+                        <span className={`font-bold text-sm ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</span>
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Category - Green for buyer */}
                   <div className="flex justify-center gap-2">
                     {[
                       { v: "residential", l: "سكني", I: Home },
@@ -1601,7 +1588,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         key={c.v}
                         onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
-                          filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                          filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border"
                         }`}
                         data-testid={`button-category-${c.v}`}
                       >
@@ -1610,14 +1597,15 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </button>
                     ))}
                   </div>
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-1">
+                  
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm bg-green-600 hover:bg-green-700" data-testid="button-next-0">
                     التالي
                   </Button>
                 </div>
               )}
 
-              {/* Step 2: City - Smart Map */}
-              {activeCard === 2 && (
+              {/* Step 1: City - Smart Map */}
+              {activeCard === 1 && (
                 <div className="space-y-2">
                   <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
                   
@@ -1707,8 +1695,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                 </div>
               )}
 
-              {/* Step 3: District - Smart Map */}
-              {activeCard === 3 && filters.cities.length > 0 && (
+              {/* Step 2: District - Smart Map */}
+              {activeCard === 2 && filters.cities.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
                   
@@ -1817,7 +1805,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 4: Property Type */}
-              {activeCard === 4 && (
+              {activeCard === 3 && (
                 <div className="space-y-2">
                   <div className="grid grid-cols-4 gap-2">
                     {propertyTypes.map((type) => {
@@ -1844,7 +1832,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 5: Property Condition */}
-              {activeCard === 5 && (
+              {activeCard === 4 && (
                 <div className="space-y-2">
                   <div className="grid grid-cols-3 gap-2">
                     {[
@@ -1876,7 +1864,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 6: Specifications */}
-              {activeCard === 6 && (
+              {activeCard === 5 && (
                 <div className="space-y-3">
                   {/* Rooms */}
                   <div>
@@ -1951,7 +1939,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               )}
 
               {/* Step 7: Additional Details */}
-              {activeCard === 7 && (
+              {activeCard === 6 && (
                 <div className="space-y-3">
                   {/* Features */}
                   <div>
