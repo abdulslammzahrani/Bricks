@@ -324,6 +324,11 @@ function DistrictMarker({
 }) {
   const [isHovered, setIsHovered] = useState(false);
   
+  // Don't render if coordinates are invalid
+  if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number' || isNaN(coords.lat) || isNaN(coords.lng)) {
+    return null;
+  }
+  
   const eventHandlers = useMemo(() => ({
     click: () => onToggle(name),
     mouseover: () => setIsHovered(true),
@@ -489,15 +494,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     }));
   }, []);
 
-  // Get all neighborhoods from selected cities
+  // Get all neighborhoods from selected cities with coordinates
   const availableDistricts = useMemo(() => {
     if (filters.cities.length === 0) return [];
-    const districts: { name: string; cityName: string }[] = [];
+    const districts: { name: string; cityName: string; lat: number; lng: number }[] = [];
     filters.cities.forEach(cityName => {
       const city = saudiCities.find(c => c.name === cityName);
       if (city) {
-        city.neighborhoods.forEach(n => {
-          districts.push({ name: n.name, cityName: city.name });
+        city.neighborhoods.forEach((n, i) => {
+          const coord = getNeighborhoodCoords(city.coordinates, i, city.neighborhoods.length, n.name.charCodeAt(0));
+          districts.push({ name: n.name, cityName: city.name, lat: coord.lat, lng: coord.lng });
         });
       }
     });
@@ -872,15 +878,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           zoom={filters.cities.length > 0 ? 8 : 5} 
                         />
                         
-                        {/* Show only selected cities as markers */}
-                        {filters.cities.map(cityName => {
-                          const city = saudiCities.find(c => c.name === cityName);
-                          if (!city) return null;
+                        {/* Show all cities as markers for selection */}
+                        {filteredCities.map(city => {
+                          const isSelected = filters.cities.includes(city.name);
                           return (
                             <CityMarker
                               key={city.name}
                               city={city}
-                              isSelected={true}
+                              isSelected={isSelected}
                               onToggle={toggleCity}
                             />
                           );
@@ -1468,15 +1473,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         center={[cityMapCenter.lat, cityMapCenter.lng]} 
                         zoom={filters.cities.length > 0 ? 8 : 5} 
                       />
-                      {/* Show only selected cities as markers */}
-                      {filters.cities.map(cityName => {
-                        const city = saudiCities.find(c => c.name === cityName);
-                        if (!city) return null;
+                      {/* Show all cities as markers for selection */}
+                      {saudiCities.map(city => {
+                        const isSelected = filters.cities.includes(city.name);
                         return (
                           <CityMarker
                             key={city.name}
                             city={city}
-                            isSelected={true}
+                            isSelected={isSelected}
                             onToggle={toggleCity}
                           />
                         );
@@ -1557,17 +1561,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     >
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                       <MapCenterChanger center={[districtMapCenter.lat, districtMapCenter.lng]} zoom={11} />
-                      {/* Show only selected districts as markers */}
-                      {filters.districts.map(districtName => {
-                        const data = neighborhoodCoords.get(districtName);
-                        if (!data) return null;
+                      {/* Show all districts as markers for selection */}
+                      {filteredDistricts.map(district => {
+                        const isSelected = filters.districts.includes(district.name);
                         return (
                           <DistrictMarker
-                            key={districtName}
-                            name={districtName}
-                            cityName={data.cityName}
-                            coords={{ lat: data.lat, lng: data.lng }}
-                            isSelected={true}
+                            key={`${district.cityName}-${district.name}`}
+                            name={district.name}
+                            cityName={district.cityName}
+                            coords={{ lat: district.lat, lng: district.lng }}
+                            isSelected={isSelected}
                             onToggle={toggleDistrict}
                           />
                         );

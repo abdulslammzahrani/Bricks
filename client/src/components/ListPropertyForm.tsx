@@ -9,9 +9,19 @@ import {
   Send, MessageCircle, Navigation, Target
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+// Generate neighborhood coordinates around city center
+function getNeighborhoodCoords(cityCoords: { lat: number; lng: number }, index: number, total: number, seed: number) {
+  const angle = (2 * Math.PI * index) / total + (seed * 0.1);
+  const radius = 0.02 + (seed % 3) * 0.01;
+  return {
+    lat: cityCoords.lat + radius * Math.cos(angle),
+    lng: cityCoords.lng + radius * Math.sin(angle)
+  };
+}
 
 interface PropertyData {
   ownerName: string;
@@ -66,6 +76,83 @@ function MapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: nu
   const map = useMap();
   map.setView(center, zoom, { animate: true });
   return null;
+}
+
+// Custom icons for cities and districts
+const greenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const greyIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [20, 33],
+  iconAnchor: [10, 33],
+  popupAnchor: [1, -28],
+  shadowSize: [33, 33]
+});
+
+// City marker component for seller form
+function SellerCityMarker({ 
+  city, 
+  isSelected, 
+  onSelect 
+}: { 
+  city: typeof saudiCities[0]; 
+  isSelected: boolean;
+  onSelect: (name: string) => void;
+}) {
+  return (
+    <Marker 
+      position={[city.coordinates.lat, city.coordinates.lng]}
+      icon={isSelected ? greenIcon : greyIcon}
+      eventHandlers={{
+        click: () => onSelect(city.name)
+      }}
+    >
+      <Popup>
+        <div className="text-center text-sm font-bold">{city.name}</div>
+      </Popup>
+    </Marker>
+  );
+}
+
+// District marker component for seller form
+function SellerDistrictMarker({ 
+  name, 
+  coords, 
+  isSelected, 
+  onSelect 
+}: { 
+  name: string;
+  coords: { lat: number; lng: number };
+  isSelected: boolean;
+  onSelect: (name: string) => void;
+}) {
+  return (
+    <CircleMarker 
+      center={[coords.lat, coords.lng]}
+      radius={isSelected ? 10 : 6}
+      pathOptions={{
+        color: isSelected ? '#22c55e' : '#6b7280',
+        fillColor: isSelected ? '#22c55e' : '#9ca3af',
+        fillOpacity: isSelected ? 0.8 : 0.5,
+        weight: 2
+      }}
+      eventHandlers={{
+        click: () => onSelect(name)
+      }}
+    >
+      <Popup>
+        <div className="text-center text-sm font-bold">{name}</div>
+      </Popup>
+    </CircleMarker>
+  );
 }
 
 const propertyOptions = {
@@ -126,9 +213,33 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     return [24.7136, 46.6753]; // Default: Riyadh
   }, [data.city, data.latitude, data.longitude]);
 
+  // Get available districts for selected city with coordinates
+  const availableDistricts = useMemo(() => {
+    if (!data.city) return [];
+    const city = saudiCities.find(c => c.name === data.city);
+    if (!city) return [];
+    return city.neighborhoods.map((n, i) => {
+      const coord = getNeighborhoodCoords(city.coordinates, i, city.neighborhoods.length, n.name.charCodeAt(0));
+      return { name: n.name, lat: coord.lat, lng: coord.lng };
+    });
+  }, [data.city]);
+
   // Handle location selection from map click
   const handleLocationSelect = (lat: number, lng: number) => {
     setData(d => ({ ...d, latitude: lat, longitude: lng }));
+  };
+
+  // Handle city selection
+  const handleCitySelect = (cityName: string) => {
+    setData(d => ({ ...d, city: cityName, district: "", latitude: null, longitude: null }));
+  };
+
+  // Handle district selection
+  const handleDistrictSelect = (districtName: string) => {
+    const district = availableDistricts.find(d => d.name === districtName);
+    if (district) {
+      setData(d => ({ ...d, district: districtName, latitude: district.lat, longitude: district.lng }));
+    }
   };
 
   const propertyTypes = propertyOptions[data.propertyCategory];
@@ -349,71 +460,124 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       </button>
                     ))}
                   </div>
-                  <label className="text-sm font-medium mb-2 block text-center">اختر المدينة</label>
-                  <div className="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto p-1">
-                    {saudiCities.slice(0, 20).map((city) => (
-                      <button
-                        key={city.name}
-                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
-                        className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                          data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                        }`}
-                        data-testid={`button-list-city-${city.name}`}
-                      >
-                        {city.name}
-                      </button>
-                    ))}
-                  </div>
                   
-                  {/* Interactive Map for Pin Placement */}
-                  {data.city && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium flex items-center gap-1">
-                          <Target className="h-4 w-4 text-amber-500" />
-                          حدد الموقع بالنقر على الخريطة
-                        </label>
-                        {data.latitude && data.longitude && (
-                          <button 
-                            onClick={() => setData(d => ({ ...d, latitude: null, longitude: null }))}
-                            className="text-xs text-red-500 hover:underline"
-                            data-testid="button-clear-location"
-                          >
-                            مسح الموقع
-                          </button>
-                        )}
-                      </div>
-                      <div className="h-[180px] rounded-xl overflow-hidden border-2 border-border">
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* City Map with all markers */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-center">اختر المدينة من الخريطة</label>
+                      <div className="h-[200px] rounded-xl overflow-hidden border-2 border-border">
                         <MapContainer
-                          center={mapCenter}
-                          zoom={data.latitude ? 15 : 12}
+                          center={[24.7136, 46.6753]}
+                          zoom={5}
                           style={{ height: "100%", width: "100%" }}
                           scrollWheelZoom={true}
                         >
                           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                          <MapCenterUpdater center={mapCenter} zoom={data.latitude ? 15 : 12} />
-                          <LocationPicker 
-                            onLocationSelect={handleLocationSelect}
-                            currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
-                          />
+                          {saudiCities.map(city => (
+                            <SellerCityMarker
+                              key={city.name}
+                              city={city}
+                              isSelected={data.city === city.name}
+                              onSelect={handleCitySelect}
+                            />
+                          ))}
                         </MapContainer>
                       </div>
+                    </div>
+                    
+                    {/* City List */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block text-center">أو اختر من القائمة</label>
+                      <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-1">
+                        {saudiCities.slice(0, 20).map((city) => (
+                          <button
+                            key={city.name}
+                            onClick={() => handleCitySelect(city.name)}
+                            className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
+                              data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                            }`}
+                            data-testid={`button-list-city-${city.name}`}
+                          >
+                            {city.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Districts Map and List - Shows when city is selected */}
+                  {data.city && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium block text-center">اختر الحي</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Districts Map */}
+                        <div>
+                          <div className="h-[180px] rounded-xl overflow-hidden border-2 border-border">
+                            <MapContainer
+                              center={mapCenter}
+                              zoom={12}
+                              style={{ height: "100%", width: "100%" }}
+                              scrollWheelZoom={true}
+                            >
+                              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                              <MapCenterUpdater center={mapCenter} zoom={12} />
+                              {/* Show all districts as markers */}
+                              {availableDistricts.map(district => (
+                                <SellerDistrictMarker
+                                  key={district.name}
+                                  name={district.name}
+                                  coords={{ lat: district.lat, lng: district.lng }}
+                                  isSelected={data.district === district.name}
+                                  onSelect={handleDistrictSelect}
+                                />
+                              ))}
+                              {/* Allow manual pin placement */}
+                              <LocationPicker 
+                                onLocationSelect={handleLocationSelect}
+                                currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
+                              />
+                            </MapContainer>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground text-center mt-1">انقر على الدائرة لاختيار الحي أو انقر في أي مكان لتحديد موقع دقيق</p>
+                        </div>
+                        
+                        {/* Districts List */}
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {availableDistricts.map(district => (
+                              <button
+                                key={district.name}
+                                onClick={() => handleDistrictSelect(district.name)}
+                                className={`py-1.5 px-2 rounded-lg border text-xs font-medium transition-all ${
+                                  data.district === district.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
+                                }`}
+                                data-testid={`button-list-district-${district.name}`}
+                              >
+                                {district.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
                       {data.latitude && data.longitude && (
-                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
-                          <Navigation className="h-3 w-3 text-amber-500" />
-                          <span>تم تحديد الموقع: {data.latitude.toFixed(5)}, {data.longitude.toFixed(5)}</span>
+                        <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Navigation className="h-3 w-3 text-amber-500" />
+                            <span>الموقع: {data.district || 'موقع مخصص'} ({data.latitude.toFixed(4)}, {data.longitude.toFixed(4)})</span>
+                          </div>
+                          <button 
+                            onClick={() => setData(d => ({ ...d, district: "", latitude: null, longitude: null }))}
+                            className="text-xs text-red-500 hover:underline"
+                            data-testid="button-clear-location"
+                          >
+                            مسح
+                          </button>
                         </div>
                       )}
                     </div>
                   )}
 
-                  <Input
-                    placeholder="اسم الحي (اختياري)"
-                    value={data.district}
-                    onChange={(e) => setData(d => ({ ...d, district: e.target.value }))}
-                    className="h-12 text-center rounded-xl"
-                    data-testid="input-district"
-                  />
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-base bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-1">
                     التالي
                   </Button>
@@ -722,11 +886,33 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5 max-h-[80px] overflow-y-auto">
-                    {saudiCities.slice(0, 16).map((city) => (
+                  
+                  {/* City Map with markers - Mobile */}
+                  <div className="h-[100px] rounded-lg overflow-hidden border border-border">
+                    <MapContainer
+                      center={[24.7136, 46.6753]}
+                      zoom={5}
+                      style={{ height: "100%", width: "100%" }}
+                      zoomControl={false}
+                    >
+                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                      {saudiCities.map(city => (
+                        <SellerCityMarker
+                          key={city.name}
+                          city={city}
+                          isSelected={data.city === city.name}
+                          onSelect={handleCitySelect}
+                        />
+                      ))}
+                    </MapContainer>
+                  </div>
+                  
+                  {/* City Grid - Mobile */}
+                  <div className="grid grid-cols-4 gap-1.5 max-h-[60px] overflow-y-auto">
+                    {saudiCities.slice(0, 12).map((city) => (
                       <button
                         key={city.name}
-                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
+                        onClick={() => handleCitySelect(city.name)}
                         className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
                           data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
                         }`}
@@ -737,42 +923,61 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     ))}
                   </div>
                   
-                  {/* Interactive Map for Mobile */}
+                  {/* Districts Map and List - Mobile */}
                   {data.city && (
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-medium flex items-center gap-1">
-                          <Target className="h-3 w-3 text-amber-500" />
-                          انقر لتحديد الموقع
-                        </span>
-                        {data.latitude && (
-                          <button 
-                            onClick={() => setData(d => ({ ...d, latitude: null, longitude: null }))}
-                            className="text-[10px] text-red-500"
-                            data-testid="button-clear-location-mobile"
-                          >
-                            مسح
-                          </button>
-                        )}
-                      </div>
-                      <div className="h-[120px] rounded-lg overflow-hidden border border-border">
+                      <p className="text-[10px] text-center font-medium">اختر الحي من الخريطة أو القائمة</p>
+                      <div className="h-[100px] rounded-lg overflow-hidden border border-border">
                         <MapContainer
                           center={mapCenter}
-                          zoom={data.latitude ? 15 : 12}
+                          zoom={12}
                           style={{ height: "100%", width: "100%" }}
-                          scrollWheelZoom={true}
+                          zoomControl={false}
                         >
                           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                          <MapCenterUpdater center={mapCenter} zoom={data.latitude ? 15 : 12} />
+                          <MapCenterUpdater center={mapCenter} zoom={12} />
+                          {availableDistricts.map(district => (
+                            <SellerDistrictMarker
+                              key={district.name}
+                              name={district.name}
+                              coords={{ lat: district.lat, lng: district.lng }}
+                              isSelected={data.district === district.name}
+                              onSelect={handleDistrictSelect}
+                            />
+                          ))}
                           <LocationPicker 
                             onLocationSelect={handleLocationSelect}
                             currentPosition={data.latitude && data.longitude ? [data.latitude, data.longitude] : null}
                           />
                         </MapContainer>
                       </div>
+                      
+                      {/* Districts Grid - Mobile */}
+                      <div className="grid grid-cols-3 gap-1 max-h-[60px] overflow-y-auto">
+                        {availableDistricts.slice(0, 9).map(district => (
+                          <button
+                            key={district.name}
+                            onClick={() => handleDistrictSelect(district.name)}
+                            className={`py-1 px-1 rounded text-[9px] font-medium transition-all ${
+                              data.district === district.name ? "bg-amber-500 text-white" : "bg-muted"
+                            }`}
+                            data-testid={`button-list-district-${district.name}-mobile`}
+                          >
+                            {district.name}
+                          </button>
+                        ))}
+                      </div>
+                      
                       {data.latitude && data.longitude && (
-                        <div className="text-[10px] text-center text-muted-foreground bg-amber-50 dark:bg-amber-900/20 rounded p-1">
-                          تم التحديد: {data.latitude.toFixed(4)}, {data.longitude.toFixed(4)}
+                        <div className="flex items-center justify-between text-[10px] bg-amber-50 dark:bg-amber-900/20 rounded p-1">
+                          <span>{data.district || 'موقع مخصص'}: {data.latitude.toFixed(4)}</span>
+                          <button 
+                            onClick={() => setData(d => ({ ...d, district: "", latitude: null, longitude: null }))}
+                            className="text-red-500"
+                            data-testid="button-clear-location-mobile"
+                          >
+                            مسح
+                          </button>
                         </div>
                       )}
                     </div>
