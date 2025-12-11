@@ -1935,137 +1935,88 @@ export default function HeroSection() {
               </div>
             ) : (
               <>
+            {/* Map Section - Shared between buyer and seller */}
+            {(mode === "buyer" || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
+              <div className="bg-muted/20 p-3">
+                <SaudiMap 
+                  markers={mapMarkers} 
+                  className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
+                />
+                
+                {/* Typewriter Example */}
+                <div className="mt-2">
+                  <TypewriterBanner
+                    segments={exampleSegments}
+                    fullText={fullExampleText}
+                    mode={mode}
+                    onExampleComplete={handleExampleComplete}
+                    onTextClick={addSuggestion}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Mode Toggle - Between Map and Form */}
+            {conversation.length === 0 && !pendingConfirmation && (
+              <div className="flex justify-center py-3 border-t border-b bg-background">
+                <div className="inline-flex rounded-full border border-border p-1 bg-muted/30">
+                  <Button
+                    size="sm"
+                    variant={mode === "buyer" ? "default" : "ghost"}
+                    onClick={() => handleModeSwitch("buyer")}
+                    className="gap-1.5 rounded-full px-4 text-xs"
+                    data-testid="button-mode-buyer"
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    أبحث عن عقار
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={mode === "seller" ? "default" : "ghost"}
+                    onClick={() => handleModeSwitch("seller")}
+                    className="gap-1.5 rounded-full px-4 text-xs"
+                    data-testid="button-mode-seller"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    اعرض عقارك
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Map Section - Top */}
-                <div className="bg-muted/20 p-3">
-                  {/* Map with embedded stats */}
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
-                  />
-                  
-                  {/* Mode Toggle - Under Map */}
-                  <div className="flex justify-center mt-3">
-                    <div className="inline-flex rounded-full border border-border p-1 bg-background/80 backdrop-blur-sm">
-                      <Button
-                        size="sm"
-                        variant={mode === "buyer" ? "default" : "ghost"}
-                        onClick={() => handleModeSwitch("buyer")}
-                        className="gap-1.5 rounded-full px-4 text-xs"
-                        data-testid="button-mode-buyer"
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                        أبحث عن عقار
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={mode === "seller" ? "default" : "ghost"}
-                        onClick={() => handleModeSwitch("seller")}
-                        className="gap-1.5 rounded-full px-4 text-xs"
-                        data-testid="button-mode-seller"
-                      >
-                        <Building2 className="h-3.5 w-3.5" />
-                        اعرض عقارك
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Typewriter Example */}
-                  <div className="mt-2">
-                    <TypewriterBanner
-                      segments={exampleSegments}
-                      fullText={fullExampleText}
-                      mode={mode}
-                      onExampleComplete={handleExampleComplete}
-                      onTextClick={addSuggestion}
-                    />
-                  </div>
-                </div>
-                
-                {/* Search Form - Main Action (includes chat inside) */}
-                <div className="border-t">
-                  <AdvancedSearchForm 
-                    onSearch={handleSearchFormSearch}
-                    onSwitchToChat={handleSwitchToChat}
-                  />
-                </div>
+                <AdvancedSearchForm 
+                  onSearch={handleSearchFormSearch}
+                  onSwitchToChat={handleSwitchToChat}
+                />
               </div>
             )}
 
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Map Section - Top */}
-                <div className="bg-muted/20 p-3">
-                  {/* Map with embedded stats */}
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
-                  />
-                  
-                  {/* Mode Toggle - Under Map */}
-                  <div className="flex justify-center mt-3">
-                    <div className="inline-flex rounded-full border border-border p-1 bg-background/80 backdrop-blur-sm">
-                      <Button
-                        size="sm"
-                        variant={mode === "buyer" ? "default" : "ghost"}
-                        onClick={() => handleModeSwitch("buyer")}
-                        className="gap-1.5 rounded-full px-4 text-xs"
-                        data-testid="button-mode-buyer-seller"
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                        أبحث عن عقار
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={mode === "seller" ? "default" : "ghost"}
-                        onClick={() => handleModeSwitch("seller")}
-                        className="gap-1.5 rounded-full px-4 text-xs"
-                        data-testid="button-mode-seller-seller"
-                      >
-                        <Building2 className="h-3.5 w-3.5" />
-                        اعرض عقارك
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Typewriter Example for Seller */}
-                  <div className="mt-2">
-                    <TypewriterBanner
-                      segments={exampleSegments}
-                      fullText={fullExampleText}
-                      mode={mode}
-                      onExampleComplete={handleExampleComplete}
-                      onTextClick={addSuggestion}
-                    />
-                  </div>
-                </div>
-                
-                {/* Property Form - Main Action (includes chat inside) */}
-                <div className="border-t">
-                  <ListPropertyForm 
-                    onSubmit={(propertyData) => {
-                      toast({
-                        title: "تم استلام طلبك",
-                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                      });
-                      setIsComplete(true);
-                      setExtractedData({
-                        name: propertyData.ownerName,
-                        phone: propertyData.ownerPhone,
-                        city: propertyData.city,
-                        district: propertyData.district,
-                        propertyType: propertyData.propertyType,
-                        transactionType: propertyData.transactionType,
-                        rooms: propertyData.rooms,
-                        area: propertyData.area,
-                        price: propertyData.price,
-                      });
-                    }}
-                  />
-                </div>
+                <ListPropertyForm 
+                  onSubmit={(propertyData) => {
+                    toast({
+                      title: "تم استلام طلبك",
+                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                    });
+                    setIsComplete(true);
+                    setExtractedData({
+                      name: propertyData.ownerName,
+                      phone: propertyData.ownerPhone,
+                      city: propertyData.city,
+                      district: propertyData.district,
+                      propertyType: propertyData.propertyType,
+                      transactionType: propertyData.transactionType,
+                      rooms: propertyData.rooms,
+                      area: propertyData.area,
+                      price: propertyData.price,
+                    });
+                  }}
+                />
               </div>
             )}
 
