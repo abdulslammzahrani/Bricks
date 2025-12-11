@@ -8,7 +8,8 @@ import {
   Sparkles, Search, Building, Warehouse, LandPlot,
   Check, Castle, Hotel, Store, Factory, Blocks, Navigation,
   BedDouble, Bath, Wallet, Settings2, FileText,
-  Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X
+  Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X,
+  Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send
 } from "lucide-react";
 import { saudiCities, type Neighborhood } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -103,6 +104,12 @@ const featureOptions = [
   { value: "security", label: "حراسة أمنية", icon: ShieldCheck },
   { value: "pool", label: "مسبح", icon: Waves },
   { value: "ac", label: "تكييف مركزي", icon: Wind },
+  { value: "elevator", label: "مصعد", icon: DoorOpen },
+  { value: "furnished", label: "مؤثث", icon: Sofa },
+  { value: "kitchen", label: "مطبخ راكب", icon: Utensils },
+  { value: "internet", label: "انترنت", icon: Wifi },
+  { value: "electricity", label: "كهرباء", icon: Zap },
+  { value: "gas", label: "غاز مركزي", icon: Flame },
 ];
 
 const budgetOptions = {
@@ -1064,8 +1071,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-primary to-green-600" data-testid="button-search-desktop">
-                    <Search className="h-5 w-5" />
-                    ابدأ البحث والمطابقة
+                    <Send className="h-5 w-5" />
+                    إرسال الطلب
                   </Button>
                 </div>
               )}
@@ -1549,8 +1556,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   <Button onClick={handleSearch} className="w-full h-10 rounded-lg text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600" data-testid="button-search">
-                    <Search className="h-4 w-4" />
-                    ابدأ البحث
+                    <Send className="h-4 w-4" />
+                    إرسال الطلب
                   </Button>
                 </div>
               )}
