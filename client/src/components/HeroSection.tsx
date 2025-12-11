@@ -2189,8 +2189,8 @@ export default function HeroSection() {
               </div>
             )}
 
-            {/* Input area - hidden when search form is shown */}
-            {!(mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) && (
+            {/* Input area - hidden when search form is shown OR when seller mode (seller has own chat in ListPropertyForm) */}
+            {!(mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) && (mode as string) !== "seller" && (
               <div 
                 className="p-4 border-t"
                 style={{
