@@ -531,6 +531,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         value={data.ownerName}
                         onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
                         className="h-12 text-center rounded-xl"
+                        name="name"
+                        autoComplete="name"
                         data-testid="input-owner-name"
                       />
                     </div>
@@ -543,6 +545,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
+                        name="tel"
+                        autoComplete="tel"
                         data-testid="input-owner-phone"
                       />
                       {phoneError && (
@@ -563,6 +567,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                         onChange={(e) => handleEmailChange(e.target.value)}
                         className={`h-12 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
+                        name="email"
+                        autoComplete="email"
                         data-testid="input-owner-email"
                       />
                       {emailError && (
@@ -1014,6 +1020,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     value={data.ownerName}
                     onChange={(e) => setData(d => ({ ...d, ownerName: e.target.value }))}
                     className="h-10 text-sm text-center rounded-lg"
+                    name="name"
+                    autoComplete="name"
                     data-testid="input-owner-name-mobile"
                   />
                   <div>
@@ -1024,6 +1032,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`h-10 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
+                      name="tel"
+                      autoComplete="tel"
                       data-testid="input-owner-phone-mobile"
                     />
                     {phoneError && (
@@ -1043,6 +1053,8 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       onChange={(e) => handleEmailChange(e.target.value)}
                       className={`h-10 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
+                      name="email"
+                      autoComplete="email"
                       data-testid="input-owner-email-mobile"
                     />
                     {emailError && (

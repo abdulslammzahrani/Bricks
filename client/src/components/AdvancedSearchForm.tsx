@@ -849,6 +849,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         value={filters.name}
                         onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
                         className="h-11 text-center rounded-xl"
+                        name="name"
+                        autoComplete="name"
                         data-testid="input-name-desktop"
                       />
                     </div>
@@ -861,6 +863,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
+                        name="tel"
+                        autoComplete="tel"
                         data-testid="input-phone-desktop"
                       />
                       {phoneError && (
@@ -881,6 +885,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         onChange={(e) => handleEmailChange(e.target.value)}
                         className={`h-11 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
+                        name="email"
+                        autoComplete="email"
                         data-testid="input-email-desktop"
                       />
                       {emailError && (
@@ -1496,6 +1502,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     value={filters.name}
                     onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
                     className="h-9 text-sm text-center rounded-lg"
+                    name="name"
+                    autoComplete="name"
                     data-testid="input-name"
                   />
                   <div>
@@ -1506,6 +1514,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
+                      name="tel"
+                      autoComplete="tel"
                       data-testid="input-phone"
                     />
                     {phoneError && (
@@ -1525,6 +1535,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       onChange={(e) => handleEmailChange(e.target.value)}
                       className={`h-9 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       dir="ltr"
+                      name="email"
+                      autoComplete="email"
                       data-testid="input-email"
                     />
                     {emailError && (
