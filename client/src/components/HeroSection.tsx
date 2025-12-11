@@ -1769,52 +1769,6 @@ export default function HeroSection() {
             </p>
           </div>
 
-          {/* Stats Bar - Shared */}
-          <div className="max-w-md mx-auto mb-6">
-            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
-                <span>يتصفحون الآن</span>
-              </div>
-              <div className="h-4 w-px bg-border"></div>
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-amber-500" />
-                <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
-                <span>طلب اليوم</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Mode Toggle */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex rounded-full border-2 border-border p-1 bg-background shadow-sm">
-              <Button
-                size="lg"
-                variant={mode === "buyer" ? "default" : "ghost"}
-                onClick={() => handleModeSwitch("buyer")}
-                className="gap-2 rounded-full px-6"
-                data-testid="button-mode-buyer"
-              >
-                <Users className="h-4 w-4" />
-                أبحث عن عقار
-              </Button>
-              <Button
-                size="lg"
-                variant={mode === "seller" ? "default" : "ghost"}
-                onClick={() => handleModeSwitch("seller")}
-                className="gap-2 rounded-full px-6"
-                data-testid="button-mode-seller"
-              >
-                <Building2 className="h-4 w-4" />
-                اعرض عقارك
-              </Button>
-            </div>
-          </div>
-
           {/* Main Card */}
           <Card className="max-w-2xl mx-auto overflow-hidden shadow-2xl border-2">
             {/* Completion Screen - Show when registration is complete */}
@@ -1984,37 +1938,39 @@ export default function HeroSection() {
             {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Map and Stats Section - Top for Trust */}
+                {/* Map Section - Top */}
                 <div className="bg-muted/20 p-3">
-                  {/* Stats Row */}
-                  <div className="flex items-center justify-center gap-4 mb-3 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="h-3 w-px bg-border"></div>
-                    <div className="flex items-center gap-1">
-                      <FileText className={`h-3 w-3 text-amber-500 ${requestsAnimating ? 'scale-125' : ''}`} />
-                      <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
-                      <span>طلب</span>
-                    </div>
-                    <div className="h-3 w-px bg-border"></div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
-                      <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
-                      <span>صفقة</span>
-                    </div>
-                  </div>
-                  
-                  {/* Map */}
+                  {/* Map with embedded stats */}
                   <SaudiMap 
                     markers={mapMarkers} 
                     className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
                   />
+                  
+                  {/* Mode Toggle - Under Map */}
+                  <div className="flex justify-center mt-3">
+                    <div className="inline-flex rounded-full border border-border p-1 bg-background/80 backdrop-blur-sm">
+                      <Button
+                        size="sm"
+                        variant={mode === "buyer" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("buyer")}
+                        className="gap-1.5 rounded-full px-4 text-xs"
+                        data-testid="button-mode-buyer"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        أبحث عن عقار
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={mode === "seller" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("seller")}
+                        className="gap-1.5 rounded-full px-4 text-xs"
+                        data-testid="button-mode-seller"
+                      >
+                        <Building2 className="h-3.5 w-3.5" />
+                        اعرض عقارك
+                      </Button>
+                    </div>
+                  </div>
                   
                   {/* Typewriter Example */}
                   <div className="mt-2">
@@ -2041,37 +1997,39 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                {/* Map and Stats Section - Top for Trust */}
+                {/* Map Section - Top */}
                 <div className="bg-muted/20 p-3">
-                  {/* Stats Row */}
-                  <div className="flex items-center justify-center gap-4 mb-3 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="h-3 w-px bg-border"></div>
-                    <div className="flex items-center gap-1">
-                      <Building2 className={`h-3 w-3 text-green-500 ${requestsAnimating ? 'scale-125' : ''}`} />
-                      <span className="font-semibold text-foreground">{requestsToday.toLocaleString('ar-EG')}</span>
-                      <span>عقار</span>
-                    </div>
-                    <div className="h-3 w-px bg-border"></div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3 w-3 text-green-500 ${dealsAnimating ? 'scale-125' : ''}`} />
-                      <span className="font-semibold text-foreground">{dealsToday.toLocaleString('ar-EG')}</span>
-                      <span>صفقة</span>
-                    </div>
-                  </div>
-                  
-                  {/* Map */}
+                  {/* Map with embedded stats */}
                   <SaudiMap 
                     markers={mapMarkers} 
                     className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
                   />
+                  
+                  {/* Mode Toggle - Under Map */}
+                  <div className="flex justify-center mt-3">
+                    <div className="inline-flex rounded-full border border-border p-1 bg-background/80 backdrop-blur-sm">
+                      <Button
+                        size="sm"
+                        variant={mode === "buyer" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("buyer")}
+                        className="gap-1.5 rounded-full px-4 text-xs"
+                        data-testid="button-mode-buyer-seller"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        أبحث عن عقار
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={mode === "seller" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("seller")}
+                        className="gap-1.5 rounded-full px-4 text-xs"
+                        data-testid="button-mode-seller-seller"
+                      >
+                        <Building2 className="h-3.5 w-3.5" />
+                        اعرض عقارك
+                      </Button>
+                    </div>
+                  </div>
                   
                   {/* Typewriter Example for Seller */}
                   <div className="mt-2">
