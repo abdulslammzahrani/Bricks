@@ -476,6 +476,26 @@ export default function HeroSection() {
     setIsComplete(true);
   }, [toast]);
 
+  // Memoized callback for ListPropertyForm to prevent re-renders
+  const handleListPropertySubmit = useCallback((propertyData: any) => {
+    toast({
+      title: "تم استلام طلبك",
+      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+    });
+    setIsComplete(true);
+    setExtractedData({
+      name: propertyData.ownerName,
+      phone: propertyData.ownerPhone,
+      city: propertyData.city,
+      district: propertyData.district,
+      propertyType: propertyData.propertyType,
+      transactionType: propertyData.transactionType,
+      rooms: propertyData.rooms,
+      area: propertyData.area,
+      price: propertyData.price,
+    });
+  }, [toast]);
+
   const handleSwitchToChat = useCallback((initialMessage?: string) => {
     setShowSearchForm(false);
     if (initialMessage && initialMessage.trim()) {
@@ -2076,26 +2096,7 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                <ListPropertyForm 
-                  onSubmit={(propertyData) => {
-                    toast({
-                      title: "تم استلام طلبك",
-                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                    });
-                    setIsComplete(true);
-                    setExtractedData({
-                      name: propertyData.ownerName,
-                      phone: propertyData.ownerPhone,
-                      city: propertyData.city,
-                      district: propertyData.district,
-                      propertyType: propertyData.propertyType,
-                      transactionType: propertyData.transactionType,
-                      rooms: propertyData.rooms,
-                      area: propertyData.area,
-                      price: propertyData.price,
-                    });
-                  }}
-                />
+                <ListPropertyForm onSubmit={handleListPropertySubmit} />
               </div>
             )}
 
