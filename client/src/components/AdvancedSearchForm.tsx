@@ -787,7 +787,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       )}
 
       {/* Desktop Stacked Cards Container */}
-      <div className="relative max-w-lg mx-auto" style={{ minHeight: "520px" }}>
+      <div className="relative max-w-lg mx-auto" style={{ minHeight: "480px" }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -797,14 +797,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
               key={card.id}
               onClick={() => goBack(card.id)}
               className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
-              style={{ top: `${idx * 40}px`, zIndex: idx + 1 }}
+              style={{ top: `${idx * 44}px`, zIndex: idx + 1 }}
             >
-              <div className={`${card.lightColor} rounded-2xl p-3 flex items-center gap-3 border-2 border-primary/30 shadow-sm`}>
-                <div className={`w-9 h-9 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
-                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+              <div className={`${card.lightColor} rounded-2xl p-4 flex items-center gap-4 border-2 border-green-500/30 shadow-sm`}>
+                <div className={`w-10 h-10 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
+                  <Check className="w-5 h-5 text-white" strokeWidth={3} />
                 </div>
                 <span className="text-sm font-bold truncate flex-1">{card.title}</span>
-                <span className="text-xs text-primary font-medium">تعديل</span>
+                <span className="text-xs text-green-600 font-medium">تعديل</span>
               </div>
             </div>
           );
@@ -813,53 +813,53 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         {/* Active Card */}
         <div
           className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-          style={{ top: `${activeCard * 40}px`, zIndex: 10 }}
+          style={{ top: `${activeCard * 44}px`, zIndex: 10 }}
         >
           <div className="bg-card border-2 rounded-2xl shadow-lg">
             
             {/* Card Header */}
-            <div className="flex items-center gap-3 p-4 border-b">
-              <div className={`w-10 h-10 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-primary" />; })()}
+            <div className="flex items-center gap-4 p-5 border-b">
+              <div className={`w-12 h-12 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-6 h-6 text-green-600" />; })()}
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-base">{cards[activeCard].title}</h3>
+                <h3 className="font-bold text-lg">{cards[activeCard].title}</h3>
                 <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
               </div>
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-1">
                 {cards.map((_, i) => (
-                  <div key={i} className={`w-2 h-2 rounded-full transition-all ${i <= activeCard ? 'bg-primary' : 'bg-muted'}`} />
+                  <div key={i} className={`w-2.5 h-2.5 rounded-full transition-all ${i <= activeCard ? 'bg-green-500' : 'bg-muted'}`} />
                 ))}
               </div>
             </div>
 
             {/* Card Content */}
-            <div className="p-4">
+            <div className="p-5">
               
               {/* Step 0: Personal */}
               {activeCard === 0 && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">الاسم</label>
+                      <label className="text-sm font-medium mb-2 block">الاسم</label>
                       <Input
                         placeholder="أدخل اسمك"
                         value={filters.name}
                         onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                        className="h-11 text-center rounded-xl"
+                        className="h-12 text-center rounded-xl"
                         name="name"
                         autoComplete="name"
                         data-testid="input-name-desktop"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
+                      <label className="text-sm font-medium mb-2 block">رقم الجوال</label>
                       <Input
                         type="tel"
                         placeholder="05xxxxxxxx"
                         value={filters.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
-                        className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                        className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
                         name="tel"
                         autoComplete="tel"
@@ -875,13 +875,13 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label>
+                      <label className="text-sm font-medium mb-2 block">البريد الإلكتروني</label>
                       <Input
                         type="email"
                         placeholder="example@email.com"
                         value={filters.email}
                         onChange={(e) => handleEmailChange(e.target.value)}
-                        className={`h-11 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                        className={`h-12 text-center rounded-xl ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
                         name="email"
                         autoComplete="email"
@@ -920,28 +920,27 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   )}
                   
                   {/* Transaction Type - Green for buyer (Desktop) */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {[
-                      { v: "sale", l: "للشراء", desc: "أبحث عن عقار للشراء", icon: Home },
-                      { v: "rent", l: "للإيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
+                      { v: "sale", l: "للشراء", icon: Home },
+                      { v: "rent", l: "للإيجار", icon: Building2 }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md" : "border-border hover:border-green-300"
+                        className={`p-4 rounded-xl border-2 text-center transition-all flex items-center justify-center gap-3 ${
+                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border hover:border-green-300"
                         }`}
                         data-testid={`button-filter-${t.v}-desktop`}
                       >
-                        <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
-                        <div className={`font-bold text-sm ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
+                        <t.icon className={`h-5 w-5 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
+                        <span className={`font-bold ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</span>
                       </button>
                     ))}
                   </div>
                   
                   {/* Category - Green for buyer (Desktop) */}
-                  <div className="flex justify-center gap-2">
+                  <div className="flex justify-center gap-3">
                     {[
                       { v: "residential", l: "سكني", I: Home },
                       { v: "commercial", l: "تجاري", I: Building2 }
@@ -949,7 +948,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       <button
                         key={c.v}
                         onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-5 py-2 rounded-full border-2 text-sm transition-all ${
+                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
                           filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border hover:border-green-300"
                         }`}
                         data-testid={`button-category-${c.v}-desktop`}
@@ -1400,15 +1399,15 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       {/* Chat with Consultant - Inside Form (Desktop) */}
       <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <MessageCircle className="h-4 w-4 text-muted-foreground" />
+          <Search className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
         </div>
-        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+        <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3">
           <Button
             size="icon"
             variant="default"
             onClick={() => onSwitchToChat?.()}
-            className="rounded-full h-9 w-9 flex-shrink-0"
+            className="rounded-full h-9 w-9 flex-shrink-0 bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant-desktop"
           >
             <Send className="h-4 w-4" />
@@ -1417,7 +1416,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             type="text"
             dir="rtl"
             placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60"
             onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant-desktop"
           />

@@ -929,10 +929,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       {/* Chat with Consultant - Inside Form (Desktop) */}
       <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار المبيعات</span>
         </div>
-        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+        <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3">
           <Button
             size="icon"
             className="rounded-full h-9 w-9 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
@@ -944,7 +944,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
             type="text"
             dir="rtl"
             placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60"
             data-testid="input-chat-consultant-seller-desktop"
           />
         </div>
