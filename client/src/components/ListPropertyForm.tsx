@@ -751,7 +751,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       </button>
                     ))}
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-0">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 0 */}
+              {activeCard === 0 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm bg-amber-500 hover:bg-amber-600 shadow-lg" data-testid="button-next-list-mobile-0">
                     التالي
                   </Button>
                 </div>
@@ -835,7 +842,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     </div>
                   )}
 
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-1">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 1 */}
+              {activeCard === 1 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm bg-amber-500 hover:bg-amber-600 shadow-lg" data-testid="button-next-list-mobile-1">
                     التالي
                   </Button>
                 </div>
@@ -889,7 +903,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       data-testid="input-area-mobile"
                     />
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm bg-amber-500 hover:bg-amber-600" data-testid="button-next-list-mobile-2">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 2 */}
+              {activeCard === 2 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm bg-amber-500 hover:bg-amber-600 shadow-lg" data-testid="button-next-list-mobile-2">
                     التالي
                   </Button>
                 </div>
@@ -920,7 +941,14 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       </button>
                     ))}
                   </div>
-                  <Button onClick={handleSubmit} disabled={!canProceed()} className="w-full h-10 rounded-lg text-sm gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500" data-testid="button-submit-property-mobile">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Submit Button for Step 3 */}
+              {activeCard === 3 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={handleSubmit} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg" data-testid="button-submit-property-mobile">
                     <Camera className="h-4 w-4" />
                     اعرض عقارك
                   </Button>
