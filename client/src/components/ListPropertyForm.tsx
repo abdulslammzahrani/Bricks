@@ -6,7 +6,7 @@ import {
   MapPin, User, Home, Building2, 
   Check, Phone, Camera, DollarSign,
   Building, Warehouse, LandPlot, Ruler, BedDouble,
-  Send, MessageCircle, Navigation, Target
+  Send, MessageCircle, Navigation, Target, Search
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -1353,13 +1353,13 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
       {/* Chat with Consultant - Inside Form (Mobile) */}
       <div className="mt-4 pt-4 border-t border-dashed">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <MessageCircle className="h-3.5 w-3.5 text-amber-500" />
-          <span className="text-xs text-muted-foreground">تحدث مع مستشار المبيعات</span>
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار المبيعات</span>
         </div>
-        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-4 py-2.5">
+        <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3">
           <Button
             size="icon"
-            className="rounded-full h-8 w-8 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            className="rounded-full h-9 w-9 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
             data-testid="button-send-consultant-seller-mobile"
           >
             <Send className="h-4 w-4" />
@@ -1368,7 +1368,7 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
             type="text"
             dir="rtl"
             placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60"
             data-testid="input-chat-consultant-seller-mobile"
           />
         </div>
