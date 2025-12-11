@@ -6,7 +6,7 @@ import {
   MapPin, User, Home, Building2, 
   Check, Phone, Camera, DollarSign,
   Building, Warehouse, LandPlot, Ruler, BedDouble,
-  Send, MessageCircle, Navigation, Target, Search
+  Send, MessageCircle, Navigation, Target, Search, Mic
 } from "lucide-react";
 import { saudiCities } from "@shared/saudi-locations";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
@@ -907,27 +907,39 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         })}
       </div>
 
-      {/* Chat with Consultant - Inside Form (Desktop) */}
-      <div className="mt-6 pt-4 max-w-md mx-auto">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار المبيعات</span>
-        </div>
-        <div className="flex items-center gap-3 bg-muted/40 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/50">
+      {/* Chat with Consultant - Inside Form (Desktop) - Matches screenshot exactly */}
+      <div className="mt-6 pt-4 max-w-lg mx-auto">
+        <div className="flex items-center gap-2">
+          {/* Text Input - Left side */}
+          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/30">
+            <input
+              type="text"
+              dir="rtl"
+              placeholder="تحدث مع مستشار المبيعات"
+              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
+              data-testid="input-chat-consultant-seller-desktop"
+            />
+          </div>
+          
+          {/* Mic Button - Middle */}
           <Button
             size="icon"
-            className="rounded-full h-10 w-10 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            variant="outline"
+            className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
+            data-testid="button-mic-consultant-seller-desktop"
+          >
+            <Mic className="h-5 w-5 text-green-600" />
+          </Button>
+          
+          {/* Send Button - Right side (Green) */}
+          <Button
+            size="icon"
+            variant="default"
+            className="h-12 w-12 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant-seller-desktop"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
-          <input
-            type="text"
-            dir="rtl"
-            placeholder="اكتب رسالتك هنا .."
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/70"
-            data-testid="input-chat-consultant-seller-desktop"
-          />
         </div>
       </div>
     </div>
@@ -1309,27 +1321,39 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
         })}
       </div>
 
-      {/* Chat with Consultant - Inside Form (Mobile) */}
+      {/* Chat with Consultant - Inside Form (Mobile) - Matches screenshot exactly */}
       <div className="mt-6 pt-4">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار المبيعات</span>
-        </div>
-        <div className="flex items-center gap-3 bg-muted/40 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/50">
+        <div className="flex items-center gap-2">
+          {/* Text Input - Left side */}
+          <div className="flex-1 bg-muted/30 dark:bg-muted/20 rounded-xl px-4 py-3 border border-border/30">
+            <input
+              type="text"
+              dir="rtl"
+              placeholder="تحدث مع مستشار المبيعات"
+              className="w-full bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60 text-center"
+              data-testid="input-chat-consultant-seller-mobile"
+            />
+          </div>
+          
+          {/* Mic Button - Middle */}
           <Button
             size="icon"
-            className="rounded-full h-10 w-10 flex-shrink-0 bg-amber-500 hover:bg-amber-600"
+            variant="outline"
+            className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
+            data-testid="button-mic-consultant-seller-mobile"
+          >
+            <Mic className="h-5 w-5 text-green-600" />
+          </Button>
+          
+          {/* Send Button - Right side (Green) */}
+          <Button
+            size="icon"
+            variant="default"
+            className="h-11 w-11 flex-shrink-0 rounded-xl bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant-seller-mobile"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </Button>
-          <input
-            type="text"
-            dir="rtl"
-            placeholder="اكتب رسالتك هنا .."
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/70"
-            data-testid="input-chat-consultant-seller-mobile"
-          />
         </div>
       </div>
     </div>
