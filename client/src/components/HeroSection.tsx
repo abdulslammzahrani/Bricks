@@ -1984,15 +1984,10 @@ export default function HeroSection() {
             {/* Buyer Search Form */}
             {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                <AdvancedSearchForm 
-                  onSearch={handleSearchFormSearch}
-                  onSwitchToChat={handleSwitchToChat}
-                />
-                
-                {/* Live Stats and Map Section */}
-                <div className="border-t bg-muted/30 p-2 pt-2">
+                {/* Live Stats and Map Section - First */}
+                <div className="bg-muted/30 p-3">
                   {/* Stats Row */}
-                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -2031,9 +2026,19 @@ export default function HeroSection() {
                     markers={mapMarkers} 
                     className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
                   />
-                  
-                  {/* Chat Input with Mic and Send */}
-                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-3 py-2">
+                </div>
+                
+                {/* Search Form - Second */}
+                <div className="border-t">
+                  <AdvancedSearchForm 
+                    onSearch={handleSearchFormSearch}
+                    onSwitchToChat={handleSwitchToChat}
+                  />
+                </div>
+                
+                {/* Chat Input with Mic and Send - Bottom */}
+                <div className="border-t bg-muted/30 p-3">
+                  <div className="flex items-center gap-2 bg-card border rounded-full px-3 py-2">
                     <Button
                       size="icon"
                       onClick={() => {
@@ -2083,31 +2088,10 @@ export default function HeroSection() {
             {/* Seller Property Form */}
             {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
               <div>
-                <ListPropertyForm 
-                  onSubmit={(propertyData) => {
-                    toast({
-                      title: "تم استلام طلبك",
-                      description: "سنتواصل معك قريباً لإكمال عرض عقارك",
-                    });
-                    setIsComplete(true);
-                    setExtractedData({
-                      name: propertyData.ownerName,
-                      phone: propertyData.ownerPhone,
-                      city: propertyData.city,
-                      district: propertyData.district,
-                      propertyType: propertyData.propertyType,
-                      transactionType: propertyData.transactionType,
-                      rooms: propertyData.rooms,
-                      area: propertyData.area,
-                      price: propertyData.price,
-                    });
-                  }}
-                />
-                
-                {/* Live Stats and Map Section for Seller */}
-                <div className="border-t bg-muted/30 p-2 pt-2">
+                {/* Live Stats and Map Section for Seller - First */}
+                <div className="bg-muted/30 p-3">
                   {/* Stats Row */}
-                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3 mb-3 text-[11px] text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -2146,9 +2130,35 @@ export default function HeroSection() {
                     markers={mapMarkers} 
                     className="h-32 md:h-40 rounded-lg border border-border/30 shadow-sm"
                   />
-                  
-                  {/* Chat Input with Mic and Send */}
-                  <div className="mt-3 flex items-center gap-2 bg-card border rounded-full px-3 py-2">
+                </div>
+                
+                {/* Property Form - Second */}
+                <div className="border-t">
+                  <ListPropertyForm 
+                    onSubmit={(propertyData) => {
+                      toast({
+                        title: "تم استلام طلبك",
+                        description: "سنتواصل معك قريباً لإكمال عرض عقارك",
+                      });
+                      setIsComplete(true);
+                      setExtractedData({
+                        name: propertyData.ownerName,
+                        phone: propertyData.ownerPhone,
+                        city: propertyData.city,
+                        district: propertyData.district,
+                        propertyType: propertyData.propertyType,
+                        transactionType: propertyData.transactionType,
+                        rooms: propertyData.rooms,
+                        area: propertyData.area,
+                        price: propertyData.price,
+                      });
+                    }}
+                  />
+                </div>
+                
+                {/* Chat Input with Mic and Send - Bottom */}
+                <div className="border-t bg-muted/30 p-3">
+                  <div className="flex items-center gap-2 bg-card border rounded-full px-3 py-2">
                     <Button
                       size="icon"
                       onClick={() => {
