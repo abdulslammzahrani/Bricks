@@ -1960,9 +1960,17 @@ export default function HeroSection() {
             {conversation.length === 0 && !pendingConfirmation && (
               <div className="p-4 border-t bg-background">
                 {/* Title */}
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <Brain className="h-5 w-5 text-primary" />
-                  <h3 className="font-bold text-lg">المطابقة الذكية</h3>
+                <div className="text-center mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Brain className="h-5 w-5 text-primary" />
+                    <h3 className="font-bold text-lg">المطابقة الذكية</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {mode === "buyer" 
+                      ? "أضف طلبك الآن ودع نظامنا الذكي يجلب لك العروض المطابقة لطلبك"
+                      : "أضف عقارك الآن ودع نظامنا الذكي يجلب لك المشترين المناسبين"
+                    }
+                  </p>
                 </div>
                 
                 {/* Mode Toggle */}
