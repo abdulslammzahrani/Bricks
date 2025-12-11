@@ -97,7 +97,7 @@ const greyIcon = new L.Icon({
   shadowSize: [33, 33]
 });
 
-// City marker component for seller form
+// City marker component for seller form - ALL markers are GREEN
 function SellerCityMarker({ 
   city, 
   isSelected, 
@@ -110,19 +110,20 @@ function SellerCityMarker({
   return (
     <Marker 
       position={[city.coordinates.lat, city.coordinates.lng]}
-      icon={isSelected ? greenIcon : greyIcon}
+      icon={greenIcon}
       eventHandlers={{
         click: () => onSelect(city.name)
       }}
     >
       <Popup>
         <div className="text-center text-sm font-bold">{city.name}</div>
+        {isSelected && <div className="text-xs text-green-600">محدد</div>}
       </Popup>
     </Marker>
   );
 }
 
-// District marker component for seller form
+// District marker component for seller form - ALL markers are GREEN
 function SellerDistrictMarker({ 
   name, 
   coords, 
@@ -134,15 +135,20 @@ function SellerDistrictMarker({
   isSelected: boolean;
   onSelect: (name: string) => void;
 }) {
+  // Validate coordinates
+  if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number' || isNaN(coords.lat) || isNaN(coords.lng)) {
+    return null;
+  }
+  
   return (
     <CircleMarker 
       center={[coords.lat, coords.lng]}
-      radius={isSelected ? 10 : 6}
+      radius={isSelected ? 12 : 8}
       pathOptions={{
-        color: isSelected ? '#22c55e' : '#6b7280',
-        fillColor: isSelected ? '#22c55e' : '#9ca3af',
-        fillOpacity: isSelected ? 0.8 : 0.5,
-        weight: 2
+        color: '#22c55e',
+        fillColor: '#22c55e',
+        fillOpacity: isSelected ? 0.9 : 0.6,
+        weight: isSelected ? 3 : 2
       }}
       eventHandlers={{
         click: () => onSelect(name)
