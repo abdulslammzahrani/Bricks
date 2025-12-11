@@ -1952,7 +1952,7 @@ export default function HeroSection() {
             ) : (
               <>
             {/* Map Section - Shared between buyer and seller */}
-            {(mode === "buyer" || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
+            {(mode === "buyer" || mode === "seller") && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
               <div className="bg-muted/20 p-3">
                 <SaudiMap 
                   markers={mapMarkers} 
