@@ -856,14 +856,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           maxDistance={0.1}
                         />
                         
-                        {/* Show ALL districts as markers */}
-                        {Array.from(neighborhoodCoords.entries()).map(([name, data]) => (
+                        {/* Show only selected districts as markers */}
+                        {Array.from(neighborhoodCoords.entries())
+                          .filter(([name]) => filters.districts.includes(name))
+                          .map(([name, data]) => (
                           <DistrictMarker
                             key={name}
                             name={name}
                             cityName={data.cityName}
                             coords={{ lat: data.lat, lng: data.lng }}
-                            isSelected={filters.districts.includes(name)}
+                            isSelected={true}
                             onToggle={toggleDistrict}
                           />
                         ))}
@@ -1344,13 +1346,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                         onSelect={toggleDistrict}
                         maxDistance={0.1}
                       />
-                      {Array.from(neighborhoodCoords.entries()).map(([name, data]) => (
+                      {/* Show only selected districts as markers */}
+                      {Array.from(neighborhoodCoords.entries())
+                        .filter(([name]) => filters.districts.includes(name))
+                        .map(([name, data]) => (
                         <DistrictMarker
                           key={name}
                           name={name}
                           cityName={data.cityName}
                           coords={{ lat: data.lat, lng: data.lng }}
-                          isSelected={filters.districts.includes(name)}
+                          isSelected={true}
                           onToggle={toggleDistrict}
                         />
                       ))}
