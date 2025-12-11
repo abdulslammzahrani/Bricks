@@ -180,18 +180,26 @@ interface AdvancedSearchFormProps {
   onSwitchToChat: () => void;
 }
 
-// Generate approximate coordinates for neighborhoods based on city center with better distribution
+// Generate approximate coordinates for neighborhoods based on city center with grid distribution
 function getNeighborhoodCoords(cityCoords: { lat: number; lng: number }, index: number, total: number, seed: number = 0) {
-  const baseRadius = 0.04;
-  const rings = Math.ceil(total / 8);
-  const ringIndex = Math.floor(index / 8);
-  const posInRing = index % 8;
-  const angle = (2 * Math.PI * posInRing) / 8 + (ringIndex * Math.PI / 8);
-  const distance = baseRadius * (0.5 + ringIndex * 0.4) + (seed % 10) * 0.002;
+  // Use a grid-based approach centered around city
+  const gridSize = Math.ceil(Math.sqrt(total));
+  const row = Math.floor(index / gridSize);
+  const col = index % gridSize;
+  
+  // Small spacing between neighborhoods (approximately 1-2 km)
+  const spacing = 0.015;
+  
+  // Center the grid around the city center
+  const offsetRow = (row - gridSize / 2) * spacing;
+  const offsetCol = (col - gridSize / 2) * spacing;
+  
+  // Add small variation based on seed to prevent perfect grid
+  const variation = ((seed % 100) / 100 - 0.5) * 0.005;
   
   return {
-    lat: cityCoords.lat + distance * Math.cos(angle) + (index % 3) * 0.005,
-    lng: cityCoords.lng + distance * Math.sin(angle) + (index % 2) * 0.005
+    lat: cityCoords.lat + offsetRow + variation,
+    lng: cityCoords.lng + offsetCol + variation * 0.8
   };
 }
 
