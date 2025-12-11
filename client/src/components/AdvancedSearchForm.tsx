@@ -1,8 +1,10 @@
-import { useState, memo, useMemo, useEffect } from "react";
+import { useState, memo, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   MapPin, User, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
@@ -388,8 +390,11 @@ function SmartMapClickHandler({
 }
 
 export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
+  const { toast } = useToast();
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isAutoRegistered, setIsAutoRegistered] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     name: "",
     phone: "",
@@ -545,8 +550,49 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     { id: 7, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
   ];
 
-  const goNext = () => {
+  // Auto-register user when moving from step 0 (contact info)
+  const autoRegisterUser = async () => {
+    if (isAutoRegistered || isRegistering) return;
+    
+    setIsRegistering(true);
+    try {
+      const normalizedPhone = validateSaudiPhone(filters.phone).normalized;
+      const response = await apiRequest("POST", "/api/auth/auto-register", {
+        name: filters.name.trim(),
+        phone: normalizedPhone,
+        email: `${normalizedPhone}@tatabuk.sa`,
+        city: filters.cities[0] || "",
+        districts: filters.districts,
+        propertyType: filters.propertyType || "apartment",
+        budgetMin: filters.minPrice ? parseInt(filters.minPrice) : 0,
+        budgetMax: filters.maxPrice ? parseInt(filters.maxPrice) : 0,
+        paymentMethod: "cash",
+        transactionType: filters.transactionType === "sale" ? "buy" : "rent",
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setIsAutoRegistered(true);
+        toast({
+          title: "تم تسجيلك بنجاح",
+          description: `مرحباً ${filters.name.split(" ")[0]}! تم إنشاء حسابك تلقائياً`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Auto-register error:", error);
+      // Don't show error to user, just continue
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const goNext = async () => {
     if (activeCard < totalCards - 1 && !isAnimating) {
+      // Auto-register when moving from step 0 (contact info step)
+      if (activeCard === 0 && !isAutoRegistered) {
+        await autoRegisterUser();
+      }
+      
       setIsAnimating(true);
       setTimeout(() => {
         setActiveCard(prev => prev + 1);

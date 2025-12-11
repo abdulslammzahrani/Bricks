@@ -2,6 +2,8 @@ import { useState, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   MapPin, User, Home, Building2, 
   Check, Phone, Camera, DollarSign,
@@ -92,8 +94,11 @@ interface ListPropertyFormProps {
 }
 
 export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: ListPropertyFormProps) {
+  const { toast } = useToast();
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isAutoRegistered, setIsAutoRegistered] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [data, setData] = useState<PropertyData>({
     ownerName: "",
     ownerPhone: "",
@@ -142,8 +147,53 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     { id: 3, icon: DollarSign, title: "السعر والوصف", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
   ];
 
-  const goNext = () => {
+  // Auto-register seller when moving from step 0 (owner info)
+  const autoRegisterSeller = async () => {
+    if (isAutoRegistered || isRegistering) return;
+    
+    setIsRegistering(true);
+    try {
+      // Normalize phone (remove spaces and convert Arabic numerals)
+      let normalizedPhone = data.ownerPhone.replace(/[\s\-\(\)\.]/g, '');
+      normalizedPhone = normalizedPhone.replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632 + 48));
+      
+      const response = await apiRequest("POST", "/api/sellers/register", {
+        name: data.ownerName.trim(),
+        email: `${normalizedPhone}@tatabuk.sa`,
+        phone: normalizedPhone,
+        city: data.city || "",
+        district: data.district || "",
+        propertyType: data.propertyType || "apartment",
+        price: data.price ? parseInt(data.price) : 0,
+        status: "ready",
+        images: [],
+        latitude: data.latitude,
+        longitude: data.longitude,
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setIsAutoRegistered(true);
+        toast({
+          title: "تم تسجيلك كبائع",
+          description: `مرحباً ${data.ownerName.split(" ")[0]}! تم إنشاء حسابك تلقائياً`,
+        });
+      }
+    } catch (error: any) {
+      console.error("Auto-register seller error:", error);
+      // Don't show error to user, just continue
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const goNext = async () => {
     if (activeCard < totalCards - 1 && !isAnimating) {
+      // Auto-register when moving from step 0 (owner info step)
+      if (activeCard === 0 && !isAutoRegistered) {
+        await autoRegisterSeller();
+      }
+      
       setIsAnimating(true);
       setTimeout(() => {
         setActiveCard(prev => prev + 1);
