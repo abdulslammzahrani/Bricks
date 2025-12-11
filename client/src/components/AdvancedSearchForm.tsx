@@ -1400,15 +1400,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             />
           </div>
           
-          {/* Mic Button - Middle */}
+          {/* Mic Button - Middle (decorative - voice recording available in chat) */}
           <Button
             size="icon"
             variant="outline"
-            className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
-            onClick={() => onSwitchToChat?.()}
+            className="h-12 w-12 flex-shrink-0 rounded-xl border-border/50 bg-card opacity-50 cursor-not-allowed"
+            disabled
             data-testid="button-mic-consultant-desktop"
+            title="التسجيل الصوتي متاح في المحادثة"
           >
-            <Mic className="h-5 w-5 text-green-600" />
+            <Mic className="h-5 w-5 text-muted-foreground" />
           </Button>
           
           {/* Send Button - Right side (Green) */}
@@ -2018,15 +2019,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
             />
           </div>
           
-          {/* Mic Button - Middle */}
+          {/* Mic Button - Middle (decorative - voice recording available in chat) */}
           <Button
             size="icon"
             variant="outline"
-            className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card hover:bg-muted/50"
-            onClick={() => onSwitchToChat?.()}
+            className="h-11 w-11 flex-shrink-0 rounded-xl border-border/50 bg-card opacity-50 cursor-not-allowed"
+            disabled
             data-testid="button-mic-consultant"
+            title="التسجيل الصوتي متاح في المحادثة"
           >
-            <Mic className="h-5 w-5 text-green-600" />
+            <Mic className="h-5 w-5 text-muted-foreground" />
           </Button>
           
           {/* Send Button - Right side (Green) */}
