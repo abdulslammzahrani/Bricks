@@ -919,47 +919,28 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   )}
                   
-                  {/* Transaction Type - Green for buyer (Desktop) */}
+                  {/* Transaction Type - Green for buyer (Desktop) - text only, no icons */}
                   <div className="grid grid-cols-2 gap-4">
                     {[
-                      { v: "sale", l: "للشراء", icon: Home },
-                      { v: "rent", l: "للإيجار", icon: Building2 }
+                      { v: "sale", l: "للشراء" },
+                      { v: "rent", l: "للإيجار" }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`p-4 rounded-xl border-2 text-center transition-all flex items-center justify-center gap-3 ${
-                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border hover:border-green-300"
+                        className={`py-4 rounded-xl border-2 text-center font-bold transition-all ${
+                          filters.transactionType === t.v 
+                            ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400" 
+                            : "border-border hover:border-green-300 text-foreground"
                         }`}
                         data-testid={`button-filter-${t.v}-desktop`}
                       >
-                        <t.icon className={`h-5 w-5 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
-                        <span className={`font-bold ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</span>
+                        {t.l}
                       </button>
                     ))}
                   </div>
                   
-                  {/* Category - Green for buyer (Desktop) */}
-                  <div className="flex justify-center gap-3">
-                    {[
-                      { v: "residential", l: "سكني", I: Home },
-                      { v: "commercial", l: "تجاري", I: Building2 }
-                    ].map(c => (
-                      <button
-                        key={c.v}
-                        onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
-                          filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border hover:border-green-300"
-                        }`}
-                        data-testid={`button-category-${c.v}-desktop`}
-                      >
-                        <c.I className="h-4 w-4" />
-                        {c.l}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl bg-green-600 hover:bg-green-700" data-testid="button-next-desktop-0">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl font-bold bg-green-600 hover:bg-green-700" data-testid="button-next-desktop-0">
                     التالي
                   </Button>
                 </div>
@@ -1397,17 +1378,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Chat with Consultant - Inside Form (Desktop) */}
-      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+      <div className="mt-6 pt-4 max-w-md mx-auto">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
         </div>
-        <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3 bg-muted/40 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/50">
           <Button
             size="icon"
             variant="default"
             onClick={() => onSwitchToChat?.()}
-            className="rounded-full h-9 w-9 flex-shrink-0 bg-green-500 hover:bg-green-600"
+            className="rounded-full h-10 w-10 flex-shrink-0 bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant-desktop"
           >
             <Send className="h-4 w-4" />
@@ -1415,8 +1396,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <input
             type="text"
             dir="rtl"
-            placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60"
+            placeholder="اكتب رسالتك هنا .."
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/70"
             onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant-desktop"
           />
@@ -1472,28 +1453,25 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         >
           <div className="bg-card border rounded-xl shadow-md">
             
-            {/* Card Header */}
-            <div className="flex items-center gap-3 p-3 border-b">
-              <div className={`w-9 h-9 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+            {/* Card Header - Minimal like design */}
+            <div className="flex items-center justify-between p-4">
+              <span className="text-2xl font-bold text-muted-foreground/40">{activeCard + 1}</span>
+              <div className={`w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center`}>
                 {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-green-600" />; })()}
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
-              </div>
-              <span className="text-xl font-bold text-muted-foreground/30">{activeCard + 1}</span>
             </div>
 
             {/* Card Content */}
-            <div className="p-4">
+            <div className="px-4 pb-4 space-y-3">
               
               {/* Step 0: Personal */}
               {activeCard === 0 && (
                 <div className="space-y-3">
                   <Input
-                    placeholder="الاسم"
+                    placeholder="اسم المالك"
                     value={filters.name}
                     onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                    className="h-11 text-sm text-center rounded-lg"
+                    className="h-12 text-sm text-center rounded-lg border-border"
                     name="name"
                     autoComplete="name"
                     data-testid="input-name"
@@ -1504,7 +1482,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       placeholder="05xxxxxxxx"
                       value={filters.phone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className={`h-11 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-12 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : 'border-border'}`}
                       dir="ltr"
                       name="tel"
                       autoComplete="tel"
@@ -1522,10 +1500,10 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   <div>
                     <Input
                       type="email"
-                      placeholder="البريد الإلكتروني (اختياري)"
+                      placeholder="البريد الإلكتروني"
                       value={filters.email}
                       onChange={(e) => handleEmailChange(e.target.value)}
-                      className={`h-11 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`h-12 text-sm text-center rounded-lg ${emailError ? 'border-red-500 focus-visible:ring-red-500' : 'border-border'}`}
                       dir="ltr"
                       name="email"
                       autoComplete="email"
@@ -1557,47 +1535,28 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   )}
                   
-                  {/* Transaction Type - Green for buyer */}
-                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  {/* Transaction Type - Green for buyer (text only, no icons) */}
+                  <div className="grid grid-cols-2 gap-3">
                     {[
-                      { v: "sale", l: "للشراء", icon: Home },
-                      { v: "rent", l: "للإيجار", icon: Building2 }
+                      { v: "sale", l: "للشراء" },
+                      { v: "rent", l: "للإيجار" }
                     ].map(t => (
                       <button
                         key={t.v}
                         onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-border"
+                        className={`py-3 rounded-lg border-2 text-center font-bold text-sm transition-all ${
+                          filters.transactionType === t.v 
+                            ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400" 
+                            : "border-border text-foreground"
                         }`}
                         data-testid={`button-filter-${t.v}`}
                       >
-                        <t.icon className={`h-4 w-4 ${filters.transactionType === t.v ? "text-green-600" : "text-muted-foreground"}`} />
-                        <span className={`font-bold text-sm ${filters.transactionType === t.v ? "text-green-700 dark:text-green-400" : ""}`}>{t.l}</span>
+                        {t.l}
                       </button>
                     ))}
                   </div>
                   
-                  {/* Category - Green for buyer */}
-                  <div className="flex justify-center gap-3">
-                    {[
-                      { v: "residential", l: "سكني", I: Home },
-                      { v: "commercial", l: "تجاري", I: Building2 }
-                    ].map(c => (
-                      <button
-                        key={c.v}
-                        onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full border-2 text-sm transition-all ${
-                          filters.propertyCategory === c.v ? "border-green-500 bg-green-500 text-white" : "border-border"
-                        }`}
-                        data-testid={`button-category-${c.v}`}
-                      >
-                        <c.I className="h-4 w-4" />
-                        {c.l}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-lg text-sm bg-green-600 hover:bg-green-700 mt-1" data-testid="button-next-0">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-lg text-sm font-bold bg-green-600 hover:bg-green-700" data-testid="button-next-0">
                     التالي
                   </Button>
                 </div>
@@ -2011,17 +1970,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
       </div>
 
       {/* Chat with Consultant - Inside Form */}
-      <div className="mt-4 pt-4 border-t border-dashed">
+      <div className="mt-6 pt-4">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Search className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
         </div>
-        <div className="flex items-center gap-3 bg-muted/30 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3 bg-muted/40 dark:bg-muted/20 rounded-xl px-4 py-3.5 border border-border/50">
           <Button
             size="icon"
             variant="default"
             onClick={() => onSwitchToChat?.()}
-            className="rounded-full h-9 w-9 flex-shrink-0 bg-green-500 hover:bg-green-600"
+            className="rounded-full h-10 w-10 flex-shrink-0 bg-green-500 hover:bg-green-600"
             data-testid="button-send-consultant"
           >
             <Send className="h-4 w-4" />
@@ -2029,8 +1988,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
           <input
             type="text"
             dir="rtl"
-            placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/60"
+            placeholder="اكتب رسالتك هنا .."
+            className="flex-1 bg-transparent border-0 outline-none text-sm text-muted-foreground placeholder:text-muted-foreground/70"
             onFocus={() => onSwitchToChat?.()}
             data-testid="input-chat-consultant"
           />
