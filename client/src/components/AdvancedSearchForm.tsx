@@ -544,6 +544,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
   const reliabilityScore = getReliabilityScore();
 
+  // Get map center for cities (center on last selected city)
+  const cityMapCenter = useMemo(() => {
+    if (filters.cities.length > 0) {
+      const lastCity = filters.cities[filters.cities.length - 1];
+      const city = saudiCities.find(c => c.name === lastCity);
+      if (city) return city.coordinates;
+    }
+    return SAUDI_CENTER;
+  }, [filters.cities]);
+
   // Get map center for districts (center on last selected district, or first city)
   const districtMapCenter = useMemo(() => {
     // If there are selected districts, center on the last one
@@ -750,11 +760,11 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {/* Map with all city markers */}
+                    {/* Map with selected city markers */}
                     <div className="h-[200px] rounded-xl overflow-hidden border-2 border-border">
                       <MapContainer
-                        center={[SAUDI_CENTER.lat, SAUDI_CENTER.lng]}
-                        zoom={5}
+                        center={[cityMapCenter.lat, cityMapCenter.lng]}
+                        zoom={filters.cities.length > 0 ? 8 : 5}
                         style={{ height: "100%", width: "100%" }}
                         zoomControl={true}
                       >
@@ -762,21 +772,24 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           attribution='&copy; OpenStreetMap'
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <SmartMapClickHandler 
-                          items={cityItems} 
-                          onSelect={toggleCity}
-                          maxDistance={2}
+                        <MapCenterChanger 
+                          center={[cityMapCenter.lat, cityMapCenter.lng]} 
+                          zoom={filters.cities.length > 0 ? 8 : 5} 
                         />
                         
-                        {/* Show ALL cities as markers */}
-                        {saudiCities.map(city => (
-                          <CityMarker
-                            key={city.name}
-                            city={city}
-                            isSelected={filters.cities.includes(city.name)}
-                            onToggle={toggleCity}
-                          />
-                        ))}
+                        {/* Show only selected cities as markers */}
+                        {filters.cities.map(cityName => {
+                          const city = saudiCities.find(c => c.name === cityName);
+                          if (!city) return null;
+                          return (
+                            <CityMarker
+                              key={city.name}
+                              city={city}
+                              isSelected={true}
+                              onToggle={toggleCity}
+                            />
+                          );
+                        })}
                       </MapContainer>
                     </div>
 
@@ -1255,28 +1268,32 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     />
                   </div>
 
-                  {/* Map with all cities */}
+                  {/* Map with selected cities */}
                   <div className="h-[110px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
-                      center={[SAUDI_CENTER.lat, SAUDI_CENTER.lng]}
-                      zoom={5}
+                      center={[cityMapCenter.lat, cityMapCenter.lng]}
+                      zoom={filters.cities.length > 0 ? 8 : 5}
                       style={{ height: "100%", width: "100%" }}
                       zoomControl={false}
                     >
                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                      <SmartMapClickHandler 
-                        items={cityItems} 
-                        onSelect={toggleCity}
-                        maxDistance={2}
+                      <MapCenterChanger 
+                        center={[cityMapCenter.lat, cityMapCenter.lng]} 
+                        zoom={filters.cities.length > 0 ? 8 : 5} 
                       />
-                      {saudiCities.map(city => (
-                        <CityMarker
-                          key={city.name}
-                          city={city}
-                          isSelected={filters.cities.includes(city.name)}
-                          onToggle={toggleCity}
-                        />
-                      ))}
+                      {/* Show only selected cities as markers */}
+                      {filters.cities.map(cityName => {
+                        const city = saudiCities.find(c => c.name === cityName);
+                        if (!city) return null;
+                        return (
+                          <CityMarker
+                            key={city.name}
+                            city={city}
+                            isSelected={true}
+                            onToggle={toggleCity}
+                          />
+                        );
+                      })}
                     </MapContainer>
                   </div>
 
