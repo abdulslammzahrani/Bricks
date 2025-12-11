@@ -1495,6 +1495,7 @@ export default function HeroSection() {
               setExtractedData({});
               setPendingConfirmation(false);
               setIsComplete(false);
+              setShowSearchForm(true);
             }}
             className="text-primary-foreground"
             data-testid="button-back-chat"
@@ -1750,6 +1751,7 @@ export default function HeroSection() {
                 setConversation([]);
                 setExtractedData({});
                 setIsComplete(false);
+                setShowSearchForm(true);
               }}
               data-testid="button-new-request"
             >
