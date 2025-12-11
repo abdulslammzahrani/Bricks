@@ -121,22 +121,47 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
     }));
   };
 
+  // Calculate match index score based on completed data
+  const matchIndexScore = (() => {
+    let score = 0;
+    // Step 1: Owner data (25%)
+    if (data.ownerName.trim()) score += 12;
+    if (data.ownerPhone.trim().length >= 10) score += 13;
+    // Step 2: Location (25%)
+    if (data.city) score += 15;
+    if (data.district) score += 10;
+    // Step 3: Property details (25%)
+    if (data.propertyType) score += 10;
+    if (data.rooms) score += 5;
+    if (data.bathrooms) score += 5;
+    if (data.area) score += 5;
+    // Step 4: Price & description (25%)
+    if (data.price) score += 15;
+    if (data.description.trim()) score += 10;
+    return Math.min(100, score);
+  })();
+
   // ==================== DESKTOP VERSION ====================
   const DesktopForm = () => (
     <div className="hidden md:block p-6">
-      {/* Progress */}
-      <div className="mb-6 max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">اكتمال البيانات</span>
-          <span className="text-sm font-bold text-primary">{Math.round(progress)}%</span>
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-6 max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">مؤشر التطابق</span>
+            <span className="text-sm font-bold text-amber-600">{matchIndexScore}%</span>
+          </div>
+          <div className="h-3 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+              style={{ width: `${matchIndexScore}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            كلما أكملت بياناتك، زادت فرص التطابق
+          </p>
         </div>
-        <div className="h-3 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Desktop Stacked Cards */}
       <div className="relative max-w-lg mx-auto" style={{ minHeight: "420px" }}>
@@ -443,23 +468,25 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
 
   // ==================== MOBILE VERSION ====================
   const MobileForm = () => (
-    <div className="md:hidden relative px-3 py-4">
-      {/* Progress */}
-      <div className="mb-4 px-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-medium">اكتمال البيانات</span>
-          <span className="text-xs font-bold text-amber-600">{Math.round(progress)}%</span>
+    <div className="md:hidden relative px-3 py-3">
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-2 px-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium">مؤشر التطابق</span>
+            <span className="text-xs font-bold text-amber-600">{matchIndexScore}%</span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
+              style={{ width: `${matchIndexScore}%` }}
+            />
+          </div>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Stacked Cards */}
-      <div className="relative" style={{ height: "320px" }}>
+      {/* Stacked Cards - Dynamic height */}
+      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 28) + 240}px` }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
