@@ -1030,13 +1030,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                             />
                           );
                         })}
-                        {/* Preferred location picker */}
-                        <PreferredLocationPicker 
-                          onLocationSelect={handlePreferredLocationSelect}
-                          currentPosition={filters.preferredLatitude && filters.preferredLongitude 
-                            ? [filters.preferredLatitude, filters.preferredLongitude] 
-                            : null}
-                        />
                       </MapContainer>
                     </div>
 
@@ -1064,30 +1057,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </div>
                     </div>
                   </div>
-
-                  {/* Preferred Location Info */}
-                  {filters.preferredLatitude && filters.preferredLongitude && (
-                    <div className="flex items-center justify-between bg-primary/10 rounded-lg p-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Navigation className="h-4 w-4 text-primary" />
-                        <span>تم تحديد منطقة مفضلة</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({filters.preferredLatitude.toFixed(4)}, {filters.preferredLongitude.toFixed(4)})
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => setFilters(f => ({ ...f, preferredLatitude: null, preferredLongitude: null }))}
-                        className="text-xs text-destructive hover:underline"
-                        data-testid="button-clear-preferred-location-desktop"
-                      >
-                        مسح
-                      </button>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground text-center">
-                    انقر على الخريطة لتحديد موقع مفضل بدقة (اختياري)
-                  </p>
 
                   <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-3">
                     {filters.districts.length > 0 ? `التالي (${filters.districts.length} حي)` : "تخطي"}
@@ -1438,7 +1407,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </p>
                     )}
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-0">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 0 */}
+              {activeCard === 0 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-0">
                     التالي
                   </Button>
                 </div>
@@ -1483,7 +1459,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </button>
                     ))}
                   </div>
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-1">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 1 */}
+              {activeCard === 1 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-1">
                     التالي
                   </Button>
                 </div>
@@ -1570,7 +1553,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   </div>
 
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-2">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 2 */}
+              {activeCard === 2 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-2">
                     {filters.cities.length > 0 ? `التالي (${filters.cities.length})` : "اختر مدينة"}
                   </Button>
                 </div>
@@ -1631,32 +1621,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                           />
                         );
                       })}
-                      {/* Preferred location picker */}
-                      <PreferredLocationPicker 
-                        onLocationSelect={handlePreferredLocationSelect}
-                        currentPosition={filters.preferredLatitude && filters.preferredLongitude 
-                          ? [filters.preferredLatitude, filters.preferredLongitude] 
-                          : null}
-                      />
                     </MapContainer>
                   </div>
-
-                  {/* Preferred Location Info - Mobile */}
-                  {filters.preferredLatitude && filters.preferredLongitude && (
-                    <div className="flex items-center justify-between bg-primary/10 rounded p-1.5">
-                      <div className="flex items-center gap-1 text-[10px]">
-                        <Navigation className="h-3 w-3 text-primary" />
-                        <span>منطقة مفضلة</span>
-                      </div>
-                      <button 
-                        onClick={() => setFilters(f => ({ ...f, preferredLatitude: null, preferredLongitude: null }))}
-                        className="text-[10px] text-destructive"
-                        data-testid="button-clear-preferred-location-mobile"
-                      >
-                        مسح
-                      </button>
-                    </div>
-                  )}
 
                   {/* Districts Grid - All districts with scroll */}
                   <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
@@ -1680,9 +1646,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   </div>
 
-                  <p className="text-[9px] text-muted-foreground text-center">انقر على الخريطة لتحديد موقع مفضل</p>
+                  <div className="pb-14" />
+                </div>
+              )}
 
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-3">
+              {/* Floating Next Button for Step 3 */}
+              {activeCard === 3 && filters.cities.length > 0 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-3">
                     {filters.districts.length > 0 ? `التالي (${filters.districts.length})` : "تخطي"}
                   </Button>
                 </div>
@@ -1709,7 +1680,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       );
                     })}
                   </div>
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-4">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 4 */}
+              {activeCard === 4 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-4">
                     التالي
                   </Button>
                 </div>
@@ -1741,7 +1719,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       );
                     })}
                   </div>
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-5">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 5 */}
+              {activeCard === 5 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-5">
                     التالي
                   </Button>
                 </div>
@@ -1816,7 +1801,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   </div>
 
-                  <Button onClick={goNext} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-5">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Next Button for Step 6 */}
+              {activeCard === 6 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-6">
                     التالي
                   </Button>
                 </div>
@@ -1861,7 +1853,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     />
                   </div>
 
-                  <Button onClick={handleSearch} className="w-full h-10 rounded-lg text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600" data-testid="button-search">
+                  <div className="pb-14" />
+                </div>
+              )}
+
+              {/* Floating Submit Button for Step 7 */}
+              {activeCard === 7 && (
+                <div className="fixed bottom-4 left-3 right-3 z-50">
+                  <Button onClick={handleSearch} className="w-full h-10 rounded-xl text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600 shadow-lg" data-testid="button-search">
                     <Send className="h-4 w-4" />
                     إرسال الطلب
                   </Button>
