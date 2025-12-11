@@ -251,6 +251,98 @@ export async function registerRoutes(
     });
   });
 
+  // Auto-register user when filling first card (name, phone, email)
+  // Password = phone + 3 random digits
+  app.post("/api/auth/autoregister", async (req, res) => {
+    try {
+      const { name, phone, email, role } = req.body;
+      
+      // Validate required fields
+      if (!name || !phone || !email) {
+        return res.status(400).json({ error: "جميع الحقول مطلوبة: الاسم، رقم الجوال، البريد الإلكتروني" });
+      }
+
+      // Validate phone format (Saudi format)
+      const phoneRegex = /^05\d{8}$/;
+      if (!phoneRegex.test(phone)) {
+        return res.status(400).json({ error: "رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام" });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "صيغة البريد الإلكتروني غير صحيحة" });
+      }
+
+      // Check if user already exists by phone or email
+      const existingByPhone = await storage.getUserByPhone(phone);
+      const existingByEmail = await storage.getUserByEmail(email);
+      
+      if (existingByPhone) {
+        // User exists, log them in automatically
+        req.session.userId = existingByPhone.id;
+        req.session.userName = existingByPhone.name;
+        req.session.userRole = existingByPhone.role;
+        
+        return res.json({
+          success: true,
+          isExisting: true,
+          user: {
+            id: existingByPhone.id,
+            name: existingByPhone.name,
+            phone: existingByPhone.phone,
+            email: existingByPhone.email,
+            role: existingByPhone.role,
+          },
+          message: "تم تسجيل الدخول بنجاح"
+        });
+      }
+      
+      if (existingByEmail) {
+        return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
+      }
+
+      // Generate password: phone + 3 random digits
+      const randomSuffix = Math.floor(100 + Math.random() * 900).toString(); // 3 digits
+      const generatedPassword = phone + randomSuffix;
+      
+      // Hash the password
+      const passwordHash = await bcrypt.hash(generatedPassword, 10);
+      
+      // Create user
+      const user = await storage.createUser({
+        name,
+        phone,
+        email,
+        passwordHash,
+        role: role || "buyer",
+        requiresPasswordReset: true, // Force password change on first login
+      });
+
+      // Auto-login the new user
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+      req.session.userRole = user.role;
+
+      res.json({
+        success: true,
+        isExisting: false,
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+        },
+        generatedPassword, // Return password only once so user can save it
+        message: `تم التسجيل بنجاح! كلمة المرور: ${generatedPassword}`
+      });
+    } catch (error: any) {
+      console.error("Auto-register error:", error);
+      res.status(500).json({ error: "حدث خطأ أثناء التسجيل" });
+    }
+  });
+
   // Change password (requires authenticated session)
   app.post("/api/auth/change-password", async (req, res) => {
     try {
