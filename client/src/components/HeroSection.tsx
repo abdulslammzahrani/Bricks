@@ -498,8 +498,9 @@ export default function HeroSection() {
         .then(result => {
           setIsTyping(false);
           setIsAnalyzing(false);
-          if (result.response) {
-            setConversation(prev => [...prev, { type: "system" as const, text: result.response }]);
+          const reply = result.assistantReply || result.response;
+          if (reply) {
+            setConversation(prev => [...prev, { type: "system" as const, text: reply }]);
           }
         })
         .catch(() => {
