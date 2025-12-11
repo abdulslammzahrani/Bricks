@@ -585,6 +585,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     <>
     {/* ==================== DESKTOP VERSION ==================== */}
     <div className="hidden md:block p-6">
+      {/* Form Title */}
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold mb-2">المطابقة الذكية</h2>
+        <p className="text-sm text-muted-foreground">
+          أضف طلبك الآن ودع نظامنا الذكي يجلب لك العروض المطابقة لطلبك
+        </p>
+      </div>
+
       {/* Match Index - Shows after step 1 */}
       {activeCard >= 1 && (
         <div className="mb-6 max-w-md mx-auto">
@@ -1146,6 +1154,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
     {/* ==================== MOBILE VERSION ==================== */}
     <div className="md:hidden relative px-3 py-3">
+      {/* Form Title */}
+      <div className="text-center mb-3">
+        <h2 className="text-base font-bold mb-1">المطابقة الذكية</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          أضف طلبك الآن ودع نظامنا الذكي يجلب لك العروض المطابقة لطلبك
+        </p>
+      </div>
+
       {/* Match Index - Shows after step 1 */}
       {activeCard >= 1 && (
         <div className="mb-2 px-1">
