@@ -1143,14 +1143,14 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     </div>
 
     {/* ==================== MOBILE VERSION ==================== */}
-    <div className="md:hidden relative px-3 py-4">
+    <div className="md:hidden relative px-3 py-3">
       {/* Progress & Reliability */}
-      <div className="mb-3 px-1">
+      <div className="mb-2 px-1">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium">الموثوقية</span>
           <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
             style={{ width: `${reliabilityScore}%` }}
@@ -1158,8 +1158,8 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
         </div>
       </div>
 
-      {/* Stacked Cards Container */}
-      <div className="relative" style={{ height: activeCard >= 2 ? "420px" : "300px" }}>
+      {/* Stacked Cards Container - Dynamic height based on content */}
+      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 24) + 220}px` }}>
         
         {/* Completed Cards */}
         {cards.slice(0, activeCard).map((card, idx) => {
@@ -1313,7 +1313,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Map with selected cities */}
-                  <div className="h-[180px] rounded-lg overflow-hidden border border-border">
+                  <div className="h-[140px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[cityMapCenter.lat, cityMapCenter.lng]}
                       zoom={filters.cities.length > 0 ? 8 : 5}
@@ -1342,7 +1342,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Cities Grid */}
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto p-1">
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[100px] overflow-y-auto p-1">
                     {filteredCities.map((city) => {
                       const isSelected = filters.cities.includes(city.name);
                       return (
@@ -1398,7 +1398,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Map with all districts */}
-                  <div className="h-[180px] rounded-lg overflow-hidden border border-border">
+                  <div className="h-[140px] rounded-lg overflow-hidden border border-border">
                     <MapContainer
                       center={[districtMapCenter.lat, districtMapCenter.lng]}
                       zoom={11}
@@ -1426,7 +1426,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                   </div>
 
                   {/* Districts Grid */}
-                  <div className="grid grid-cols-3 gap-1.5 max-h-[120px] overflow-y-auto p-1">
+                  <div className="grid grid-cols-3 gap-1.5 max-h-[100px] overflow-y-auto p-1">
                     {filteredDistricts.map((district) => {
                       const isSelected = filters.districts.includes(district.name);
                       return (

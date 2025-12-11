@@ -2036,10 +2036,10 @@ export default function HeroSection() {
                   />
                 </div>
                 
-                {/* Chat Input - Alternative */}
-                <div className="border-t bg-card p-3">
-                  <p className="text-[10px] text-muted-foreground text-center mb-2">أو تحدث مع مستشار المبيعات</p>
-                  <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+                {/* Chat Input - Alternative - Compact */}
+                <div className="border-t bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] text-muted-foreground text-center mb-1.5">أو تحدث مع مستشار المبيعات</p>
+                  <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
                     <Button
                       size="icon"
                       onClick={() => {
@@ -2049,10 +2049,10 @@ export default function HeroSection() {
                         }
                       }}
                       disabled={!inputText.trim()}
-                      className="rounded-full h-8 w-8 flex-shrink-0"
+                      className="rounded-full h-7 w-7 flex-shrink-0"
                       data-testid="button-send-form"
                     >
-                      <Send className="h-4 w-4" />
+                      <Send className="h-3.5 w-3.5" />
                     </Button>
                     
                     <Button
@@ -2060,10 +2060,10 @@ export default function HeroSection() {
                       variant={isRecording ? "destructive" : "ghost"}
                       onClick={isRecording ? stopRecording : startRecording}
                       disabled={isTranscribing}
-                      className="rounded-full h-8 w-8 flex-shrink-0"
+                      className="rounded-full h-7 w-7 flex-shrink-0"
                       data-testid="button-voice-form"
                     >
-                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
                     </Button>
                     
                     <input
@@ -2078,7 +2078,7 @@ export default function HeroSection() {
                         }
                       }}
                       placeholder="اكتب رسالتك هنا..."
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
                       data-testid="input-chat-form"
                     />
                   </div>
@@ -2157,10 +2157,10 @@ export default function HeroSection() {
                   />
                 </div>
                 
-                {/* Chat Input - Alternative */}
-                <div className="border-t bg-card p-3">
-                  <p className="text-[10px] text-muted-foreground text-center mb-2">أو تحدث مع مستشار العقارات</p>
-                  <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+                {/* Chat Input - Alternative - Compact */}
+                <div className="border-t bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] text-muted-foreground text-center mb-1.5">أو تحدث مع مستشار العقارات</p>
+                  <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5">
                     <Button
                       size="icon"
                       onClick={() => {
@@ -2169,10 +2169,10 @@ export default function HeroSection() {
                         }
                       }}
                       disabled={!inputText.trim()}
-                      className="rounded-full h-8 w-8 flex-shrink-0 bg-green-600 hover:bg-green-700"
+                      className="rounded-full h-7 w-7 flex-shrink-0 bg-green-600 hover:bg-green-700"
                       data-testid="button-send-seller-form"
                     >
-                      <Send className="h-4 w-4" />
+                      <Send className="h-3.5 w-3.5" />
                     </Button>
                     
                     <Button
@@ -2180,10 +2180,10 @@ export default function HeroSection() {
                       variant={isRecording ? "destructive" : "ghost"}
                       onClick={isRecording ? stopRecording : startRecording}
                       disabled={isTranscribing}
-                      className="rounded-full h-8 w-8 flex-shrink-0"
+                      className="rounded-full h-7 w-7 flex-shrink-0"
                       data-testid="button-voice-seller-form"
                     >
-                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
                     </Button>
                     
                     <input
@@ -2197,7 +2197,7 @@ export default function HeroSection() {
                         }
                       }}
                       placeholder="اكتب رسالتك هنا..."
-                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2 py-1"
+                      className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
                       data-testid="input-chat-seller-form"
                     />
                   </div>
