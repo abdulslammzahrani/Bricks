@@ -1548,31 +1548,26 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </MapContainer>
                   </div>
 
-                  {/* Cities Grid - Show exactly 6 main cities in 2 rows */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { name: "الرياض" },
-                      { name: "جدة" },
-                      { name: "مكة المكرمة" },
-                      { name: "المدينة المنورة" },
-                      { name: "الدمام" },
-                      { name: "الخبر" }
-                    ].map((city) => {
-                      const isSelected = filters.cities.includes(city.name);
-                      return (
-                        <button
-                          key={city.name}
-                          onClick={() => toggleCity(city.name)}
-                          className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-city-${city.name}`}
-                        >
-                          {isSelected && <Check className="h-3 w-3" />}
-                          {city.name}
-                        </button>
-                      );
-                    })}
+                  {/* Cities Grid - All cities with scroll */}
+                  <div className="max-h-[120px] overflow-y-auto border rounded-lg p-1.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {filteredCities.map((city) => {
+                        const isSelected = filters.cities.includes(city.name);
+                        return (
+                          <button
+                            key={city.name}
+                            onClick={() => toggleCity(city.name)}
+                            className={`py-1.5 px-2 rounded-lg border text-[11px] font-medium transition-all flex items-center justify-center gap-1 ${
+                              isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-city-${city.name}`}
+                          >
+                            {isSelected && <Check className="h-3 w-3" />}
+                            <span className="truncate">{city.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <Button onClick={goNext} disabled={!canProceed()} className="w-full h-9 rounded-lg text-sm" data-testid="button-next-2">
@@ -1663,24 +1658,26 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                     </div>
                   )}
 
-                  {/* Districts Grid - Show exactly 6 districts in 2 rows */}
-                  <div className="grid grid-cols-3 gap-1.5 p-1">
-                    {filteredDistricts.slice(0, 6).map((district) => {
-                      const isSelected = filters.districts.includes(district.name);
-                      return (
-                        <button
-                          key={`${district.cityName}-${district.name}`}
-                          onClick={() => toggleDistrict(district.name)}
-                          className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                            isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-district-${district.name}`}
-                        >
-                          {isSelected && <Check className="h-3 w-3" />}
-                          {district.name}
-                        </button>
-                      );
-                    })}
+                  {/* Districts Grid - All districts with scroll */}
+                  <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {filteredDistricts.map((district) => {
+                        const isSelected = filters.districts.includes(district.name);
+                        return (
+                          <button
+                            key={`${district.cityName}-${district.name}`}
+                            onClick={() => toggleDistrict(district.name)}
+                            className={`py-1.5 px-1.5 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
+                              isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-district-${district.name}`}
+                          >
+                            {isSelected && <Check className="h-2.5 w-2.5" />}
+                            <span className="truncate">{district.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <p className="text-[9px] text-muted-foreground text-center">انقر على الخريطة لتحديد موقع مفضل</p>

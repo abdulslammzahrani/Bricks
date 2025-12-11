@@ -400,19 +400,21 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                     ))}
                   </div>
                   <label className="text-sm font-medium mb-2 block text-center">اختر المدينة</label>
-                  <div className="grid grid-cols-4 gap-2 max-h-[120px] overflow-y-auto p-1">
-                    {saudiCities.slice(0, 20).map((city) => (
-                      <button
-                        key={city.name}
-                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
-                        className={`py-2 px-2 rounded-xl border-2 text-xs font-medium transition-all ${
-                          data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                        }`}
-                        data-testid={`button-list-city-${city.name}`}
-                      >
-                        {city.name}
-                      </button>
-                    ))}
+                  <div className="max-h-[140px] overflow-y-auto border rounded-lg p-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {saudiCities.map((city) => (
+                        <button
+                          key={city.name}
+                          onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
+                          className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all ${
+                            data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border hover:border-amber-500/50"
+                          }`}
+                          data-testid={`button-list-city-${city.name}`}
+                        >
+                          <span className="truncate block">{city.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   
                   {/* Interactive Map for Pin Placement */}
@@ -775,19 +777,21 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
                       </button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5 max-h-[80px] overflow-y-auto">
-                    {saudiCities.slice(0, 16).map((city) => (
-                      <button
-                        key={city.name}
-                        onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
-                        className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
-                          data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border"
-                        }`}
-                        data-testid={`button-list-city-${city.name}-mobile`}
-                      >
-                        {city.name}
-                      </button>
-                    ))}
+                  <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {saudiCities.map((city) => (
+                        <button
+                          key={city.name}
+                          onClick={() => setData(d => ({ ...d, city: city.name, latitude: null, longitude: null }))}
+                          className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
+                            data.city === city.name ? "border-amber-500 bg-amber-500 text-white" : "border-border hover:border-amber-500/50"
+                          }`}
+                          data-testid={`button-list-city-${city.name}-mobile`}
+                        >
+                          <span className="truncate block">{city.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   
                   {/* Interactive Map for Mobile */}
