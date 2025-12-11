@@ -585,22 +585,24 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
     <>
     {/* ==================== DESKTOP VERSION ==================== */}
     <div className="hidden md:block p-6">
-      {/* Progress & Reliability */}
-      <div className="mb-6 max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">مؤشر الموثوقية</span>
-          <span className="text-sm font-bold text-primary">{reliabilityScore}%</span>
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-6 max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">مؤشر التطابق</span>
+            <span className="text-sm font-bold text-primary">{reliabilityScore}%</span>
+          </div>
+          <div className="h-3 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
+              style={{ width: `${reliabilityScore}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            كلما أكملت بياناتك، زادت فرص التطابق
+          </p>
         </div>
-        <div className="h-3 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
-            style={{ width: `${reliabilityScore}%` }}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          كلما أكملت بياناتك، زادت موثوقيتك وفرص التطابق
-        </p>
-      </div>
+      )}
 
       {/* Desktop Stacked Cards Container */}
       <div className="relative max-w-lg mx-auto" style={{ minHeight: "520px" }}>
@@ -1144,19 +1146,21 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
     {/* ==================== MOBILE VERSION ==================== */}
     <div className="md:hidden relative px-3 py-3">
-      {/* Progress & Reliability */}
-      <div className="mb-2 px-1">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium">الموثوقية</span>
-          <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
+      {/* Match Index - Shows after step 1 */}
+      {activeCard >= 1 && (
+        <div className="mb-2 px-1">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium">مؤشر التطابق</span>
+            <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
+              style={{ width: `${reliabilityScore}%` }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
-            style={{ width: `${reliabilityScore}%` }}
-          />
-        </div>
-      </div>
+      )}
 
       {/* Stacked Cards Container - Dynamic height based on content */}
       <div className="relative pb-2" style={{ minHeight: `${(activeCard * 24) + 220}px` }}>
