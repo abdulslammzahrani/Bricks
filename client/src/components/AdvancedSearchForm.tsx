@@ -710,213 +710,808 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
 
   return (
     <>
-    {/* ==================== DESKTOP VERSION ==================== */}
-    <div className="hidden md:block p-6">
-      {/* Match Index - Shows after step 1 */}
-      {activeCard >= 1 && (
-        <div className="mb-6 max-w-md mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">مؤشر التطابق</span>
-            <span className="text-sm font-bold text-primary">{reliabilityScore}%</span>
+      {/* ==================== DESKTOP VERSION ==================== */}
+      <div className="hidden md:block p-6">
+        {/* Match Index - Shows after step 1 */}
+        {activeCard >= 1 && (
+          <div className="mb-6 max-w-md mx-auto">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">مؤشر التطابق</span>
+              <span className="text-sm font-bold text-primary">{reliabilityScore}%</span>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
+                style={{ width: `${reliabilityScore}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              كلما أكملت بياناتك، زادت فرص التطابق
+            </p>
           </div>
-          <div className="h-3 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
-              style={{ width: `${reliabilityScore}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            كلما أكملت بياناتك، زادت فرص التطابق
-          </p>
-        </div>
-      )}
+        )}
 
-      {/* Desktop Stacked Cards Container */}
-      <div className="relative max-w-lg mx-auto" style={{ minHeight: "520px" }}>
-        
-        {/* Completed Cards */}
-        {cards.slice(0, activeCard).map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.id}
-              onClick={() => goBack(card.id)}
-              className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
-              style={{ top: `${idx * 40}px`, zIndex: idx + 1 }}
-            >
-              <div className={`${card.lightColor} rounded-2xl p-3 flex items-center gap-3 border-2 border-primary/30 shadow-sm`}>
-                <div className={`w-9 h-9 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
-                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+        {/* Desktop Stacked Cards Container */}
+        <div className="relative max-w-lg mx-auto" style={{ minHeight: "520px" }}>
+          
+          {/* Completed Cards */}
+          {cards.slice(0, activeCard).map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.id}
+                onClick={() => goBack(card.id)}
+                className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                style={{ top: `${idx * 40}px`, zIndex: idx + 1 }}
+              >
+                <div className={`${card.lightColor} rounded-2xl p-3 flex items-center gap-3 border-2 border-primary/30 shadow-sm`}>
+                  <div className={`w-9 h-9 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
+                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                  </div>
+                  <span className="text-sm font-bold truncate flex-1">{card.title}</span>
+                  <span className="text-xs text-primary font-medium">تعديل</span>
                 </div>
-                <span className="text-sm font-bold truncate flex-1">{card.title}</span>
-                <span className="text-xs text-primary font-medium">تعديل</span>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        {/* Active Card */}
-        <div
-          className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-          style={{ top: `${activeCard * 40}px`, zIndex: 10 }}
-        >
-          <div className="bg-card border-2 rounded-2xl shadow-lg">
-            
-            {/* Card Header */}
-            <div className="flex items-center gap-3 p-4 border-b">
-              <div className={`w-10 h-10 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-primary" />; })()}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-base">{cards[activeCard].title}</h3>
-                <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
-              </div>
-              <div className="flex items-center gap-0.5">
-                {cards.map((_, i) => (
-                  <div key={i} className={`w-2 h-2 rounded-full transition-all ${i <= activeCard ? 'bg-primary' : 'bg-muted'}`} />
-                ))}
-              </div>
-            </div>
-
-            {/* Card Content */}
-            <div className="p-4">
+          {/* Active Card */}
+          <div
+            className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+            style={{ top: `${activeCard * 40}px`, zIndex: 10 }}
+          >
+            <div className="bg-card border-2 rounded-2xl shadow-lg">
               
-              {/* Step 0: Personal */}
-              {activeCard === 0 && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm font-medium mb-1.5 block">الاسم</label>
+              {/* Card Header */}
+              <div className="flex items-center gap-3 p-4 border-b">
+                <div className={`w-10 h-10 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                  {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-primary" />; })()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-base">{cards[activeCard].title}</h3>
+                  <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  {cards.map((_, i) => (
+                    <div key={i} className={`w-2 h-2 rounded-full transition-all ${i <= activeCard ? 'bg-primary' : 'bg-muted'}`} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Content */}
+              <div className="p-4">
+                
+                {/* Step 0: Personal */}
+                {activeCard === 0 && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">الاسم</label>
+                        <Input
+                          placeholder="أدخل اسمك"
+                          value={filters.name}
+                          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                          className="h-11 text-center rounded-xl"
+                          data-testid="input-name-desktop"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
+                        <Input
+                          type="tel"
+                          placeholder="رقم الجوال"
+                          value={filters.phone}
+                          onChange={(e) => handlePhoneChange(e.target.value)}
+                          className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                          dir="ltr"
+                          data-testid="input-phone-desktop"
+                        />
+                        {phoneError && (
+                          <p className="text-xs text-red-500 mt-1 text-center">{phoneError}</p>
+                        )}
+                        {isPhoneValid && (
+                          <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
+                            <Check className="h-3 w-3" /> رقم صحيح
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 1: Type */}
+                {activeCard === 1 && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { v: "sale", l: "شراء", desc: "أبحث عن عقار للشراء", icon: Home },
+                        { v: "rent", l: "إيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
+                      ].map(t => (
+                        <button
+                          key={t.v}
+                          onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            filters.transactionType === t.v ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-filter-${t.v}-desktop`}
+                        >
+                          <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="font-bold text-sm">{t.l}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-center gap-2">
+                      {[
+                        { v: "residential", l: "سكني", I: Home },
+                        { v: "commercial", l: "تجاري", I: Building2 }
+                      ].map(c => (
+                        <button
+                          key={c.v}
+                          onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                          className={`flex items-center gap-1.5 px-5 py-2 rounded-full border-2 text-sm transition-all ${
+                            filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                          }`}
+                          data-testid={`button-category-${c.v}-desktop`}
+                        >
+                          <c.I className="h-4 w-4" />
+                          {c.l}
+                        </button>
+                      ))}
+                    </div>
+                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-1">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 2: City with Smart Map - Multiple Selection */}
+                {activeCard === 2 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium block text-center">اختر المدن</label>
+                    <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
+                    
+                    {/* Selected Cities */}
+                    {filters.cities.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {filters.cities.map(c => (
+                          <Badge key={c} variant="secondary" className="gap-1 pl-2">
+                            {c}
+                            <button onClick={() => toggleCity(c)} className="hover:text-destructive">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="أدخل اسمك"
-                        value={filters.name}
-                        onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                        className="h-11 text-center rounded-xl"
-                        data-testid="input-name-desktop"
+                        placeholder="ابحث عن مدينة..."
+                        value={citySearch}
+                        onChange={(e) => setCitySearch(e.target.value)}
+                        className="h-9 pr-10 text-sm rounded-xl"
+                        data-testid="input-city-search-desktop"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Map with selected city markers */}
+                      <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
+                        <MapContainer
+                          center={[cityMapCenter.lat, cityMapCenter.lng]}
+                          zoom={filters.cities.length > 0 ? 8 : 5}
+                          style={{ height: "100%", width: "100%" }}
+                          zoomControl={true}
+                        >
+                          <TileLayer
+                            attribution='&copy; OpenStreetMap'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <MapCenterChanger 
+                            center={[cityMapCenter.lat, cityMapCenter.lng]} 
+                            zoom={filters.cities.length > 0 ? 8 : 5} 
+                          />
+                          
+                          {/* Show only selected cities as markers */}
+                          {filters.cities.map(cityName => {
+                            const city = saudiCities.find(c => c.name === cityName);
+                            if (!city) return null;
+                            return (
+                              <CityMarker
+                                key={city.name}
+                                city={city}
+                                isSelected={true}
+                                onToggle={toggleCity}
+                              />
+                            );
+                          })}
+                        </MapContainer>
+                      </div>
+
+                      {/* Cities Grid */}
+                      <div className="h-[300px] overflow-y-auto p-1">
+                        <div className="grid grid-cols-2 gap-2">
+                          {filteredCities.map((city) => {
+                            const isSelected = filters.cities.includes(city.name);
+                            return (
+                              <button
+                                key={city.name}
+                                onClick={() => toggleCity(city.name)}
+                                className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-primary-foreground" 
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                                data-testid={`button-city-desktop-${city.name}`}
+                              >
+                                {isSelected && <Check className="h-4 w-4" />}
+                                {city.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-2">
+                      {filters.cities.length > 0 ? `التالي (${filters.cities.length} مدينة)` : "اختر مدينة واحدة على الأقل"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 3: District with Smart Map - Multiple Selection */}
+                {activeCard === 3 && filters.cities.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium block text-center">اختر الأحياء</label>
+                    <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
+                    
+                    {/* Selected Districts */}
+                    {filters.districts.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {filters.districts.map(d => (
+                          <Badge key={d} variant="secondary" className="gap-1 pl-2">
+                            {d}
+                            <button onClick={() => toggleDistrict(d)} className="hover:text-destructive">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="ابحث عن حي..."
+                        value={districtSearch}
+                        onChange={(e) => setDistrictSearch(e.target.value)}
+                        className="h-9 pr-10 text-sm rounded-xl"
+                        data-testid="input-district-search-desktop"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Map with all district markers + preferred location picker */}
+                      <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
+                        <MapContainer
+                          center={[districtMapCenter.lat, districtMapCenter.lng]}
+                          zoom={11}
+                          style={{ height: "100%", width: "100%" }}
+                          zoomControl={true}
+                        >
+                          <TileLayer
+                            attribution='&copy; OpenStreetMap'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <MapCenterChanger 
+                            center={[districtMapCenter.lat, districtMapCenter.lng]} 
+                            zoom={11} 
+                          />
+                          {/* Show all districts as markers for selection */}
+                          {filteredDistricts.map(district => {
+                            const coords = neighborhoodCoords.get(district.name);
+                            if (!coords) return null;
+                            const isSelected = filters.districts.includes(district.name);
+                            return (
+                              <DistrictMarker
+                                key={`${district.cityName}-${district.name}`}
+                                name={district.name}
+                                cityName={district.cityName}
+                                coords={{ lat: coords.lat, lng: coords.lng }}
+                                isSelected={isSelected}
+                                onToggle={toggleDistrict}
+                              />
+                            );
+                          })}
+                        </MapContainer>
+                      </div>
+
+                      {/* Districts Grid */}
+                      <div className="h-[300px] overflow-y-auto p-1">
+                        <div className="grid grid-cols-2 gap-2">
+                          {filteredDistricts.map((district) => {
+                            const isSelected = filters.districts.includes(district.name);
+                            return (
+                              <button
+                                key={`${district.cityName}-${district.name}`}
+                                onClick={() => toggleDistrict(district.name)}
+                                className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-primary-foreground" 
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                                data-testid={`button-district-desktop-${district.name}`}
+                              >
+                                {isSelected && <Check className="h-4 w-4" />}
+                                {district.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-3">
+                      {filters.districts.length > 0 ? `التالي (${filters.districts.length} حي)` : "تخطي"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 4: Property Type */}
+                {activeCard === 4 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium block text-center">نوع العقار</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {propertyTypes.map((type) => {
+                        const Icon = type.icon;
+                        return (
+                          <button
+                            key={type.value}
+                            onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                              filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-type-desktop-${type.value}`}
+                          >
+                            <Icon className={`h-6 w-6 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="text-xs font-medium mt-1">{type.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-4">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 5: Property Condition */}
+                {activeCard === 5 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium block text-center">حالة العقار</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: "new", label: "جديد", icon: CheckCircle2 },
+                        { value: "used", label: "مستخدم", icon: Clock },
+                        { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
+                      ].map((condition) => {
+                        const Icon = condition.icon;
+                        const isSelected = filters.propertyCondition === condition.value;
+                        return (
+                          <button
+                            key={condition.value}
+                            onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
+                            className={`p-4 rounded-xl border-2 text-center transition-all ${
+                              isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-condition-desktop-${condition.value}`}
+                          >
+                            <Icon className={`h-8 w-8 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="text-sm font-medium mt-2">{condition.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 6: Specifications */}
+                {activeCard === 6 && (
+                  <div className="space-y-4">
+                    {/* Rooms */}
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
+                      <div className="flex items-center gap-2 mb-2">
+                        <BedDouble className="h-4 w-4 text-primary" />
+                        <label className="text-sm font-medium">عدد الغرف</label>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        {["1", "2", "3", "4", "5", "6+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
+                            className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
+                              filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-rooms-desktop-${n}`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bathrooms */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bath className="h-4 w-4 text-primary" />
+                        <label className="text-sm font-medium">عدد الحمامات</label>
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        {["1", "2", "3", "4", "5+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
+                            className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
+                              filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-bathrooms-desktop-${n}`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Budget */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-4 w-4 text-primary" />
+                        <label className="text-sm font-medium">الميزانية</label>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {budgetOptions[filters.transactionType].map((b) => (
+                          <button
+                            key={b.value}
+                            onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
+                            className={`py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all ${
+                              filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-budget-desktop-${b.value}`}
+                          >
+                            {b.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 7: Additional Details */}
+                {activeCard === 7 && (
+                  <div className="space-y-4">
+                    {/* Features */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">مميزات مطلوبة</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {featureOptions.map((feat) => {
+                          const Icon = feat.icon;
+                          const isSelected = filters.features.includes(feat.value);
+                          return (
+                            <button
+                              key={feat.value}
+                              onClick={() => toggleFeature(feat.value)}
+                              className={`p-2 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                                isSelected ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                              }`}
+                              data-testid={`button-feature-desktop-${feat.value}`}
+                            >
+                              <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                              <span className="text-xs font-medium">{feat.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">ملاحظات إضافية</label>
+                      <Textarea
+                        placeholder="أضف أي تفاصيل إضافية تساعد في إيجاد العقار المناسب..."
+                        value={filters.notes}
+                        onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
+                        className="h-20 resize-none rounded-xl text-sm"
+                        data-testid="textarea-notes-desktop"
+                      />
+                    </div>
+
+                    <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-primary to-green-600" data-testid="button-search-desktop">
+                      <Send className="h-5 w-5" />
+                      إرسال الطلب
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Cards Preview */}
+          {cards.slice(activeCard + 1).map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.id}
+                className="absolute inset-x-2 pointer-events-none"
+                style={{
+                  top: `${(activeCard * 40) + 360 + (idx * 20)}px`,
+                  zIndex: -idx - 1,
+                  opacity: 0.5 - (idx * 0.1),
+                }}
+              >
+                <div className="bg-muted/60 rounded-xl p-2.5 flex items-center gap-2 border border-border/40">
+                  <div className={`w-8 h-8 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
+                    <Icon className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Chat with Consultant - Inside Form (Desktop) */}
+        <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+          </div>
+          <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
+            <Button
+              size="icon"
+              variant="default"
+              onClick={() => {
+                if (consultantMessage.trim()) {
+                  onSwitchToChat?.(consultantMessage.trim());
+                  setConsultantMessage("");
+                } else {
+                  onSwitchToChat?.();
+                }
+              }}
+              className="rounded-full h-9 w-9 flex-shrink-0"
+              data-testid="button-send-consultant-desktop"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+            <input
+              type="text"
+              dir="rtl"
+              value={consultantMessage}
+              onChange={(e) => setConsultantMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && consultantMessage.trim()) {
+                  e.preventDefault();
+                  onSwitchToChat?.(consultantMessage.trim());
+                  setConsultantMessage("");
+                }
+              }}
+              placeholder="اكتب رسالتك هنا..."
+              className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
+              data-testid="input-chat-consultant-desktop"
+            />
+          </div>
+        </div>
+      </div>
+      {/* ==================== MOBILE VERSION ==================== */}
+      <div className="md:hidden relative px-3 py-3">
+        {/* Match Index - Shows after step 1 */}
+        {activeCard >= 1 && (
+          <div className="mb-2 px-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium">مؤشر التطابق</span>
+              <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
+                style={{ width: `${reliabilityScore}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Stacked Cards Container - Dynamic height based on content */}
+        <div className="relative pt-[0px] pb-[0px]" style={{ minHeight: `${(activeCard * 24) + 320}px` }}>
+          
+          {/* Completed Cards */}
+          {cards.slice(0, activeCard).map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.id}
+                onClick={() => goBack(card.id)}
+                className="absolute inset-x-0 cursor-pointer transition-all duration-200"
+                style={{ top: `${idx * 24}px`, zIndex: idx + 1 }}
+              >
+                <div className={`${card.lightColor} rounded-xl p-2 flex items-center gap-2 border border-primary/20`}>
+                  <div className={`w-6 h-6 rounded-lg ${card.color} flex items-center justify-center`}>
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  </div>
+                  <span className="text-xs font-medium truncate flex-1">{card.title}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Active Card */}
+          <div
+            className={`absolute inset-x-0 transition-all duration-200 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+            style={{ top: `${activeCard * 24}px`, zIndex: 10 }}
+          >
+            <div className="bg-card border rounded-xl shadow-md">
+              
+              {/* Card Header */}
+              <div className="flex items-center gap-2 p-2.5 border-b">
+                <div className={`w-8 h-8 rounded-lg ${cards[activeCard].lightColor} flex items-center justify-center`}>
+                  {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-4 h-4 text-primary" />; })()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
+                </div>
+                <span className="text-lg font-bold text-muted-foreground/30">{activeCard + 1}</span>
+              </div>
+
+              {/* Card Content */}
+              <div className="p-2.5">
+                
+                {/* Step 0: Personal */}
+                {activeCard === 0 && (
+                  <div className="space-y-2">
+                    <Input
+                      placeholder="الاسم"
+                      value={filters.name}
+                      onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
+                      className="h-9 text-sm text-center rounded-lg"
+                      data-testid="input-name"
+                    />
+                    <div>
                       <Input
                         type="tel"
                         placeholder="رقم الجوال"
                         value={filters.phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
-                        className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                        className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                         dir="ltr"
-                        data-testid="input-phone-desktop"
+                        data-testid="input-phone"
                       />
                       {phoneError && (
-                        <p className="text-xs text-red-500 mt-1 text-center">{phoneError}</p>
+                        <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
                       )}
                       {isPhoneValid && (
-                        <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
-                          <Check className="h-3 w-3" /> رقم صحيح
+                        <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
+                          <Check className="h-2.5 w-2.5" /> صحيح
                         </p>
                       )}
                     </div>
+                    <div className="pb-14" />
                   </div>
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
-                    التالي
-                  </Button>
-                </div>
-              )}
+                )}
 
-              {/* Step 1: Type */}
-              {activeCard === 1 && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { v: "sale", l: "شراء", desc: "أبحث عن عقار للشراء", icon: Home },
-                      { v: "rent", l: "إيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
-                    ].map(t => (
-                      <button
-                        key={t.v}
-                        onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                        }`}
-                        data-testid={`button-filter-${t.v}-desktop`}
-                      >
-                        <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                        <div className="font-bold text-sm">{t.l}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
-                      </button>
-                    ))}
+                {/* Floating Next Button for Step 0 */}
+                {activeCard === 0 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-0">
+                      التالي
+                    </Button>
                   </div>
-                  <div className="flex justify-center gap-2">
-                    {[
-                      { v: "residential", l: "سكني", I: Home },
-                      { v: "commercial", l: "تجاري", I: Building2 }
-                    ].map(c => (
-                      <button
-                        key={c.v}
-                        onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1.5 px-5 py-2 rounded-full border-2 text-sm transition-all ${
-                          filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                        }`}
-                        data-testid={`button-category-${c.v}-desktop`}
-                      >
-                        <c.I className="h-4 w-4" />
-                        {c.l}
-                      </button>
-                    ))}
-                  </div>
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-1">
-                    التالي
-                  </Button>
-                </div>
-              )}
+                )}
 
-              {/* Step 2: City with Smart Map - Multiple Selection */}
-              {activeCard === 2 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium block text-center">اختر المدن</label>
-                  <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
-                  
-                  {/* Selected Cities */}
-                  {filters.cities.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-center">
-                      {filters.cities.map(c => (
-                        <Badge key={c} variant="secondary" className="gap-1 pl-2">
-                          {c}
-                          <button onClick={() => toggleCity(c)} className="hover:text-destructive">
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
+                {/* Step 1: Type */}
+                {activeCard === 1 && (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { v: "sale", l: "شراء", icon: Home },
+                        { v: "rent", l: "إيجار", icon: Building2 }
+                      ].map(t => (
+                        <button
+                          key={t.v}
+                          onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
+                          className={`p-2.5 rounded-lg border-2 text-center transition-all ${
+                            filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
+                          }`}
+                          data-testid={`button-filter-${t.v}`}
+                        >
+                          <t.icon className={`h-5 w-5 mx-auto ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
+                          <div className="font-bold text-xs mt-1">{t.l}</div>
+                        </button>
                       ))}
                     </div>
-                  )}
-
-                  <div className="relative">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="ابحث عن مدينة..."
-                      value={citySearch}
-                      onChange={(e) => setCitySearch(e.target.value)}
-                      className="h-9 pr-10 text-sm rounded-xl"
-                      data-testid="input-city-search-desktop"
-                    />
+                    <div className="flex justify-center gap-2">
+                      {[
+                        { v: "residential", l: "سكني", I: Home },
+                        { v: "commercial", l: "تجاري", I: Building2 }
+                      ].map(c => (
+                        <button
+                          key={c.v}
+                          onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
+                            filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                          }`}
+                          data-testid={`button-category-${c.v}`}
+                        >
+                          <c.I className="h-3 w-3" />
+                          {c.l}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="pb-14" />
                   </div>
+                )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Map with selected city markers */}
-                    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
+                {/* Floating Next Button for Step 1 */}
+                {activeCard === 1 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-1">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 2: City - Smart Map */}
+                {activeCard === 2 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
+                    
+                    {/* Selected Cities */}
+                    {filters.cities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {filters.cities.map(c => (
+                          <Badge key={c} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
+                            {c}
+                            <button onClick={() => toggleCity(c)}>
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                      <Input
+                        placeholder="ابحث عن مدينة..."
+                        value={citySearch}
+                        onChange={(e) => setCitySearch(e.target.value)}
+                        className="h-8 pr-7 text-xs rounded-lg"
+                        data-testid="input-city-search"
+                      />
+                    </div>
+
+                    {/* Map with selected cities */}
+                    <div className="h-[140px] rounded-lg overflow-hidden border border-border">
                       <MapContainer
                         center={[cityMapCenter.lat, cityMapCenter.lng]}
                         zoom={filters.cities.length > 0 ? 8 : 5}
                         style={{ height: "100%", width: "100%" }}
-                        zoomControl={true}
+                        zoomControl={false}
                       >
-                        <TileLayer
-                          attribution='&copy; OpenStreetMap'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                         <MapCenterChanger 
                           center={[cityMapCenter.lat, cityMapCenter.lng]} 
                           zoom={filters.cities.length > 0 ? 8 : 5} 
                         />
-                        
                         {/* Show only selected cities as markers */}
                         {filters.cities.map(cityName => {
                           const city = saudiCities.find(c => c.name === cityName);
@@ -933,97 +1528,92 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </MapContainer>
                     </div>
 
-                    {/* Cities Grid */}
-                    <div className="h-[300px] overflow-y-auto p-1">
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* Cities Grid - All cities with scroll */}
+                    <div className="max-h-[120px] overflow-y-auto border rounded-lg p-1.5">
+                      <div className="grid grid-cols-3 gap-1.5">
                         {filteredCities.map((city) => {
                           const isSelected = filters.cities.includes(city.name);
                           return (
                             <button
                               key={city.name}
                               onClick={() => toggleCity(city.name)}
-                              className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                                isSelected
-                                  ? "border-primary bg-primary text-primary-foreground" 
-                                  : "border-border hover:border-primary/50"
+                              className={`py-1.5 px-2 rounded-lg border text-[11px] font-medium transition-all flex items-center justify-center gap-1 ${
+                                isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
                               }`}
-                              data-testid={`button-city-desktop-${city.name}`}
+                              data-testid={`button-city-${city.name}`}
                             >
-                              {isSelected && <Check className="h-4 w-4" />}
-                              {city.name}
+                              {isSelected && <Check className="h-3 w-3" />}
+                              <span className="truncate">{city.name}</span>
                             </button>
                           );
                         })}
                       </div>
                     </div>
+
+                    <div className="pb-14" />
                   </div>
+                )}
 
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-2">
-                    {filters.cities.length > 0 ? `التالي (${filters.cities.length} مدينة)` : "اختر مدينة واحدة على الأقل"}
-                  </Button>
-                </div>
-              )}
+                {/* Floating Next Button for Step 2 */}
+                {activeCard === 2 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-2">
+                      {filters.cities.length > 0 ? `التالي (${filters.cities.length})` : "اختر مدينة"}
+                    </Button>
+                  </div>
+                )}
 
-              {/* Step 3: District with Smart Map - Multiple Selection */}
-              {activeCard === 3 && filters.cities.length > 0 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium block text-center">اختر الأحياء</label>
-                  <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
-                  
-                  {/* Selected Districts */}
-                  {filters.districts.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-center">
-                      {filters.districts.map(d => (
-                        <Badge key={d} variant="secondary" className="gap-1 pl-2">
-                          {d}
-                          <button onClick={() => toggleDistrict(d)} className="hover:text-destructive">
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
+                {/* Step 3: District - Smart Map */}
+                {activeCard === 3 && filters.cities.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
+                    
+                    {/* Selected Districts */}
+                    {filters.districts.length > 0 && (
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {filters.districts.map(d => (
+                          <Badge key={d} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
+                            {d}
+                            <button onClick={() => toggleDistrict(d)}>
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="relative">
+                      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                      <Input
+                        placeholder="ابحث عن حي..."
+                        value={districtSearch}
+                        onChange={(e) => setDistrictSearch(e.target.value)}
+                        className="h-8 pr-7 text-xs rounded-lg"
+                        data-testid="input-district-search"
+                      />
                     </div>
-                  )}
 
-                  <div className="relative">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="ابحث عن حي..."
-                      value={districtSearch}
-                      onChange={(e) => setDistrictSearch(e.target.value)}
-                      className="h-9 pr-10 text-sm rounded-xl"
-                      data-testid="input-district-search-desktop"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Map with all district markers + preferred location picker */}
-                    <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
+                    {/* Map with all districts + preferred location */}
+                    <div className="h-[140px] rounded-lg overflow-hidden border border-border">
                       <MapContainer
                         center={[districtMapCenter.lat, districtMapCenter.lng]}
                         zoom={11}
                         style={{ height: "100%", width: "100%" }}
-                        zoomControl={true}
+                        zoomControl={false}
                       >
-                        <TileLayer
-                          attribution='&copy; OpenStreetMap'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <MapCenterChanger 
-                          center={[districtMapCenter.lat, districtMapCenter.lng]} 
-                          zoom={11} 
-                        />
-                        {/* Show all districts as markers for selection */}
-                        {filteredDistricts.map(district => {
-                          const coords = neighborhoodCoords.get(district.name);
-                          if (!coords) return null;
-                          const isSelected = filters.districts.includes(district.name);
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <MapCenterChanger center={[districtMapCenter.lat, districtMapCenter.lng]} zoom={11} />
+                        {/* Show only selected districts as markers */}
+                        {filters.districts.map(districtName => {
+                          const data = neighborhoodCoords.get(districtName);
+                          if (!data) return null;
                           return (
                             <DistrictMarker
-                              key={`${district.cityName}-${district.name}`}
-                              name={district.name}
-                              cityName={district.cityName}
-                              coords={{ lat: coords.lat, lng: coords.lng }}
-                              isSelected={isSelected}
+                              key={districtName}
+                              name={districtName}
+                              cityName={data.cityName}
+                              coords={{ lat: data.lat, lng: data.lng }}
+                              isSelected={true}
                               onToggle={toggleDistrict}
                             />
                           );
@@ -1031,909 +1621,318 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, o
                       </MapContainer>
                     </div>
 
-                    {/* Districts Grid */}
-                    <div className="h-[300px] overflow-y-auto p-1">
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* Districts Grid - All districts with scroll */}
+                    <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
+                      <div className="grid grid-cols-3 gap-1.5">
                         {filteredDistricts.map((district) => {
                           const isSelected = filters.districts.includes(district.name);
                           return (
                             <button
                               key={`${district.cityName}-${district.name}`}
                               onClick={() => toggleDistrict(district.name)}
-                              className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                                isSelected
-                                  ? "border-primary bg-primary text-primary-foreground" 
-                                  : "border-border hover:border-primary/50"
+                              className={`py-1.5 px-1.5 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
+                                isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
                               }`}
-                              data-testid={`button-district-desktop-${district.name}`}
+                              data-testid={`button-district-${district.name}`}
                             >
-                              {isSelected && <Check className="h-4 w-4" />}
-                              {district.name}
+                              {isSelected && <Check className="h-2.5 w-2.5" />}
+                              <span className="truncate">{district.name}</span>
                             </button>
                           );
                         })}
                       </div>
                     </div>
+
+                    <div className="pb-14" />
                   </div>
+                )}
 
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-3">
-                    {filters.districts.length > 0 ? `التالي (${filters.districts.length} حي)` : "تخطي"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 4: Property Type */}
-              {activeCard === 4 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium block text-center">نوع العقار</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {propertyTypes.map((type) => {
-                      const Icon = type.icon;
-                      return (
-                        <button
-                          key={type.value}
-                          onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${
-                            filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-type-desktop-${type.value}`}
-                        >
-                          <Icon className={`h-6 w-6 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="text-xs font-medium mt-1">{type.label}</div>
-                        </button>
-                      );
-                    })}
+                {/* Floating Next Button for Step 3 */}
+                {activeCard === 3 && filters.cities.length > 0 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-3">
+                      {filters.districts.length > 0 ? `التالي (${filters.districts.length})` : "تخطي"}
+                    </Button>
                   </div>
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-4">
-                    التالي
-                  </Button>
-                </div>
-              )}
+                )}
 
-              {/* Step 5: Property Condition */}
-              {activeCard === 5 && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium block text-center">حالة العقار</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: "new", label: "جديد", icon: CheckCircle2 },
-                      { value: "used", label: "مستخدم", icon: Clock },
-                      { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
-                    ].map((condition) => {
-                      const Icon = condition.icon;
-                      const isSelected = filters.propertyCondition === condition.value;
-                      return (
-                        <button
-                          key={condition.value}
-                          onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-condition-desktop-${condition.value}`}
-                        >
-                          <Icon className={`h-8 w-8 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="text-sm font-medium mt-2">{condition.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 6: Specifications */}
-              {activeCard === 6 && (
-                <div className="space-y-4">
-                  {/* Rooms */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <BedDouble className="h-4 w-4 text-primary" />
-                      <label className="text-sm font-medium">عدد الغرف</label>
-                    </div>
-                    <div className="flex justify-center gap-2">
-                      {["1", "2", "3", "4", "5", "6+"].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
-                          className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
-                            filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-rooms-desktop-${n}`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bathrooms */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bath className="h-4 w-4 text-primary" />
-                      <label className="text-sm font-medium">عدد الحمامات</label>
-                    </div>
-                    <div className="flex justify-center gap-2">
-                      {["1", "2", "3", "4", "5+"].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
-                          className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
-                            filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-bathrooms-desktop-${n}`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Budget */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Wallet className="h-4 w-4 text-primary" />
-                      <label className="text-sm font-medium">الميزانية</label>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {budgetOptions[filters.transactionType].map((b) => (
-                        <button
-                          key={b.value}
-                          onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
-                          className={`py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all ${
-                            filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-budget-desktop-${b.value}`}
-                        >
-                          {b.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 7: Additional Details */}
-              {activeCard === 7 && (
-                <div className="space-y-4">
-                  {/* Features */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">مميزات مطلوبة</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {featureOptions.map((feat) => {
-                        const Icon = feat.icon;
-                        const isSelected = filters.features.includes(feat.value);
+                {/* Step 4: Property Type */}
+                {activeCard === 4 && (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {propertyTypes.map((type) => {
+                        const Icon = type.icon;
                         return (
                           <button
-                            key={feat.value}
-                            onClick={() => toggleFeature(feat.value)}
-                            className={`p-2 rounded-lg border-2 flex items-center gap-2 transition-all ${
-                              isSelected ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                            key={type.value}
+                            onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                              filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
                             }`}
-                            data-testid={`button-feature-desktop-${feat.value}`}
+                            data-testid={`button-type-${type.value}`}
                           >
-                            <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                            <span className="text-xs font-medium">{feat.label}</span>
+                            <Icon className={`h-7 w-7 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="text-xs font-medium mt-1">{type.label}</div>
                           </button>
                         );
                       })}
                     </div>
+                    <div className="pb-14" />
                   </div>
+                )}
 
-                  {/* Notes */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">ملاحظات إضافية</label>
-                    <Textarea
-                      placeholder="أضف أي تفاصيل إضافية تساعد في إيجاد العقار المناسب..."
-                      value={filters.notes}
-                      onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
-                      className="h-20 resize-none rounded-xl text-sm"
-                      data-testid="textarea-notes-desktop"
-                    />
+                {/* Floating Next Button for Step 4 */}
+                {activeCard === 4 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-4">
+                      التالي
+                    </Button>
                   </div>
+                )}
 
-                  <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-primary to-green-600" data-testid="button-search-desktop">
-                    <Send className="h-5 w-5" />
-                    إرسال الطلب
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+                {/* Step 5: Property Condition */}
+                {activeCard === 5 && (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "new", label: "جديد", icon: CheckCircle2 },
+                        { value: "used", label: "مستخدم", icon: Clock },
+                        { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
+                      ].map((condition) => {
+                        const Icon = condition.icon;
+                        const isSelected = filters.propertyCondition === condition.value;
+                        return (
+                          <button
+                            key={condition.value}
+                            onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                              isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
+                            }`}
+                            data-testid={`button-condition-${condition.value}`}
+                          >
+                            <Icon className={`h-7 w-7 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="text-xs font-medium mt-1">{condition.label}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="pb-14" />
+                  </div>
+                )}
 
-        {/* Upcoming Cards Preview */}
-        {cards.slice(activeCard + 1).map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.id}
-              className="absolute inset-x-2 pointer-events-none"
-              style={{
-                top: `${(activeCard * 40) + 360 + (idx * 20)}px`,
-                zIndex: -idx - 1,
-                opacity: 0.5 - (idx * 0.1),
-              }}
-            >
-              <div className="bg-muted/60 rounded-xl p-2.5 flex items-center gap-2 border border-border/40">
-                <div className={`w-8 h-8 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
-                  <Icon className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+                {/* Floating Next Button for Step 5 */}
+                {activeCard === 5 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-5">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 6: Specifications */}
+                {activeCard === 6 && (
+                  <div className="space-y-3">
+                    {/* Rooms */}
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <BedDouble className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium">الغرف</span>
+                      </div>
+                      <div className="flex justify-center gap-1.5">
+                        {["1", "2", "3", "4", "5", "6+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
+                            className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
+                              filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                            }`}
+                            data-testid={`button-rooms-${n}`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bathrooms */}
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Bath className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium">الحمامات</span>
+                      </div>
+                      <div className="flex justify-center gap-1.5">
+                        {["1", "2", "3", "4", "5+"].map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
+                            className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
+                              filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                            }`}
+                            data-testid={`button-bathrooms-${n}`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Budget */}
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Wallet className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-medium">الميزانية</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {budgetOptions[filters.transactionType].map((b) => (
+                          <button
+                            key={b.value}
+                            onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
+                            className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
+                              filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                            }`}
+                            data-testid={`button-budget-${b.value}`}
+                          >
+                            {b.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pb-14" />
+                  </div>
+                )}
+
+                {/* Floating Next Button for Step 6 */}
+                {activeCard === 6 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-6">
+                      التالي
+                    </Button>
+                  </div>
+                )}
+
+                {/* Step 7: Additional Details */}
+                {activeCard === 7 && (
+                  <div className="space-y-3">
+                    {/* Features */}
+                    <div>
+                      <span className="text-xs font-medium mb-1.5 block">مميزات مطلوبة</span>
+                      <div className="grid grid-cols-3 gap-1">
+                        {featureOptions.map((feat) => {
+                          const Icon = feat.icon;
+                          const isSelected = filters.features.includes(feat.value);
+                          return (
+                            <button
+                              key={feat.value}
+                              onClick={() => toggleFeature(feat.value)}
+                              className={`p-1.5 rounded-lg border flex items-center gap-1 transition-all ${
+                                isSelected ? "border-primary bg-primary/10" : "border-border"
+                              }`}
+                              data-testid={`button-feature-${feat.value}`}
+                            >
+                              <Icon className={`h-3 w-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                              <span className="text-[9px] font-medium">{feat.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <span className="text-xs font-medium mb-1.5 block">ملاحظات</span>
+                      <Textarea
+                        placeholder="أضف تفاصيل إضافية..."
+                        value={filters.notes}
+                        onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
+                        className="h-16 resize-none rounded-lg text-xs"
+                        data-testid="textarea-notes"
+                      />
+                    </div>
+
+                    <div className="pb-14" />
+                  </div>
+                )}
+
+                {/* Floating Submit Button for Step 7 */}
+                {activeCard === 7 && (
+                  <div className="fixed bottom-4 left-3 right-3 z-50">
+                    <Button onClick={handleSearch} className="w-full h-10 rounded-xl text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600 shadow-lg" data-testid="button-search">
+                      <Send className="h-4 w-4" />
+                      إرسال الطلب
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Chat with Consultant - Inside Form (Desktop) */}
-      <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
-        </div>
-        <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
-          <Button
-            size="icon"
-            variant="default"
-            onClick={() => {
-              if (consultantMessage.trim()) {
-                onSwitchToChat?.(consultantMessage.trim());
-                setConsultantMessage("");
-              } else {
-                onSwitchToChat?.();
-              }
-            }}
-            className="rounded-full h-9 w-9 flex-shrink-0"
-            data-testid="button-send-consultant-desktop"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-          <input
-            type="text"
-            dir="rtl"
-            value={consultantMessage}
-            onChange={(e) => setConsultantMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && consultantMessage.trim()) {
-                e.preventDefault();
-                onSwitchToChat?.(consultantMessage.trim());
-                setConsultantMessage("");
-              }
-            }}
-            placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
-            data-testid="input-chat-consultant-desktop"
-          />
-        </div>
-      </div>
-    </div>
-
-    {/* ==================== MOBILE VERSION ==================== */}
-    <div className="md:hidden relative px-3 py-3">
-      {/* Match Index - Shows after step 1 */}
-      {activeCard >= 1 && (
-        <div className="mb-2 px-1">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium">مؤشر التطابق</span>
-            <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
           </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
-              style={{ width: `${reliabilityScore}%` }}
+
+          {/* Upcoming Cards Preview */}
+          {cards.slice(activeCard + 1).map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.id}
+                className="absolute inset-x-1 pointer-events-none"
+                style={{
+                  top: `${(activeCard * 24) + (activeCard >= 2 ? 360 : 240) + (idx * 14)}px`,
+                  zIndex: -idx - 1,
+                  opacity: 0.4 - (idx * 0.1),
+                }}
+              >
+                <div className="bg-muted/50 rounded-lg p-1.5 flex items-center gap-1.5 border border-border/30">
+                  <div className={`w-5 h-5 rounded ${card.lightColor} flex items-center justify-center opacity-60`}>
+                    <Icon className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{card.title}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Chat with Consultant - Inside Form */}
+        <div className="mt-3 pt-3 border-t border-dashed">
+          <div className="flex items-center justify-center gap-1.5 mb-2">
+            <MessageCircle className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
+          </div>
+          <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
+            <Button
+              size="icon"
+              variant="default"
+              onClick={() => {
+                if (consultantMessage.trim()) {
+                  onSwitchToChat?.(consultantMessage.trim());
+                  setConsultantMessage("");
+                } else {
+                  onSwitchToChat?.();
+                }
+              }}
+              className="rounded-full h-7 w-7 flex-shrink-0"
+              data-testid="button-send-consultant"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
+            <input
+              type="text"
+              dir="rtl"
+              value={consultantMessage}
+              onChange={(e) => setConsultantMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && consultantMessage.trim()) {
+                  e.preventDefault();
+                  onSwitchToChat?.(consultantMessage.trim());
+                  setConsultantMessage("");
+                }
+              }}
+              placeholder="اكتب رسالتك هنا..."
+              className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
+              data-testid="input-chat-consultant"
             />
           </div>
         </div>
-      )}
-
-      {/* Stacked Cards Container - Dynamic height based on content */}
-      <div className="relative pb-2" style={{ minHeight: `${(activeCard * 24) + 320}px` }}>
-        
-        {/* Completed Cards */}
-        {cards.slice(0, activeCard).map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.id}
-              onClick={() => goBack(card.id)}
-              className="absolute inset-x-0 cursor-pointer transition-all duration-200"
-              style={{ top: `${idx * 24}px`, zIndex: idx + 1 }}
-            >
-              <div className={`${card.lightColor} rounded-xl p-2 flex items-center gap-2 border border-primary/20`}>
-                <div className={`w-6 h-6 rounded-lg ${card.color} flex items-center justify-center`}>
-                  <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                </div>
-                <span className="text-xs font-medium truncate flex-1">{card.title}</span>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Active Card */}
-        <div
-          className={`absolute inset-x-0 transition-all duration-200 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-          style={{ top: `${activeCard * 24}px`, zIndex: 10 }}
-        >
-          <div className="bg-card border rounded-xl shadow-md">
-            
-            {/* Card Header */}
-            <div className="flex items-center gap-2 p-2.5 border-b">
-              <div className={`w-8 h-8 rounded-lg ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-4 h-4 text-primary" />; })()}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
-              </div>
-              <span className="text-lg font-bold text-muted-foreground/30">{activeCard + 1}</span>
-            </div>
-
-            {/* Card Content */}
-            <div className="p-2.5">
-              
-              {/* Step 0: Personal */}
-              {activeCard === 0 && (
-                <div className="space-y-2">
-                  <Input
-                    placeholder="الاسم"
-                    value={filters.name}
-                    onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                    className="h-9 text-sm text-center rounded-lg"
-                    data-testid="input-name"
-                  />
-                  <div>
-                    <Input
-                      type="tel"
-                      placeholder="رقم الجوال"
-                      value={filters.phone}
-                      onChange={(e) => handlePhoneChange(e.target.value)}
-                      className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                      dir="ltr"
-                      data-testid="input-phone"
-                    />
-                    {phoneError && (
-                      <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
-                    )}
-                    {isPhoneValid && (
-                      <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
-                        <Check className="h-2.5 w-2.5" /> صحيح
-                      </p>
-                    )}
-                  </div>
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 0 */}
-              {activeCard === 0 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-0">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 1: Type */}
-              {activeCard === 1 && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { v: "sale", l: "شراء", icon: Home },
-                      { v: "rent", l: "إيجار", icon: Building2 }
-                    ].map(t => (
-                      <button
-                        key={t.v}
-                        onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                        className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                          filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
-                        }`}
-                        data-testid={`button-filter-${t.v}`}
-                      >
-                        <t.icon className={`h-5 w-5 mx-auto ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                        <div className="font-bold text-xs mt-1">{t.l}</div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex justify-center gap-2">
-                    {[
-                      { v: "residential", l: "سكني", I: Home },
-                      { v: "commercial", l: "تجاري", I: Building2 }
-                    ].map(c => (
-                      <button
-                        key={c.v}
-                        onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                        className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
-                          filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                        }`}
-                        data-testid={`button-category-${c.v}`}
-                      >
-                        <c.I className="h-3 w-3" />
-                        {c.l}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 1 */}
-              {activeCard === 1 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-1">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 2: City - Smart Map */}
-              {activeCard === 2 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
-                  
-                  {/* Selected Cities */}
-                  {filters.cities.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {filters.cities.map(c => (
-                        <Badge key={c} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
-                          {c}
-                          <button onClick={() => toggleCity(c)}>
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input
-                      placeholder="ابحث عن مدينة..."
-                      value={citySearch}
-                      onChange={(e) => setCitySearch(e.target.value)}
-                      className="h-8 pr-7 text-xs rounded-lg"
-                      data-testid="input-city-search"
-                    />
-                  </div>
-
-                  {/* Map with selected cities */}
-                  <div className="h-[140px] rounded-lg overflow-hidden border border-border">
-                    <MapContainer
-                      center={[cityMapCenter.lat, cityMapCenter.lng]}
-                      zoom={filters.cities.length > 0 ? 8 : 5}
-                      style={{ height: "100%", width: "100%" }}
-                      zoomControl={false}
-                    >
-                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                      <MapCenterChanger 
-                        center={[cityMapCenter.lat, cityMapCenter.lng]} 
-                        zoom={filters.cities.length > 0 ? 8 : 5} 
-                      />
-                      {/* Show only selected cities as markers */}
-                      {filters.cities.map(cityName => {
-                        const city = saudiCities.find(c => c.name === cityName);
-                        if (!city) return null;
-                        return (
-                          <CityMarker
-                            key={city.name}
-                            city={city}
-                            isSelected={true}
-                            onToggle={toggleCity}
-                          />
-                        );
-                      })}
-                    </MapContainer>
-                  </div>
-
-                  {/* Cities Grid - All cities with scroll */}
-                  <div className="max-h-[120px] overflow-y-auto border rounded-lg p-1.5">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {filteredCities.map((city) => {
-                        const isSelected = filters.cities.includes(city.name);
-                        return (
-                          <button
-                            key={city.name}
-                            onClick={() => toggleCity(city.name)}
-                            className={`py-1.5 px-2 rounded-lg border text-[11px] font-medium transition-all flex items-center justify-center gap-1 ${
-                              isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-city-${city.name}`}
-                          >
-                            {isSelected && <Check className="h-3 w-3" />}
-                            <span className="truncate">{city.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 2 */}
-              {activeCard === 2 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-2">
-                    {filters.cities.length > 0 ? `التالي (${filters.cities.length})` : "اختر مدينة"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 3: District - Smart Map */}
-              {activeCard === 3 && filters.cities.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
-                  
-                  {/* Selected Districts */}
-                  {filters.districts.length > 0 && (
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {filters.districts.map(d => (
-                        <Badge key={d} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
-                          {d}
-                          <button onClick={() => toggleDistrict(d)}>
-                            <X className="h-2.5 w-2.5" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="relative">
-                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                    <Input
-                      placeholder="ابحث عن حي..."
-                      value={districtSearch}
-                      onChange={(e) => setDistrictSearch(e.target.value)}
-                      className="h-8 pr-7 text-xs rounded-lg"
-                      data-testid="input-district-search"
-                    />
-                  </div>
-
-                  {/* Map with all districts + preferred location */}
-                  <div className="h-[140px] rounded-lg overflow-hidden border border-border">
-                    <MapContainer
-                      center={[districtMapCenter.lat, districtMapCenter.lng]}
-                      zoom={11}
-                      style={{ height: "100%", width: "100%" }}
-                      zoomControl={false}
-                    >
-                      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                      <MapCenterChanger center={[districtMapCenter.lat, districtMapCenter.lng]} zoom={11} />
-                      {/* Show only selected districts as markers */}
-                      {filters.districts.map(districtName => {
-                        const data = neighborhoodCoords.get(districtName);
-                        if (!data) return null;
-                        return (
-                          <DistrictMarker
-                            key={districtName}
-                            name={districtName}
-                            cityName={data.cityName}
-                            coords={{ lat: data.lat, lng: data.lng }}
-                            isSelected={true}
-                            onToggle={toggleDistrict}
-                          />
-                        );
-                      })}
-                    </MapContainer>
-                  </div>
-
-                  {/* Districts Grid - All districts with scroll */}
-                  <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {filteredDistricts.map((district) => {
-                        const isSelected = filters.districts.includes(district.name);
-                        return (
-                          <button
-                            key={`${district.cityName}-${district.name}`}
-                            onClick={() => toggleDistrict(district.name)}
-                            className={`py-1.5 px-1.5 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
-                              isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-district-${district.name}`}
-                          >
-                            {isSelected && <Check className="h-2.5 w-2.5" />}
-                            <span className="truncate">{district.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 3 */}
-              {activeCard === 3 && filters.cities.length > 0 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-3">
-                    {filters.districts.length > 0 ? `التالي (${filters.districts.length})` : "تخطي"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 4: Property Type */}
-              {activeCard === 4 && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-4 gap-2">
-                    {propertyTypes.map((type) => {
-                      const Icon = type.icon;
-                      return (
-                        <button
-                          key={type.value}
-                          onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${
-                            filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-type-${type.value}`}
-                        >
-                          <Icon className={`h-7 w-7 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="text-xs font-medium mt-1">{type.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 4 */}
-              {activeCard === 4 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-4">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 5: Property Condition */}
-              {activeCard === 5 && (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "new", label: "جديد", icon: CheckCircle2 },
-                      { value: "used", label: "مستخدم", icon: Clock },
-                      { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
-                    ].map((condition) => {
-                      const Icon = condition.icon;
-                      const isSelected = filters.propertyCondition === condition.value;
-                      return (
-                        <button
-                          key={condition.value}
-                          onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
-                          className={`p-3 rounded-xl border-2 text-center transition-all ${
-                            isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-condition-${condition.value}`}
-                        >
-                          <Icon className={`h-7 w-7 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="text-xs font-medium mt-1">{condition.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 5 */}
-              {activeCard === 5 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-5">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 6: Specifications */}
-              {activeCard === 6 && (
-                <div className="space-y-3">
-                  {/* Rooms */}
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <BedDouble className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-medium">الغرف</span>
-                    </div>
-                    <div className="flex justify-center gap-1.5">
-                      {["1", "2", "3", "4", "5", "6+"].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
-                          className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
-                            filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                          }`}
-                          data-testid={`button-rooms-${n}`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bathrooms */}
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Bath className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-medium">الحمامات</span>
-                    </div>
-                    <div className="flex justify-center gap-1.5">
-                      {["1", "2", "3", "4", "5+"].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
-                          className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
-                            filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                          }`}
-                          data-testid={`button-bathrooms-${n}`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Budget */}
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Wallet className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-medium">الميزانية</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {budgetOptions[filters.transactionType].map((b) => (
-                        <button
-                          key={b.value}
-                          onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
-                          className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
-                            filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                          }`}
-                          data-testid={`button-budget-${b.value}`}
-                        >
-                          {b.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Next Button for Step 6 */}
-              {activeCard === 6 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-6">
-                    التالي
-                  </Button>
-                </div>
-              )}
-
-              {/* Step 7: Additional Details */}
-              {activeCard === 7 && (
-                <div className="space-y-3">
-                  {/* Features */}
-                  <div>
-                    <span className="text-xs font-medium mb-1.5 block">مميزات مطلوبة</span>
-                    <div className="grid grid-cols-3 gap-1">
-                      {featureOptions.map((feat) => {
-                        const Icon = feat.icon;
-                        const isSelected = filters.features.includes(feat.value);
-                        return (
-                          <button
-                            key={feat.value}
-                            onClick={() => toggleFeature(feat.value)}
-                            className={`p-1.5 rounded-lg border flex items-center gap-1 transition-all ${
-                              isSelected ? "border-primary bg-primary/10" : "border-border"
-                            }`}
-                            data-testid={`button-feature-${feat.value}`}
-                          >
-                            <Icon className={`h-3 w-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                            <span className="text-[9px] font-medium">{feat.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <span className="text-xs font-medium mb-1.5 block">ملاحظات</span>
-                    <Textarea
-                      placeholder="أضف تفاصيل إضافية..."
-                      value={filters.notes}
-                      onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
-                      className="h-16 resize-none rounded-lg text-xs"
-                      data-testid="textarea-notes"
-                    />
-                  </div>
-
-                  <div className="pb-14" />
-                </div>
-              )}
-
-              {/* Floating Submit Button for Step 7 */}
-              {activeCard === 7 && (
-                <div className="fixed bottom-4 left-3 right-3 z-50">
-                  <Button onClick={handleSearch} className="w-full h-10 rounded-xl text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600 shadow-lg" data-testid="button-search">
-                    <Send className="h-4 w-4" />
-                    إرسال الطلب
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Cards Preview */}
-        {cards.slice(activeCard + 1).map((card, idx) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.id}
-              className="absolute inset-x-1 pointer-events-none"
-              style={{
-                top: `${(activeCard * 24) + (activeCard >= 2 ? 360 : 240) + (idx * 14)}px`,
-                zIndex: -idx - 1,
-                opacity: 0.4 - (idx * 0.1),
-              }}
-            >
-              <div className="bg-muted/50 rounded-lg p-1.5 flex items-center gap-1.5 border border-border/30">
-                <div className={`w-5 h-5 rounded ${card.lightColor} flex items-center justify-center opacity-60`}>
-                  <Icon className="w-3 h-3 text-muted-foreground" />
-                </div>
-                <span className="text-[10px] text-muted-foreground">{card.title}</span>
-              </div>
-            </div>
-          );
-        })}
       </div>
-
-      {/* Chat with Consultant - Inside Form */}
-      <div className="mt-3 pt-3 border-t border-dashed">
-        <div className="flex items-center justify-center gap-1.5 mb-2">
-          <MessageCircle className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
-        </div>
-        <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
-          <Button
-            size="icon"
-            variant="default"
-            onClick={() => {
-              if (consultantMessage.trim()) {
-                onSwitchToChat?.(consultantMessage.trim());
-                setConsultantMessage("");
-              } else {
-                onSwitchToChat?.();
-              }
-            }}
-            className="rounded-full h-7 w-7 flex-shrink-0"
-            data-testid="button-send-consultant"
-          >
-            <Send className="h-3.5 w-3.5" />
-          </Button>
-          <input
-            type="text"
-            dir="rtl"
-            value={consultantMessage}
-            onChange={(e) => setConsultantMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && consultantMessage.trim()) {
-                e.preventDefault();
-                onSwitchToChat?.(consultantMessage.trim());
-                setConsultantMessage("");
-              }
-            }}
-            placeholder="اكتب رسالتك هنا..."
-            className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
-            data-testid="input-chat-consultant"
-          />
-        </div>
-      </div>
-    </div>
     </>
   );
 });
