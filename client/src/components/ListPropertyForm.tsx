@@ -273,9 +273,10 @@ export const ListPropertyForm = memo(function ListPropertyForm({ onSubmit }: Lis
 
   const DESKTOP_HEADER_HEIGHT = 50;
   const MOBILE_HEADER_HEIGHT = 42;
-  const BASE_CONTENT_HEIGHT = 650; 
-  const containerHeightDesktop = (activeCard * DESKTOP_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT;
-  const containerHeightMobile = (activeCard * MOBILE_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT;
+  const BASE_CONTENT_HEIGHT_DESKTOP = 650; 
+  const BASE_CONTENT_HEIGHT_MOBILE = 480;
+  const containerHeightDesktop = (activeCard * DESKTOP_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT_DESKTOP;
+  const containerHeightMobile = (activeCard * MOBILE_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT_MOBILE;
 
   const getPriceRanges = () => {
     const type = listingData.propertyType;
