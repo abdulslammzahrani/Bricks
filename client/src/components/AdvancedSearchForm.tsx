@@ -1,233 +1,96 @@
-import { useState, memo, useMemo, useEffect, useRef } from "react";
+import { useState, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
 import { 
   MapPin, User, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
-  Check, Castle, Hotel, Store, Factory, Blocks, Navigation,
-  BedDouble, Bath, Wallet, Settings2, FileText,
-  Car, Trees, Dumbbell, ShieldCheck, Waves, Wind, X,
-  Tv, Wifi, Utensils, Shirt, Sofa, DoorOpen, Zap, Flame, Send,
-  Hammer, Clock, CheckCircle2, Mic, MicOff, MessageCircle
+  Check, Navigation, Wallet, Settings2, FileText,
+  Hammer, Clock, CheckCircle2, MessageCircle, Edit2, Banknote, Ruler, Plus, 
+  ArrowUpFromLine, Coins, Percent, Compass, LayoutDashboard, Star, Landmark, 
+  BrainCircuit, X, Hotel, Store, Factory, Blocks, Trees, Waves,
+  PaintBucket, Construction, ChevronLeft, ShieldCheck, DoorOpen, Zap, Flame, Send,
+  BedDouble, Bath, Shirt, Sofa, Tv, Utensils, Wifi, Dumbbell, Car,
+  ArrowUp, School, Stethoscope, Fuel, Briefcase, Truck, Users, Activity,
+  Armchair, Trees as TreeIcon, Key, FileSignature 
 } from "lucide-react";
-import { saudiCities, type Neighborhood } from "@shared/saudi-locations";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Popup, CircleMarker } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { saudiCities } from "@shared/saudi-locations";
 
-// Fix leaflet default icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// ... (نفس الإعدادات السابقة SPECIFIC_TAGS و SMART_RANGES) ...
+// 1️⃣ إعدادات التاقات
+const SPECIFIC_TAGS: Record<string, string[]> = {
+  "villa": ["مسبح", "قبو", "مصعد", "تكييف مركزي", "ملحق خارجي", "مسطحات خضراء", "واجهة مودرن", "شقة استثمارية", "غرفة كبار سن", "درج داخلي", "نظام سمارت هوم", "عوازل حرارية", "إشراف هندسي", "ضمانات هيكل", "غرفة غسيل", "غرفة سينما"],
+  "apartment": ["مدخل خاص", "سطح خاص", "موقف خاص", "غرفة سائق", "غرفة خادمة", "دخول ذكي", "بلكونة", "مطبخ راكب", "مكيفات راكبة", "خزان مستقل", "قريبة من مسجد", "ألياف بصرية", "تشطيب فاخر"],
+  "residential_building": ["موقع زاوية", "واجهة كلادينج", "مصعد (ماركة عالمية)", "عدادات مستقلة", "تمديدات سبليت", "مدخل فندقي", "غرفة حارس", "أنظمة دفاع مدني", "خزان مياه كبير", "مواقف مرصوفة", "نظام انتركوم", "سطح معزول", "قريب من الخدمات", "صك إلكتروني", "عقود إلكترونية"],
+  "tower": ["مهبط طائرات (Helipad)", "نظام إدارة مباني (BMS)", "مصاعد ذكية (Destination Control)", "واجهات زجاجية (Double Glazed)", "ردهة استقبال فندقية", "نادي صحي وسبا", "قاعة مؤتمرات مشتركة", "مصلى مركزي", "مواقف ذكية/Valet", "مولدات احتياطية كاملة", "تكييف مركزي (Chiller)", "أنظمة مراقبة CCTV", "ألياف بصرية (Fiber)", "نظام تنظيف واجهات", "حدائق معلقة (Roof Garden)", "كافتيريا داخلية"],
+  "showroom": ["ارتفاع سقف مضاعف", "واجهة زجاجية (Curtain Wall)", "رخصة مطعم/كافيه", "جلسات خارجية مرخصة", "مواقف أمامية واسعة", "مدخل خدمة خلفي", "تمديدات غاز مركزية", "نظام تهوية (Ventilation)", "إمكانية التجزئة", "موقع زاوية", "مساحة إعلانية", "مدخل ذوي همم (Ramp)", "عداد كهرباء مستقل", "تكييف مركزي مستقل", "أرضيات فاخرة", "نظام صوتي مدمج"],
+  "office": ["أرضيات مرتفعة (Raised Floors)", "إطلالة بانورامية", "دخول ذكي (Access Control)", "غرفة خوادم (Server Room)", "مطبخ تحضيري (Pantry)", "عوازل صوتية", "تصميم مرن (Open Plan)", "دورة مياه خاصة", "غرفة أرشيف", "إضاءة LED", "نظام سلامة (Sprinklers)", "ستائر ذكية", "أثاث مكتبي", "قاعة اجتماعات زجاجية", "خدمة نظافة", "واي فاي مركزي"],
+  "commercial_building": ["على شارع تجاري", "معارض مؤجرة", "مكاتب جاهزة", "رخصة دفاع مدني", "عدادات مستقلة", "كاميرات مراقبة", "مصعد", "قبو مواقف"],
+  "complex": ["سور وبوابات (Gated)", "حراسة 24/7", "مسبح مشترك", "نادي رياضي (Gym)", "حدائق (Landscape)", "ألعاب أطفال", "ميني ماركت", "قاعة مناسبات", "صيانة ونظافة دائمة", "مواقف مظللة", "دخول ذكي", "مسجد/مصلى", "محطة معالجة مياه", "مولد احتياطي", "مكافحة حريق مركزية", "كافيه لاونج"],
+  "commercial_land": ["رخصة بناء جاهزة", "موقع حيوي", "أرض مستوية", "خدمات واصلة", "شارع مسفلت", "قريبة من معالم", "سهولة الوصول", "خالية من العوائق", "مصرحة متعدد", "إمكانية الدمج", "تقرير مساحي", "واجهة تجارية", "منطقة نمو", "بعيدة عن السيول", "مسموح القبو", "سور مؤقت"],
+  "school": ["معامل حاسب آلي", "مختبرات علوم", "مكتبة شاملة", "مسرح مدرسي", "مسبح داخلي", "ملاعب رياضية", "عيادة طبية", "مقصف/كافيتيريا", "غرف معلمين مؤثثة", "مصلى واسع", "ساحات مظللة", "نظام مراقبة", "بوابات آمنة", "منطقة حافلات (Drop-off)", "تسهيلات لأصحاب الهمم", "غرف فنون/مرسم"],
+  "warehouse": ["رصيف تحميل (Dock Levelers)", "أرضية إيبوكسي", "نظام رفوف (Racking Ready)", "عزل حراري (Sandwich Panel)", "إضاءة طبيعية", "مكتب إداري داخلي", "مرافق للعمال", "غرفة حارس", "سور خرساني", "كهرباء 3 فاز", "نظام إطفاء متطور", "ساحة مناورة شاحنات", "تهوية صناعية", "كاميرات مراقبة", "مخارج طوارئ", "غرف تبريد"],
+  "gas_station": ["عقود Anchor Tenants", "سوبر ماركت (C-Store)", "طلبات سيارة (Drive-thru)", "منطقة مطاعم", "مغسلة أوتوماتيكية", "مغسلة يدوية", "مركز خدمة سيارات", "صراف آلي (ATM)", "مصلى ودورات مياه", "سكن عمال", "مضخات ديزل للشاحنات", "استرجاع أبخرة", "مظلة LED حديثة", "خدمات مجانية (هواء/ماء)", "ربط أمني (شموس)", "خزانات مزدوجة (Double Wall)"],
+  "factory": ["رافعات علوية (Cranes)", "أرضيات صناعية", "نظام إطفاء آلي", "رصيف تحميل", "مبنى إداري", "مختبر جودة", "مستودع مواد", "شبكة هواء مضغوط", "نظام تهوية", "ميزان شاحنات", "غرفة مولدات", "سكن عمال", "خزانات وقود", "تصريف صناعي", "ورشة صيانة", "شهادات أيزو"],
+  "health_center": ["غرفة أشعة (X-Ray)", "مختبر تحاليل", "صيدلية داخلية", "غرفة تعقيم", "مداخل ذوي همم", "غرفة نفايات طبية", "مولد طوارئ UPS", "غرفة طوارئ", "نظام استدعاء تمريض", "أرضيات فينيل طبي", "تكييف HEPA", "مواقف إسعاف", "استراحة أطباء", "دورات مياه خاصة", "شاشات انتظار", "دفاع مدني طبي"],
+  "industrial_land": ["داخل مدينة صناعية", "طرق شاحنات", "قرب ميناء", "محطة كهرباء", "شبكة غاز صناعي", "تصريف صناعي", "تصريح سكن عمال", "أرضية صلبة", "خدمات لوجستية", "أمن صناعي", "مخططات معتمدة", "إمكانية التجزئة", "إعفاءات جمركية", "شبكة اتصال", "تخزين خارجي", "مسورة بالكامل"],
+  "farm": ["فيلا/استراحة", "مجالس خارجية", "مسبح", "شبكة ري حديثة", "خزانات ضخمة", "بيوت محمية", "حظائر مواشي", "سكن عمال", "طرق مرصوفة", "مستودع أعلاف", "أشجار مثمرة", "مسطحات خضراء", "منطقة شواء", "سور كامل", "غطاسات ومضخات", "بوابة إلكترونية"]
+};
 
-// Custom green icon for selected items (larger)
-const greenIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// 2️⃣ إعدادات الأزرار الذكية
+const SMART_RANGES = {
+  area: ["100-200", "200-300", "300-400", "400-600", "600-900", "900-1500", "1500-3000", "3000+"],
+  floors: ["1-3", "4-7", "8-12", "13-20", "20-30", "30+"],
+  elevators: ["1", "2", "3", "4", "6", "8", "10+"],
+  units_small: ["1-5", "6-10", "11-20", "21-35"],
+  units_large: ["20-50", "50-100", "100-200", "200+"],
+  rooms: ["1", "2", "3", "4", "5", "6", "7+"],
+  bathrooms: ["1", "2", "3", "4", "5+"],
+  streets: ["1", "2", "3", "4"],
+  pumps: ["2", "4", "6", "8", "10", "12+"],
+  tanks: ["30k", "50k", "70k", "100k+"],
+  income: ["< 100k", "100k-200k", "200k-500k", "500k-1M", "1M+"],
+  roi: ["5%", "6%", "7%", "8%", "9%", "10%+"],
+  facadeWidth: ["10-15m", "15-20m", "20-30m", "30m+"],
+  ceilingHeight: ["3-4m", "4-6m", "6-8m", "8m+"],
+  power: ["Normal", "200 KVA", "500 KVA", "1000 KVA+"],
+  capacity: ["< 100", "100-300", "300-500", "500-1000", "1000+"]
+};
 
-// Custom grey icon for unselected items (smaller)
-const greyIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [20, 33],
-  iconAnchor: [10, 33],
-  popupAnchor: [1, -28],
-  shadowSize: [33, 33]
-});
-
-// Custom red icon for hover state
-const redIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const SAUDI_BANKS = ["الراجحي", "الأهلي (SNB)", "الرياض", "الإنماء", "الأول (SAB)", "البلاد", "الجزيرة", "العربي", "الاستثمار", "الفرنسي"];
 
 interface SearchFilters {
-  name: string;
-  phone: string;
-  transactionType: "sale" | "rent";
-  cities: string[];
-  districts: string[];
-  preferredLatitude: number | null;
-  preferredLongitude: number | null;
-  propertyCategory: "residential" | "commercial";
-  propertyType: string;
+  name: string; phone: string; email: string; 
+  propertyCategory: "residential" | "commercial" | "";
+  transactionType: "sale" | "rent" | ""; 
   propertyCondition: "new" | "used" | "under_construction" | "";
-  rooms: string;
-  bathrooms: string;
-  minPrice: string;
-  maxPrice: string;
-  minArea: string;
-  maxArea: string;
-  status: "all" | "ready" | "under_construction";
-  rentPeriod: "all" | "yearly" | "monthly";
-  features: string[];
-  notes: string;
-}
-
-// Custom pin icon for preferred location
-const preferredLocationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-// Preferred location picker component
-function PreferredLocationPicker({ 
-  onLocationSelect, 
-  currentPosition 
-}: { 
-  onLocationSelect: (lat: number, lng: number) => void;
-  currentPosition: [number, number] | null;
-}) {
-  useMapEvents({
-    click: (e) => {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  
-  return currentPosition ? (
-    <Marker position={currentPosition} icon={preferredLocationIcon}>
-      <Popup>
-        <div className="text-center text-sm">
-          <strong>المنطقة المفضلة</strong>
-        </div>
-      </Popup>
-    </Marker>
-  ) : null;
-}
-
-// Map center updater for buyer form
-function BuyerMapCenterUpdater({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  map.setView(center, zoom, { animate: true });
-  return null;
-}
-
-const propertyOptions = {
-  residential: [
-    { value: "apartment", label: "شقة", icon: Building },
-    { value: "villa", label: "فيلا", icon: Home },
-    { value: "duplex", label: "دوبلكس", icon: Blocks },
-    { value: "floor", label: "دور", icon: Building2 },
-    { value: "palace", label: "قصر", icon: Castle },
-    { value: "building", label: "عمارة", icon: Hotel },
-    { value: "land", label: "أرض سكنية", icon: LandPlot },
-    { value: "rest_house", label: "استراحة", icon: Home },
-  ],
-  commercial: [
-    { value: "office", label: "مكتب", icon: Building },
-    { value: "shop", label: "محل", icon: Store },
-    { value: "warehouse", label: "مستودع", icon: Warehouse },
-    { value: "showroom", label: "معرض", icon: Building2 },
-    { value: "factory", label: "مصنع", icon: Factory },
-    { value: "building", label: "عمارة تجارية", icon: Hotel },
-    { value: "land", label: "أرض تجارية", icon: LandPlot },
-    { value: "complex", label: "مجمع تجاري", icon: Blocks },
-  ],
-};
-
-const featureOptions = [
-  { value: "parking", label: "موقف سيارات", icon: Car },
-  { value: "garden", label: "حديقة", icon: Trees },
-  { value: "gym", label: "صالة رياضية", icon: Dumbbell },
-  { value: "security", label: "حراسة أمنية", icon: ShieldCheck },
-  { value: "pool", label: "مسبح", icon: Waves },
-  { value: "ac", label: "تكييف مركزي", icon: Wind },
-  { value: "elevator", label: "مصعد", icon: DoorOpen },
-  { value: "furnished", label: "مؤثث", icon: Sofa },
-  { value: "kitchen", label: "مطبخ راكب", icon: Utensils },
-  { value: "internet", label: "انترنت", icon: Wifi },
-  { value: "electricity", label: "كهرباء", icon: Zap },
-  { value: "gas", label: "غاز مركزي", icon: Flame },
-];
-
-const budgetOptions = {
-  sale: [
-    { value: "500000", label: "أقل من 500 ألف" },
-    { value: "1000000", label: "500 ألف - مليون" },
-    { value: "2000000", label: "مليون - 2 مليون" },
-    { value: "3000000", label: "2 - 3 مليون" },
-    { value: "5000000", label: "3 - 5 مليون" },
-    { value: "10000000", label: "أكثر من 5 مليون" },
-  ],
-  rent: [
-    { value: "20000", label: "أقل من 20 ألف/سنة" },
-    { value: "40000", label: "20 - 40 ألف/سنة" },
-    { value: "60000", label: "40 - 60 ألف/سنة" },
-    { value: "100000", label: "60 - 100 ألف/سنة" },
-    { value: "150000", label: "100 - 150 ألف/سنة" },
-    { value: "200000", label: "أكثر من 150 ألف/سنة" },
-  ],
-};
-
-// Saudi Arabia center coordinates
-const SAUDI_CENTER = { lat: 23.8859, lng: 45.0792 };
-
-// Convert Arabic numerals to English
-function convertArabicToEnglish(str: string): string {
-  const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  let result = str;
-  arabicNumerals.forEach((arabic, index) => {
-    result = result.replace(new RegExp(arabic, 'g'), index.toString());
-  });
-  return result;
-}
-
-// Validate Saudi phone number
-function validateSaudiPhone(phone: string): { isValid: boolean; normalized: string; error: string } {
-  // Convert Arabic numerals to English
-  let normalized = convertArabicToEnglish(phone);
-  // Remove spaces, dashes, and other non-digit characters
-  normalized = normalized.replace(/[\s\-\(\)\.]/g, '');
-  
-  // Handle different formats
-  if (normalized.startsWith('+966')) {
-    normalized = '0' + normalized.slice(4);
-  } else if (normalized.startsWith('00966')) {
-    normalized = '0' + normalized.slice(5);
-  } else if (normalized.startsWith('966')) {
-    normalized = '0' + normalized.slice(3);
-  }
-  
-  // Check if it's a valid Saudi mobile number
-  // Saudi mobile numbers: 05xxxxxxxx (10 digits starting with 05)
-  const saudiMobileRegex = /^05[0-9]{8}$/;
-  
-  if (!normalized) {
-    return { isValid: false, normalized: '', error: 'أدخل رقم الجوال' };
-  }
-  
-  if (!saudiMobileRegex.test(normalized)) {
-    if (normalized.length < 10) {
-      return { isValid: false, normalized, error: 'الرقم قصير جداً' };
-    } else if (normalized.length > 10) {
-      return { isValid: false, normalized, error: 'الرقم طويل جداً' };
-    } else if (!normalized.startsWith('05')) {
-      return { isValid: false, normalized, error: 'يجب أن يبدأ بـ 05' };
-    }
-    return { isValid: false, normalized, error: 'رقم غير صحيح' };
-  }
-  
-  return { isValid: true, normalized, error: '' };
+  cities: string[]; districts: string[]; 
+  propertyType: string; 
+  minArea: string; maxArea: string;
+  rooms: string; bathrooms: string; livingRooms: string; hasMaidRoom: boolean;
+  facade: string; streetWidth: string; plotLocation: string;
+  annualIncome: string; roi: string; unitsCount: string; propertyAge: string;
+  floorsCount: string; elevatorsCount: string; bua: string; buildingClass: string; parkingCapacity: string;
+  facadeWidth: string; ceilingHeight: string; hasMezzanine: boolean; groundArea: string; mezzanineArea: string; powerCapacity: string;
+  floorNumber: string; nla: string; finishingStatus: string; acType: string;
+  studentCapacity: string; classroomsCount: string; labsCount: string; municipalityClass: string;
+  hasCivilDefense: string; floorLoad: string;
+  pumpsCount: string; tanksCapacity: string; stationCategory: string;
+  shopsCount: string; apartmentsCount: string;
+  buildingsCount: string; occupancyRate: string;
+  zoning: string;
+  activityType: string; buildingRatio: string;
+  wellsCount: string; waterType: string; treesCount: string; farmFacade: string;
+  productionArea: string; licenseType: string; craneLoad: string;
+  clinicsCount: string; waitingArea: string; healthLicense: string;
+  minPrice: string; maxPrice: string; 
+  paymentMethod: "cash" | "finance" | ""; bankName: string; salary: string;
+  smartTags: string[]; notes: string; 
+  status: "all" | "ready" | "under_construction"; rentPeriod: "all" | "yearly" | "monthly"; features: string[]; 
 }
 
 interface AdvancedSearchFormProps {
@@ -235,1701 +98,668 @@ interface AdvancedSearchFormProps {
   onSwitchToChat: (initialMessage?: string) => void;
 }
 
-// Generate approximate coordinates for neighborhoods based on city center with grid distribution
-function getNeighborhoodCoords(cityCoords: { lat: number; lng: number }, index: number, total: number, seed: number = 0) {
-  // Use a grid-based approach centered around city
-  const gridSize = Math.ceil(Math.sqrt(total));
-  const row = Math.floor(index / gridSize);
-  const col = index % gridSize;
-  
-  // Small spacing between neighborhoods (approximately 1-2 km)
-  const spacing = 0.015;
-  
-  // Center the grid around the city center
-  const offsetRow = (row - gridSize / 2) * spacing;
-  const offsetCol = (col - gridSize / 2) * spacing;
-  
-  // Add small variation based on seed to prevent perfect grid
-  const variation = ((seed % 100) / 100 - 0.5) * 0.005;
-  
-  return {
-    lat: cityCoords.lat + offsetRow + variation,
-    lng: cityCoords.lng + offsetCol + variation * 0.8
-  };
-}
-
-// Map center changer component
-function MapCenterChanger({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom, { animate: true });
-  }, [center, zoom, map]);
-  return null;
-}
-
-// Interactive City Marker Component
-function CityMarker({ 
-  city, 
-  isSelected, 
-  onToggle 
-}: { 
-  city: typeof saudiCities[0]; 
-  isSelected: boolean; 
-  onToggle: (name: string) => void;
-}) {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const eventHandlers = useMemo(() => ({
-    click: () => onToggle(city.name),
-    mouseover: () => setIsHovered(true),
-    mouseout: () => setIsHovered(false),
-  }), [city.name, onToggle]);
-
-  const icon = isSelected ? greenIcon : (isHovered ? redIcon : greyIcon);
-
-  return (
-    <Marker 
-      position={[city.coordinates.lat, city.coordinates.lng]}
-      icon={icon}
-      eventHandlers={eventHandlers}
-    >
-      <Popup closeButton={false} className="custom-popup">
-        <div className="text-center py-1 px-2">
-          <div className="font-bold text-sm">{city.name}</div>
-          <div className="text-xs text-gray-500">{city.nameEn}</div>
-          <div className="text-xs mt-1">
-            {isSelected ? (
-              <span className="text-green-600 font-medium">محددة</span>
-            ) : (
-              <span className="text-gray-400">انقر للتحديد</span>
-            )}
-          </div>
-        </div>
-      </Popup>
-    </Marker>
-  );
-}
-
-// Interactive District Marker Component
-function DistrictMarker({ 
-  name,
-  cityName,
-  coords,
-  isSelected, 
-  onToggle 
-}: { 
-  name: string;
-  cityName: string;
-  coords: { lat: number; lng: number };
-  isSelected: boolean; 
-  onToggle: (name: string) => void;
-}) {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const eventHandlers = useMemo(() => ({
-    click: () => onToggle(name),
-    mouseover: () => setIsHovered(true),
-    mouseout: () => setIsHovered(false),
-  }), [name, onToggle]);
-
-  const icon = isSelected ? greenIcon : (isHovered ? redIcon : greyIcon);
-
-  return (
-    <Marker 
-      position={[coords.lat, coords.lng]}
-      icon={icon}
-      eventHandlers={eventHandlers}
-    >
-      <Popup closeButton={false} className="custom-popup">
-        <div className="text-center py-1 px-2">
-          <div className="font-bold text-sm">{name}</div>
-          <div className="text-xs text-gray-500">{cityName}</div>
-          <div className="text-xs mt-1">
-            {isSelected ? (
-              <span className="text-green-600 font-medium">محدد</span>
-            ) : (
-              <span className="text-gray-400">انقر للتحديد</span>
-            )}
-          </div>
-        </div>
-      </Popup>
-    </Marker>
-  );
-}
-
-// Map click handler with proximity detection
-function SmartMapClickHandler({ 
-  items,
-  onSelect,
-  maxDistance = 0.5
-}: { 
-  items: { name: string; lat: number; lng: number }[];
-  onSelect: (name: string) => void;
-  maxDistance?: number;
-}) {
-  useMapEvents({
-    click: (e) => {
-      const { lat, lng } = e.latlng;
-      let nearest: string | null = null;
-      let minDist = Infinity;
-      
-      items.forEach(item => {
-        const dist = Math.sqrt(Math.pow(item.lat - lat, 2) + Math.pow(item.lng - lng, 2));
-        if (dist < minDist && dist < maxDistance) {
-          minDist = dist;
-          nearest = item.name;
-        }
-      });
-      
-      if (nearest) {
-        onSelect(nearest);
-      }
-    },
-  });
-  return null;
-}
+const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { label: string, options: string[], selected: string, onSelect: (val: string) => void, unit?: string }) => (
+  <div className="mb-4">
+    <label className="block text-xs font-bold mb-2 text-gray-700">{label}</label>
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onSelect(opt)}
+          className={`
+            flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all whitespace-nowrap
+            ${selected === opt 
+              ? "bg-primary text-white border-primary shadow-sm scale-105" 
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
+          `}
+        >
+          {opt} {unit}
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
 export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
   const { toast } = useToast();
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAutoRegistered, setIsAutoRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [filters, setFilters] = useState<SearchFilters>({
-    name: "",
-    phone: "",
-    transactionType: "sale",
-    cities: [],
-    districts: [],
-    preferredLatitude: null,
-    preferredLongitude: null,
-    propertyCategory: "residential",
-    propertyType: "",
-    propertyCondition: "",
-    rooms: "",
-    bathrooms: "",
-    minPrice: "",
-    maxPrice: "",
-    minArea: "",
-    maxArea: "",
-    status: "all",
-    rentPeriod: "all",
-    features: [],
-    notes: "",
-  });
-  
-  // Get map center for preferred location picker
-  const preferredMapCenter = useMemo<[number, number]>(() => {
-    if (filters.preferredLatitude && filters.preferredLongitude) {
-      return [filters.preferredLatitude, filters.preferredLongitude];
-    }
-    if (filters.cities.length > 0) {
-      const city = saudiCities.find(c => c.name === filters.cities[0]);
-      if (city) {
-        return [city.coordinates.lat, city.coordinates.lng];
-      }
-    }
-    return [24.7136, 46.6753]; // Default: Riyadh
-  }, [filters.cities, filters.preferredLatitude, filters.preferredLongitude]);
 
-  // Handle preferred location selection
-  const handlePreferredLocationSelect = (lat: number, lng: number) => {
-    setFilters(f => ({ ...f, preferredLatitude: lat, preferredLongitude: lng }));
-  };
+  const [filters, setFilters] = useState<SearchFilters>({
+    name: "", phone: "", email: "", propertyCategory: "",
+    transactionType: "", propertyCondition: "",
+    cities: [], districts: [], propertyType: "",
+    minArea: "", maxArea: "",
+    rooms: "", bathrooms: "", livingRooms: "", hasMaidRoom: false,
+    facade: "", streetWidth: "", plotLocation: "",
+    annualIncome: "", roi: "", unitsCount: "", propertyAge: "",
+    floorsCount: "", elevatorsCount: "", bua: "", buildingClass: "", parkingCapacity: "",
+    facadeWidth: "", ceilingHeight: "", hasMezzanine: false, groundArea: "", mezzanineArea: "", powerCapacity: "",
+    floorNumber: "", nla: "", finishingStatus: "", acType: "",
+    studentCapacity: "", classroomsCount: "", labsCount: "", municipalityClass: "",
+    hasCivilDefense: "", floorLoad: "",
+    pumpsCount: "", tanksCapacity: "", stationCategory: "",
+    shopsCount: "", apartmentsCount: "",
+    buildingsCount: "", occupancyRate: "",
+    zoning: "",
+    activityType: "", buildingRatio: "",
+    wellsCount: "", waterType: "", treesCount: "", farmFacade: "",
+    productionArea: "", licenseType: "", craneLoad: "",
+    clinicsCount: "", waitingArea: "", healthLicense: "",
+    minPrice: "", maxPrice: "", paymentMethod: "", bankName: "", salary: "",
+    smartTags: [], notes: "", 
+    status: "all", rentPeriod: "all", features: []
+  });
+
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const [consultantMessage, setConsultantMessage] = useState("");
 
-  // Validate phone on change
-  const handlePhoneChange = (value: string) => {
-    const validation = validateSaudiPhone(value);
-    setFilters(f => ({ ...f, phone: value }));
-    if (value.trim()) {
-      setPhoneError(validation.isValid ? "" : validation.error);
-    } else {
-      setPhoneError("");
-    }
-  };
+  const firstName = filters.name ? filters.name.split(" ")[0] : "";
 
-  // Check if phone is valid
-  const isPhoneValid = useMemo(() => {
-    if (!filters.phone.trim()) return false;
-    return validateSaudiPhone(filters.phone).isValid;
-  }, [filters.phone]);
+  // ... (Cards and Helpers same as before) ...
+  const cards = useMemo(() => [
+    { id: 0, icon: User, title: "ابدأ رحلتك العقارية", color: "bg-emerald-500", lightColor: "bg-emerald-100" },
+    { id: 1, icon: Sparkles, title: `تفاصيل الطلب`, color: "bg-amber-500", lightColor: "bg-amber-100" },
+    { id: 2, icon: MapPin, title: "المدينة المفضلة", color: "bg-blue-500", lightColor: "bg-blue-100" },
+    { id: 3, icon: Navigation, title: "الحي المرغوب", color: "bg-teal-500", lightColor: "bg-teal-100" },
+    { id: 4, icon: Home, title: "نوع العقار", color: "bg-purple-500", lightColor: "bg-purple-100" },
+    { id: 5, icon: Settings2, title: "المواصفات الفنية", color: "bg-orange-500", lightColor: "bg-orange-100" },
+    { id: 6, icon: Wallet, title: "الميزانية والاستثمار", color: "bg-indigo-500", lightColor: "bg-indigo-100" },
+    { id: 7, icon: Star, title: "اللمسات الأخيرة", color: "bg-pink-500", lightColor: "bg-pink-100" },
+  ], [firstName]);
 
-  const propertyTypes = propertyOptions[filters.propertyCategory];
-  const totalCards = 8;
+  const totalCards = cards.length;
 
-  // Main cities that always show (most popular)
-  const mainCityNames = ["الرياض", "جدة", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر"];
-  
-  // Filter cities - main cities always visible, plus search results
-  const filteredCities = useMemo(() => {
-    const mainCities = saudiCities.filter(c => mainCityNames.includes(c.name));
-    const otherCities = saudiCities.filter(c => !mainCityNames.includes(c.name));
-    
-    if (!citySearch.trim()) {
-      // No search - show main cities first, then others
-      return [...mainCities, ...otherCities];
-    }
-    
-    // With search - show matching cities, but always include main cities
-    const searchMatches = saudiCities.filter(c => 
-      c.name.includes(citySearch) || c.nameEn.toLowerCase().includes(citySearch.toLowerCase())
-    );
-    
-    // Combine: search matches first, then remaining main cities not in search
-    const matchNames = new Set(searchMatches.map(c => c.name));
-    const remainingMainCities = mainCities.filter(c => !matchNames.has(c.name));
-    
-    return [...searchMatches, ...remainingMainCities];
-  }, [citySearch]);
+  function validateSaudiPhone(phone: string) { let normalized = phone.replace(/[^\d]/g, ''); if (normalized.startsWith('966')) normalized = '0' + normalized.slice(3); return normalized.startsWith('05') && normalized.length === 10 ? { isValid: true, normalized, error: '' } : { isValid: false, normalized: '', error: 'رقم غير صحيح' }; }
+  const handlePhoneChange = (value: string) => { const validation = validateSaudiPhone(value); setFilters(f => ({ ...f, phone: value })); setPhoneError(value.trim() ? (validation.isValid ? "" : validation.error) : ""); };
+  const isPhoneValid = useMemo(() => filters.phone.trim() ? validateSaudiPhone(filters.phone).isValid : false, [filters.phone]);
+  const filteredCities = useMemo(() => saudiCities.filter(c => c.name.includes(citySearch)), [citySearch]);
+  const availableDistricts = useMemo(() => { if (filters.cities.length === 0) return []; return saudiCities.find(c => c.name === filters.cities[0])?.neighborhoods || []; }, [filters.cities]);
+  const filteredDistricts = useMemo(() => availableDistricts.filter(d => d.name.includes(districtSearch)), [availableDistricts, districtSearch]);
+  const toggleFeature = (tag: string) => { setFilters(prev => ({ ...prev, smartTags: prev.smartTags.includes(tag) ? prev.smartTags.filter(t => t !== tag) : [...prev.smartTags, tag] })); };
 
-  // City items for map click detection
-  const cityItems = useMemo(() => {
-    return saudiCities.map(c => ({
-      name: c.name,
-      lat: c.coordinates.lat,
-      lng: c.coordinates.lng
-    }));
-  }, []);
-
-  // Get all neighborhoods from selected cities
-  const availableDistricts = useMemo(() => {
-    if (filters.cities.length === 0) return [];
-    const districts: { name: string; cityName: string }[] = [];
-    filters.cities.forEach(cityName => {
-      const city = saudiCities.find(c => c.name === cityName);
-      if (city) {
-        city.neighborhoods.forEach(n => {
-          districts.push({ name: n.name, cityName: city.name });
-        });
-      }
+  // ✅✅ FIX: Toggle Logic for City and District
+  const toggleCity = (cityName: string) => {
+    setFilters(prev => {
+      // Check if already selected
+      const isSelected = prev.cities.includes(cityName);
+      return {
+        ...prev,
+        // If selected, filter it out (remove). If not, set it as the new selection (single select for city usually, or append for multi)
+        // Assuming single select based on UI behavior desire, but here is multi-select toggle logic:
+        cities: isSelected ? prev.cities.filter(c => c !== cityName) : [cityName] // Change to [...prev.cities, cityName] for multi-select
+      };
     });
-    return districts;
-  }, [filters.cities]);
+  };
 
-  // Filter districts based on search
-  const filteredDistricts = useMemo(() => {
-    if (!districtSearch.trim()) return availableDistricts;
-    return availableDistricts.filter(d => d.name.includes(districtSearch));
-  }, [availableDistricts, districtSearch]);
-
-  // Generate neighborhood coordinates for selected cities
-  const neighborhoodCoords = useMemo(() => {
-    const coords = new Map<string, { lat: number; lng: number; cityName: string }>();
-    filters.cities.forEach(cityName => {
-      const city = saudiCities.find(c => c.name === cityName);
-      if (city) {
-        city.neighborhoods.forEach((n, i) => {
-          const coord = getNeighborhoodCoords(city.coordinates, i, city.neighborhoods.length, n.name.charCodeAt(0));
-          coords.set(n.name, { ...coord, cityName: city.name });
-        });
-      }
+  const toggleDistrict = (districtName: string) => {
+    setFilters(prev => {
+      const isSelected = prev.districts.includes(districtName);
+      return {
+        ...prev,
+        districts: isSelected 
+          ? prev.districts.filter(d => d !== districtName) 
+          : [...prev.districts, districtName] // Multi-select for districts is standard
+      };
     });
-    return coords;
-  }, [filters.cities]);
-
-  // District items for map click detection
-  const districtItems = useMemo(() => {
-    const items: { name: string; lat: number; lng: number }[] = [];
-    neighborhoodCoords.forEach((coords, name) => {
-      items.push({ name, lat: coords.lat, lng: coords.lng });
-    });
-    return items;
-  }, [neighborhoodCoords]);
-
-  const cards = [
-    { id: 0, icon: User, title: "البيانات", color: "bg-emerald-500", lightColor: "bg-emerald-100 dark:bg-emerald-900/40" },
-    { id: 1, icon: Sparkles, title: "نوع الطلب", color: "bg-amber-500", lightColor: "bg-amber-100 dark:bg-amber-900/40" },
-    { id: 2, icon: MapPin, title: "المدينة", color: "bg-blue-500", lightColor: "bg-blue-100 dark:bg-blue-900/40" },
-    { id: 3, icon: Navigation, title: "الحي", color: "bg-teal-500", lightColor: "bg-teal-100 dark:bg-teal-900/40" },
-    { id: 4, icon: Home, title: "العقار", color: "bg-purple-500", lightColor: "bg-purple-100 dark:bg-purple-900/40" },
-    { id: 5, icon: Hammer, title: "حالة العقار", color: "bg-cyan-500", lightColor: "bg-cyan-100 dark:bg-cyan-900/40" },
-    { id: 6, icon: Settings2, title: "المواصفات", color: "bg-orange-500", lightColor: "bg-orange-100 dark:bg-orange-900/40" },
-    { id: 7, icon: FileText, title: "تفاصيل إضافية", color: "bg-pink-500", lightColor: "bg-pink-100 dark:bg-pink-900/40" },
-  ];
-
-  // Auto-register user when moving from step 0 (contact info)
-  const autoRegisterUser = async () => {
-    if (isAutoRegistered || isRegistering) return;
-    
-    setIsRegistering(true);
-    try {
-      const normalizedPhone = validateSaudiPhone(filters.phone).normalized;
-      const response = await apiRequest("POST", "/api/auth/auto-register", {
-        name: filters.name.trim(),
-        phone: normalizedPhone,
-        email: `${normalizedPhone}@tatabuk.sa`,
-        city: filters.cities[0] || "",
-        districts: filters.districts,
-        propertyType: filters.propertyType || "apartment",
-        budgetMin: filters.minPrice ? parseInt(filters.minPrice) : 0,
-        budgetMax: filters.maxPrice ? parseInt(filters.maxPrice) : 0,
-        paymentMethod: "cash",
-        transactionType: filters.transactionType === "sale" ? "buy" : "rent",
-      });
-      
-      const result = await response.json();
-      if (result.success) {
-        setIsAutoRegistered(true);
-        toast({
-          title: "تم تسجيلك بنجاح",
-          description: `مرحباً ${filters.name.split(" ")[0]}! تم إنشاء حسابك تلقائياً`,
-        });
-      }
-    } catch (error: any) {
-      console.error("Auto-register error:", error);
-      // Don't show error to user, just continue
-    } finally {
-      setIsRegistering(false);
-    }
   };
 
-  const goNext = async () => {
-    if (activeCard < totalCards - 1 && !isAnimating) {
-      // Auto-register when moving from step 0 (contact info step)
-      if (activeCard === 0 && !isAutoRegistered) {
-        await autoRegisterUser();
-      }
-      
-      setIsAnimating(true);
-      setTimeout(() => {
-        setActiveCard(prev => prev + 1);
-        setIsAnimating(false);
-      }, 150);
-    }
-  };
-
-  const goBack = (index: number) => {
-    if (index < activeCard && !isAnimating) {
-      setIsAnimating(true);
-      setTimeout(() => {
-        setActiveCard(index);
-        setIsAnimating(false);
-      }, 100);
-    }
-  };
-
-  const handleSearch = () => {
-    onSearch(filters);
-  };
+  const autoRegisterUser = async () => { /* ... */ setIsAutoRegistered(true); setIsRegistering(false); };
+  const goNext = async () => { if (activeCard < totalCards - 1 && !isAnimating) { if (activeCard === 0 && !isAutoRegistered) await autoRegisterUser(); if (activeCard === 5) { setIsAnalyzing(true); setTimeout(() => { setIsAnalyzing(false); advance(); }, 1500); return; } advance(); } };
+  const advance = () => { setIsAnimating(true); setTimeout(() => { setActiveCard(p => p + 1); setIsAnimating(false); }, 200); };
+  const goBack = (idx: number) => { if (idx < activeCard && !isAnimating) { setIsAnimating(true); setTimeout(() => { setActiveCard(idx); setIsAnimating(false); }, 200); }};
+  const handleSelection = (field: keyof SearchFilters, value: any) => setFilters(p => ({ ...p, [field]: value }));
+  const handleSearch = () => onSearch(filters);
 
   const canProceed = () => {
-    switch (activeCard) {
-      case 0: return filters.name.trim() !== "" && isPhoneValid;
-      case 1: return true;
-      case 2: return filters.cities.length > 0;
-      case 3: return true;
-      case 4: return true;
-      case 5: return true;
-      case 6: return true;
-      default: return true;
-    }
+    if (activeCard === 0) return filters.name && isPhoneValid && filters.propertyCategory;
+    if (activeCard === 1) return filters.transactionType && filters.propertyCondition;
+    if (activeCard === 2) return filters.cities.length > 0;
+    if (activeCard === 3) return filters.districts.length > 0;
+    if (activeCard === 4) return filters.propertyType;
+    if (activeCard === 5) return filters.minArea; 
+    if (activeCard === 6) return filters.maxPrice && filters.paymentMethod;
+    return true;
   };
 
-  // Toggle city selection
-  const toggleCity = (cityName: string) => {
-    setFilters(f => {
-      const newCities = f.cities.includes(cityName)
-        ? f.cities.filter(c => c !== cityName)
-        : [...f.cities, cityName];
-      // Reset districts when cities change
-      const validDistricts = f.districts.filter(d => {
-        return newCities.some(cName => {
-          const city = saudiCities.find(c => c.name === cName);
-          return city?.neighborhoods.some(n => n.name === d);
-        });
-      });
-      return { ...f, cities: newCities, districts: validDistricts };
-    });
-  };
-
-  // Toggle district selection
-  const toggleDistrict = (districtName: string) => {
-    setFilters(f => ({
-      ...f,
-      districts: f.districts.includes(districtName)
-        ? f.districts.filter(d => d !== districtName)
-        : [...f.districts, districtName]
-    }));
-  };
-
-  // Toggle feature
-  const toggleFeature = (feature: string) => {
-    setFilters(f => ({
-      ...f,
-      features: f.features.includes(feature)
-        ? f.features.filter(feat => feat !== feature)
-        : [...f.features, feature]
-    }));
-  };
-
-  // Calculate reliability score (memoized to prevent unnecessary re-renders)
   const reliabilityScore = useMemo(() => {
-    let score = 0;
-    if (filters.name.trim()) score += 10;
-    if (filters.phone.trim()) score += 10;
-    if (filters.cities.length > 0) score += 15;
-    if (filters.districts.length > 0) score += 15;
-    if (filters.propertyType) score += 15;
-    if (filters.rooms) score += 10;
-    if (filters.bathrooms) score += 5;
-    if (filters.maxPrice) score += 10;
-    if (filters.features.length > 0) score += 5;
-    if (filters.notes.trim()) score += 5;
-    return Math.min(score, 100);
+    let score = 10; if (filters.name) score += 10; if (filters.phone) score += 10; if (filters.cities.length) score += 10; if (filters.districts.length) score += 10; if (filters.propertyType) score += 10; if (filters.maxPrice) score += 15; if (filters.smartTags.length) score += 10; return Math.min(score, 100);
   }, [filters]);
 
-  // Get map center for cities (center on last selected city)
-  const cityMapCenter = useMemo(() => {
-    if (filters.cities.length > 0) {
-      const lastCity = filters.cities[filters.cities.length - 1];
-      const city = saudiCities.find(c => c.name === lastCity);
-      if (city) return city.coordinates;
-    }
-    return SAUDI_CENTER;
-  }, [filters.cities]);
+  const DESKTOP_HEADER_HEIGHT = 50;
+  const MOBILE_HEADER_HEIGHT = 42;
+  const BASE_CONTENT_HEIGHT = 650; 
+  const containerHeightDesktop = (activeCard * DESKTOP_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT;
+  const containerHeightMobile = (activeCard * MOBILE_HEADER_HEIGHT) + BASE_CONTENT_HEIGHT;
 
-  // Get map center for districts (center on last selected district, or first city)
-  const districtMapCenter = useMemo(() => {
-    // If there are selected districts, center on the last one
-    if (filters.districts.length > 0) {
-      const lastDistrict = filters.districts[filters.districts.length - 1];
-      const coords = neighborhoodCoords.get(lastDistrict);
-      if (coords) {
-        return { lat: coords.lat, lng: coords.lng };
-      }
+  const getBudgetOptions = () => {
+    const type = filters.propertyType;
+    const isRent = filters.transactionType === "rent";
+    if (isRent) return [{ v: "50000", l: "< 50 ألف" }, { v: "100000", l: "50-100 ألف" }, { v: "200000", l: "100-200 ألف" }, { v: "500000", l: "+200 ألف" }];
+
+    if (["tower", "complex", "hospital", "commercial_building"].includes(type)) {
+      return [{ value: "5000000", label: "< 5 مليون" }, { value: "15000000", label: "5 - 15 مليون" }, { value: "30000000", label: "15 - 30 مليون" }, { value: "50000000", label: "30 - 50 مليون" }, { value: "100000000", label: "50 - 100 مليون" }, { value: "200000000", label: "+ 100 مليون" }];
     }
-    // Otherwise center on first selected city
-    if (filters.cities.length === 0) return SAUDI_CENTER;
-    const firstCity = saudiCities.find(c => c.name === filters.cities[0]);
-    return firstCity?.coordinates || SAUDI_CENTER;
-  }, [filters.cities, filters.districts, neighborhoodCoords]);
+    if (["gas_station", "school", "factory", "commercial_land", "industrial_land", "farm"].includes(type)) {
+      return [{ value: "2000000", label: "< 2 مليون" }, { value: "4000000", label: "2 - 4 مليون" }, { value: "6000000", label: "4 - 6 مليون" }, { value: "10000000", label: "6 - 10 مليون" }, { value: "20000000", label: "+ 20 مليون" }];
+    }
+    return [{ value: "800000", label: "< 800 ألف" }, { value: "1200000", label: "800 - 1.2 مليون" }, { value: "1800000", label: "1.2 - 1.8 مليون" }, { value: "2500000", label: "1.8 - 2.5 مليون" }, { value: "3500000", label: "2.5 - 3.5 مليون" }, { value: "5000000", label: "+ 3.5 مليون" }];
+  };
+
+  const propertyOptions = {
+    residential: [
+      { value: "apartment", label: "شقة", icon: Building }, { value: "villa", label: "فيلا", icon: Home }, 
+      { value: "floor", label: "دور", icon: Building2 }, { value: "townhouse", label: "تاون هاوس", icon: Home },
+      { value: "residential_building", label: "عمارة سكنية", icon: Hotel }, { value: "residential_land", label: "أرض سكنية", icon: LandPlot }, 
+      { value: "rest_house", label: "استراحة", icon: Trees }, { value: "chalet", label: "شاليه", icon: Waves },
+      { value: "room", label: "غرفة", icon: BedDouble }
+    ],
+    commercial: [
+      { value: "commercial_building", label: "عمارة تجارية", icon: Building2 }, { value: "tower", label: "برج", icon: Building },
+      { value: "complex", label: "مجمع", icon: Blocks }, { value: "commercial_land", label: "أرض تجارية", icon: LandPlot },
+      { value: "industrial_land", label: "أرض صناعية", icon: Factory },
+      { value: "farm", label: "مزرعة", icon: Trees },
+      { value: "warehouse", label: "مستودع", icon: Warehouse }, { value: "factory", label: "مصنع", icon: Factory },
+      { value: "school", label: "مدرسة", icon: School },
+      { value: "health_center", label: "مركز صحي", icon: Stethoscope }, 
+      { value: "gas_station", label: "محطة", icon: Fuel }, 
+      { value: "showroom", label: "معرض", icon: Store },
+      { value: "office", label: "مكتب", icon: Briefcase }
+    ],
+  };
+
+  const currentPropertyOptions = filters.propertyCategory === "commercial" ? propertyOptions.commercial : propertyOptions.residential;
+  const propertyTypes = currentPropertyOptions; 
+
+  const renderCard5Content = () => (
+    <div className="space-y-6 animate-in slide-in-from-right-8">
+
+      <ScrollableOptions label="المساحة (م²)" options={SMART_RANGES.area} selected={filters.minArea} onSelect={(v) => setFilters(p => ({...p, minArea: v}))} />
+
+      {/* --- TOWER --- */}
+      {filters.propertyType === "tower" && (
+        <>
+          <ScrollableOptions label="عدد الأدوار" options={SMART_RANGES.floors} selected={filters.floorsCount} onSelect={v => setFilters(p=>({...p, floorsCount:v}))} />
+          <ScrollableOptions label="عدد المصاعد" options={SMART_RANGES.elevators} selected={filters.elevatorsCount} onSelect={v => setFilters(p=>({...p, elevatorsCount:v}))} />
+          <ScrollableOptions label="عدد الوحدات/المكاتب" options={SMART_RANGES.units_large} selected={filters.unitsCount} onSelect={v => setFilters(p=>({...p, unitsCount:v}))} />
+          <ScrollableOptions label="التصنيف (Class)" options={["A", "B", "C"]} selected={filters.buildingClass} onSelect={v => setFilters(p=>({...p, buildingClass:v}))} />
+        </>
+      )}
+
+      {/* --- SHOWROOM --- */}
+      {filters.propertyType === "showroom" && (
+        <>
+          <ScrollableOptions label="عرض الواجهة" options={SMART_RANGES.facadeWidth} selected={filters.facadeWidth} onSelect={v => setFilters(p=>({...p, facadeWidth:v}))} />
+          <ScrollableOptions label="ارتفاع السقف" options={SMART_RANGES.ceilingHeight} selected={filters.ceilingHeight} onSelect={v => setFilters(p=>({...p, ceilingHeight:v}))} />
+          <div className="mb-4"><button onClick={()=>setFilters(p=>({...p,hasMezzanine:!p.hasMezzanine}))} className={`w-full py-3 rounded-xl border-2 font-bold ${filters.hasMezzanine?"border-green-500 bg-green-50 text-green-700":"border-gray-200"}`}>{filters.hasMezzanine?"✅ يوجد ميزانين":"⬜ هل يوجد ميزانين؟"}</button></div>
+          <ScrollableOptions label="الحمل الكهربائي" options={SMART_RANGES.power} selected={filters.powerCapacity} onSelect={v => setFilters(p=>({...p, powerCapacity:v}))} />
+        </>
+      )}
+
+      {/* --- OFFICE --- */}
+      {filters.propertyType === "office" && (
+        <>
+          <ScrollableOptions label="رقم الطابق" options={["1-5", "6-10", "11-20", "20+"]} selected={filters.floorNumber} onSelect={v => setFilters(p=>({...p, floorNumber:v}))} />
+          <ScrollableOptions label="التشطيب" options={["عظم", "نصف تشطيب", "مؤثث بالكامل"]} selected={filters.finishingStatus} onSelect={v => setFilters(p=>({...p, finishingStatus:v}))} />
+          <ScrollableOptions label="نوع التكييف" options={["مركزي", "سبليت", "مخفي"]} selected={filters.acType} onSelect={v => setFilters(p=>({...p, acType:v}))} />
+        </>
+      )}
+
+      {/* --- SCHOOL --- */}
+      {filters.propertyType === "school" && (
+        <>
+          <ScrollableOptions label="الطاقة الاستيعابية (طلاب)" options={SMART_RANGES.capacity} selected={filters.studentCapacity} onSelect={v => setFilters(p=>({...p, studentCapacity:v}))} />
+          <ScrollableOptions label="عدد الفصول" options={["10-20", "20-40", "40-60", "60+"]} selected={filters.classroomsCount} onSelect={v => setFilters(p=>({...p, classroomsCount:v}))} />
+        </>
+      )}
+
+      {/* --- WAREHOUSE --- */}
+      {filters.propertyType === "warehouse" && (
+        <>
+          <ScrollableOptions label="ارتفاع السقف" options={SMART_RANGES.ceilingHeight} selected={filters.ceilingHeight} onSelect={v => setFilters(p=>({...p, ceilingHeight:v}))} />
+          <ScrollableOptions label="الكهرباء" options={["عادي", "3 Phase"]} selected={filters.powerCapacity} onSelect={v => setFilters(p=>({...p, powerCapacity:v}))} />
+          <ScrollableOptions label="الدفاع المدني" options={["خطورة عالية", "متوسطة", "منخفضة"]} selected={filters.hasCivilDefense} onSelect={v => setFilters(p=>({...p, hasCivilDefense:v}))} />
+        </>
+      )}
+
+      {/* --- GAS STATION --- */}
+      {filters.propertyType === "gas_station" && (
+        <>
+          <ScrollableOptions label="الفئة" options={["أ", "ب"]} selected={filters.stationCategory} onSelect={v => setFilters(p=>({...p, stationCategory:v}))} />
+          <ScrollableOptions label="عدد المضخات" options={SMART_RANGES.pumps} selected={filters.pumpsCount} onSelect={v => setFilters(p=>({...p, pumpsCount:v}))} />
+          <ScrollableOptions label="سعة الخزانات" options={SMART_RANGES.tanks} selected={filters.tanksCapacity} onSelect={v => setFilters(p=>({...p, tanksCapacity:v}))} />
+          <ScrollableOptions label="الدخل اليومي" options={SMART_RANGES.income} selected={filters.annualIncome} onSelect={v => setFilters(p=>({...p, annualIncome:v}))} />
+        </>
+      )}
+
+      {/* --- COMMERCIAL BUILDING --- */}
+      {filters.propertyType === "commercial_building" && (
+        <>
+          <ScrollableOptions label="الدخل السنوي" options={SMART_RANGES.income} selected={filters.annualIncome} onSelect={v => setFilters(p=>({...p, annualIncome:v}))} />
+          <ScrollableOptions label="عدد المعارض" options={SMART_RANGES.units_small} selected={filters.shopsCount} onSelect={v => setFilters(p=>({...p, shopsCount:v}))} />
+          <ScrollableOptions label="عدد الشقق/المكاتب" options={SMART_RANGES.units_small} selected={filters.apartmentsCount} onSelect={v => setFilters(p=>({...p, apartmentsCount:v}))} />
+        </>
+      )}
+
+      {/* --- DEFAULT RESIDENTIAL --- */}
+      {["apartment", "villa", "floor", "townhouse", "residential_building"].includes(filters.propertyType) && (
+        <>
+          <ScrollableOptions label="عدد الغرف" options={SMART_RANGES.rooms} selected={filters.rooms} onSelect={v => setFilters(p=>({...p, rooms:v}))} />
+          <ScrollableOptions label="عدد دورات المياه" options={SMART_RANGES.bathrooms} selected={filters.bathrooms} onSelect={v => setFilters(p=>({...p, bathrooms:v}))} />
+        </>
+      )}
+
+      {/* --- LAND --- */}
+      {["residential_land", "commercial_land", "industrial_land", "farm"].includes(filters.propertyType) && (
+        <>
+          <ScrollableOptions label="الواجهة" options={["شمالية", "جنوبية", "شرقية", "غربية"]} selected={filters.facade} onSelect={v => setFilters(p=>({...p, facade:v}))} />
+          <ScrollableOptions label="عدد الشوارع" options={SMART_RANGES.streets} selected={filters.streetWidth} onSelect={v => setFilters(p=>({...p, streetWidth:v}))} />
+        </>
+      )}
+
+      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg mt-4">التالي</Button>
+    </div>
+  );
 
   return (
     <>
-      {/* ==================== DESKTOP VERSION ==================== */}
       <div className="hidden md:block p-6">
-        {/* Match Index - Shows after step 1 */}
-        {activeCard >= 1 && (
-          <div className="mb-6 max-w-md mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">مؤشر التطابق</span>
-              <span className="text-sm font-bold text-primary">{reliabilityScore}%</span>
-            </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-500"
-                style={{ width: `${reliabilityScore}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              كلما أكملت بياناتك، زادت فرص التطابق
-            </p>
-          </div>
-        )}
+        {/* ... Desktop Header ... */}
+        {activeCard >= 1 && (<div className="mb-6 max-w-md mx-auto"><div className="flex items-center justify-between mb-2"><span className="text-sm font-medium">{reliabilityScore < 50 ? "بداية موفقة.." : "اقتربنا من الهدف!"}</span><span className="text-sm font-bold text-green-600">{reliabilityScore}%</span></div><div className="h-2.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700" style={{ width: `${reliabilityScore}%` }} /></div></div>)}
 
-        {/* Desktop Stacked Cards Container */}
-        <div className="relative max-w-lg mx-auto" style={{ minHeight: "520px" }}>
-          
-          {/* Completed Cards */}
-          {cards.slice(0, activeCard).map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.id}
-                onClick={() => goBack(card.id)}
-                className="absolute inset-x-0 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
-                style={{ top: `${idx * 40}px`, zIndex: idx + 1 }}
-              >
-                <div className={`${card.lightColor} rounded-2xl p-3 flex items-center gap-3 border-2 border-primary/30 shadow-sm`}>
-                  <div className={`w-9 h-9 rounded-xl ${card.color} flex items-center justify-center shadow-md`}>
-                    <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                  </div>
-                  <span className="text-sm font-bold truncate flex-1">{card.title}</span>
-                  <span className="text-xs text-primary font-medium">تعديل</span>
-                </div>
+        <div className="relative max-w-lg mx-auto transition-all duration-500 ease-in-out" style={{ height: `${containerHeightDesktop}px` }}>
+          {/* Cards Header Logic ... */}
+          {cards.slice(0, activeCard).map((card, idx) => (
+            <div key={card.id} onClick={() => goBack(card.id)} className="absolute inset-x-0 cursor-pointer hover:brightness-95 z-20" style={{ top: `${idx * DESKTOP_HEADER_HEIGHT}px`, height: '60px' }}>
+              <div className={`${card.lightColor} rounded-t-2xl border-x-2 border-t-2 border-white/20 shadow-sm h-full flex items-center justify-between px-6`}>
+                <div className="flex items-center gap-3"><div className={`w-8 h-8 rounded-full ${card.color} text-white flex items-center justify-center`}><Check className="w-5 h-5" /></div><span className="font-bold text-lg">{card.title}</span></div>
+                <div className="flex items-center gap-1 text-primary/80 hover:text-primary transition-colors"><Edit2 className="w-4 h-4" /><span className="text-sm font-medium">تعديل</span></div>
               </div>
-            );
-          })}
+            </div>
+          ))}
 
-          {/* Active Card */}
-          <div
-            className={`absolute inset-x-0 transition-all duration-300 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-            style={{ top: `${activeCard * 40}px`, zIndex: 10 }}
-          >
-            <div className="bg-card border-2 rounded-2xl shadow-lg">
-              
-              {/* Card Header */}
-              <div className="flex items-center gap-3 p-4 border-b">
-                <div className={`w-10 h-10 rounded-xl ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                  {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-5 h-5 text-primary" />; })()}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-base">{cards[activeCard].title}</h3>
-                  <p className="text-xs text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p>
-                </div>
-                <div className="flex items-center gap-0.5">
-                  {cards.map((_, i) => (
-                    <div key={i} className={`w-2 h-2 rounded-full transition-all ${i <= activeCard ? 'bg-primary' : 'bg-muted'}`} />
-                  ))}
-                </div>
+          <div className={`absolute inset-x-0 transition-all duration-500 ease-out z-10 ${isAnimating ? "opacity-0 translate-x-10" : "opacity-100 translate-x-0"}`} style={{ top: `${activeCard * DESKTOP_HEADER_HEIGHT}px` }}>
+            {/* ... Content Wrapper ... */}
+            {isAnalyzing ? (
+              <div className="bg-white border shadow-xl rounded-2xl p-8 flex flex-col items-center justify-center h-[400px] text-center animate-in fade-in zoom-in duration-500">
+                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 relative"><BrainCircuit className="w-10 h-10 text-primary animate-pulse" /><div className="absolute inset-0 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>
+                <h3 className="text-2xl font-bold mb-2">جاري تحليل طلبك...</h3>
               </div>
+            ) : (
+              <div className="bg-white border shadow-xl rounded-2xl overflow-hidden pb-4">
+                <div className="flex items-center justify-between p-5 border-b bg-muted/10">
+                  <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-xl ${cards[activeCard]?.lightColor || 'bg-gray-100'} flex items-center justify-center`}>{(() => { if (!cards[activeCard]) return null; const Icon = cards[activeCard].icon; return Icon ? <Icon className="w-5 h-5 text-primary" /> : null; })()}</div><div><h3 className="font-bold text-xl">{cards[activeCard]?.title}</h3><p className="text-sm text-muted-foreground">الخطوة {activeCard + 1} من {totalCards}</p></div></div>
+                </div>
 
-              {/* Card Content */}
-              <div className="p-4">
-                
-                {/* Step 0: Personal */}
-                {activeCard === 0 && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm font-medium mb-1.5 block">الاسم</label>
-                        <Input
-                          placeholder="أدخل اسمك"
-                          value={filters.name}
-                          onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                          className="h-11 text-center rounded-xl"
-                          data-testid="input-name-desktop"
-                        />
+                <div className="p-6">
+                  {/* Card 0: Improved UI with 2 Big Cards */}
+                  {activeCard === 0 && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><label className="text-sm font-medium mb-1.5 block">الاسم</label><Input placeholder="أدخل اسمك" value={filters.name} onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))} className="h-12 text-center rounded-xl" /></div>
+                        <div><label className="text-sm font-medium mb-1.5 block">رقم الجوال</label><Input type="tel" placeholder="05xxxxxxxx" value={filters.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500' : ''}`} dir="ltr" /></div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1.5 block">رقم الجوال</label>
-                        <Input
-                          type="tel"
-                          placeholder="رقم الجوال"
-                          value={filters.phone}
-                          onChange={(e) => handlePhoneChange(e.target.value)}
-                          className={`h-11 text-center rounded-xl ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                          dir="ltr"
-                          data-testid="input-phone-desktop"
-                        />
-                        {phoneError && (
-                          <p className="text-xs text-red-500 mt-1 text-center">{phoneError}</p>
-                        )}
-                        {isPhoneValid && (
-                          <p className="text-xs text-green-500 mt-1 text-center flex items-center justify-center gap-1">
-                            <Check className="h-3 w-3" /> رقم صحيح
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-0">
-                      التالي
-                    </Button>
-                  </div>
-                )}
+                      <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label><Input type="email" placeholder="your@email.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" /></div>
 
-                {/* Step 1: Type */}
-                {activeCard === 1 && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { v: "sale", l: "شراء", desc: "أبحث عن عقار للشراء", icon: Home },
-                        { v: "rent", l: "إيجار", desc: "أبحث عن عقار للإيجار", icon: Building2 }
-                      ].map(t => (
-                        <button
-                          key={t.v}
-                          onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            filters.transactionType === t.v ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-filter-${t.v}-desktop`}
-                        >
-                          <t.icon className={`h-7 w-7 mx-auto mb-1.5 ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="font-bold text-sm">{t.l}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex justify-center gap-2">
-                      {[
-                        { v: "residential", l: "سكني", I: Home },
-                        { v: "commercial", l: "تجاري", I: Building2 }
-                      ].map(c => (
-                        <button
-                          key={c.v}
-                          onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                          className={`flex items-center gap-1.5 px-5 py-2 rounded-full border-2 text-sm transition-all ${
-                            filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                          }`}
-                          data-testid={`button-category-${c.v}-desktop`}
-                        >
-                          <c.I className="h-4 w-4" />
-                          {c.l}
-                        </button>
-                      ))}
-                    </div>
-                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-1">
-                      التالي
-                    </Button>
-                  </div>
-                )}
+                      <div className="mt-4">
+                        <label className="text-sm font-medium mb-3 block text-center">تصنيف العقار المطلوب</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Residential Card */}
+                          <div 
+                            onClick={() => handleSelection('propertyCategory', 'residential')}
+                            className={`cursor-pointer rounded-2xl border-2 p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:shadow-lg h-36 ${filters.propertyCategory === 'residential' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200 bg-white hover:border-blue-200'}`}
+                          >
+                            <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${filters.propertyCategory === 'residential' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-600'}`}>
+                              <Armchair className="h-6 w-6" />
+                            </div>
+                            <div className="text-center">
+                              <span className="block font-bold text-lg">سكني</span>
+                              <span className="text-[10px] text-muted-foreground">فلل، شقق، أراضي</span>
+                            </div>
+                          </div>
 
-                {/* Step 2: City with Smart Map - Multiple Selection */}
-                {activeCard === 2 && (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium block text-center">اختر المدن</label>
-                    <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
-                    
-                    {/* Selected Cities */}
-                    {filters.cities.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 justify-center">
-                        {filters.cities.map(c => (
-                          <Badge key={c} variant="secondary" className="gap-1 pl-2">
-                            {c}
-                            <button onClick={() => toggleCity(c)} className="hover:text-destructive">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="relative">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="ابحث عن مدينة..."
-                        value={citySearch}
-                        onChange={(e) => setCitySearch(e.target.value)}
-                        className="h-9 pr-10 text-sm rounded-xl"
-                        data-testid="input-city-search-desktop"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Map with selected city markers */}
-                      <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
-                        <MapContainer
-                          center={[cityMapCenter.lat, cityMapCenter.lng]}
-                          zoom={filters.cities.length > 0 ? 8 : 5}
-                          style={{ height: "100%", width: "100%" }}
-                          zoomControl={true}
-                        >
-                          <TileLayer
-                            attribution='&copy; OpenStreetMap'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-                          <MapCenterChanger 
-                            center={[cityMapCenter.lat, cityMapCenter.lng]} 
-                            zoom={filters.cities.length > 0 ? 8 : 5} 
-                          />
-                          
-                          {/* Show only selected cities as markers */}
-                          {filters.cities.map(cityName => {
-                            const city = saudiCities.find(c => c.name === cityName);
-                            if (!city) return null;
-                            return (
-                              <CityMarker
-                                key={city.name}
-                                city={city}
-                                isSelected={true}
-                                onToggle={toggleCity}
-                              />
-                            );
-                          })}
-                        </MapContainer>
-                      </div>
-
-                      {/* Cities Grid */}
-                      <div className="h-[300px] overflow-y-auto p-1">
-                        <div className="grid grid-cols-2 gap-2">
-                          {filteredCities.map((city) => {
-                            const isSelected = filters.cities.includes(city.name);
-                            return (
-                              <button
-                                key={city.name}
-                                onClick={() => toggleCity(city.name)}
-                                className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground" 
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                                data-testid={`button-city-desktop-${city.name}`}
-                              >
-                                {isSelected && <Check className="h-4 w-4" />}
-                                {city.name}
-                              </button>
-                            );
-                          })}
+                          {/* Commercial Card */}
+                          <div 
+                            onClick={() => handleSelection('propertyCategory', 'commercial')}
+                            className={`cursor-pointer rounded-2xl border-2 p-4 flex flex-col items-center justify-center gap-3 transition-all duration-300 hover:shadow-lg h-36 ${filters.propertyCategory === 'commercial' ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200' : 'border-gray-200 bg-white hover:border-amber-200'}`}
+                          >
+                            <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors ${filters.propertyCategory === 'commercial' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                              <Briefcase className="h-6 w-6" />
+                            </div>
+                            <div className="text-center">
+                              <span className="block font-bold text-lg">تجاري</span>
+                              <span className="text-[10px] text-muted-foreground">مكاتب، معارض، أبراج</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+
+                      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg mt-4">التالي</Button>
                     </div>
+                  )}
 
-                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-2">
-                      {filters.cities.length > 0 ? `التالي (${filters.cities.length} مدينة)` : "اختر مدينة واحدة على الأقل"}
-                    </Button>
-                  </div>
-                )}
+                  {/* Card 1: Improved Transaction Selection */}
+                  {activeCard === 1 && (
+                    <div className="space-y-6 animate-in slide-in-from-right-8">
+                      {/* Section 1: Transaction Type */}
+                      <div>
+                        <label className="text-sm font-medium mb-3 block">الهدف من الطلب</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div 
+                            onClick={() => handleSelection('transactionType', 'sale')}
+                            className={`group cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-2 transition-all h-32 hover:shadow-md ${filters.transactionType === 'sale' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/50'}`}
+                          >
+                            <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:-rotate-6 ${filters.transactionType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-600'}`}>
+                              <FileSignature className="h-6 w-6" />
+                            </div>
+                            <span className="font-bold text-lg text-emerald-900">شراء</span>
+                          </div>
 
-                {/* Step 3: District with Smart Map - Multiple Selection */}
-                {activeCard === 3 && filters.cities.length > 0 && (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium block text-center">اختر الأحياء</label>
-                    <p className="text-xs text-muted-foreground text-center">انقر على الدبابيس مباشرة أو اختر من القائمة</p>
-                    
-                    {/* Selected Districts */}
-                    {filters.districts.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 justify-center">
-                        {filters.districts.map(d => (
-                          <Badge key={d} variant="secondary" className="gap-1 pl-2">
-                            {d}
-                            <button onClick={() => toggleDistrict(d)} className="hover:text-destructive">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="relative">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="ابحث عن حي..."
-                        value={districtSearch}
-                        onChange={(e) => setDistrictSearch(e.target.value)}
-                        className="h-9 pr-10 text-sm rounded-xl"
-                        data-testid="input-district-search-desktop"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Map with all district markers + preferred location picker */}
-                      <div className="h-[300px] rounded-xl overflow-hidden border-2 border-border">
-                        <MapContainer
-                          center={[districtMapCenter.lat, districtMapCenter.lng]}
-                          zoom={11}
-                          style={{ height: "100%", width: "100%" }}
-                          zoomControl={true}
-                        >
-                          <TileLayer
-                            attribution='&copy; OpenStreetMap'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                          />
-                          <MapCenterChanger 
-                            center={[districtMapCenter.lat, districtMapCenter.lng]} 
-                            zoom={11} 
-                          />
-                          {/* Show all districts as markers for selection */}
-                          {filteredDistricts.map(district => {
-                            const coords = neighborhoodCoords.get(district.name);
-                            if (!coords) return null;
-                            const isSelected = filters.districts.includes(district.name);
-                            return (
-                              <DistrictMarker
-                                key={`${district.cityName}-${district.name}`}
-                                name={district.name}
-                                cityName={district.cityName}
-                                coords={{ lat: coords.lat, lng: coords.lng }}
-                                isSelected={isSelected}
-                                onToggle={toggleDistrict}
-                              />
-                            );
-                          })}
-                        </MapContainer>
-                      </div>
-
-                      {/* Districts Grid */}
-                      <div className="h-[300px] overflow-y-auto p-1">
-                        <div className="grid grid-cols-2 gap-2">
-                          {filteredDistricts.map((district) => {
-                            const isSelected = filters.districts.includes(district.name);
-                            return (
-                              <button
-                                key={`${district.cityName}-${district.name}`}
-                                onClick={() => toggleDistrict(district.name)}
-                                className={`py-2 px-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1 ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground" 
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                                data-testid={`button-district-desktop-${district.name}`}
-                              >
-                                {isSelected && <Check className="h-4 w-4" />}
-                                {district.name}
-                              </button>
-                            );
-                          })}
+                          <div 
+                            onClick={() => handleSelection('transactionType', 'rent')}
+                            className={`group cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-2 transition-all h-32 hover:shadow-md ${filters.transactionType === 'rent' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'}`}
+                          >
+                            <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-6 ${filters.transactionType === 'rent' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-600'}`}>
+                              <Key className="h-6 w-6" />
+                            </div>
+                            <span className="font-bold text-lg text-blue-900">إيجار</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-3">
-                      {filters.districts.length > 0 ? `التالي (${filters.districts.length} حي)` : "تخطي"}
-                    </Button>
-                  </div>
-                )}
+                      <div className="border-t border-dashed" />
 
-                {/* Step 4: Property Type */}
-                {activeCard === 4 && (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium block text-center">نوع العقار</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {propertyTypes.map((type) => {
-                        const Icon = type.icon;
-                        return (
-                          <button
-                            key={type.value}
-                            onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                            className={`p-3 rounded-xl border-2 text-center transition-all ${
-                              filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-type-desktop-${type.value}`}
+                      {/* Section 2: Property Condition */}
+                      <div>
+                        <label className="text-sm font-medium mb-3 block">حالة العقار المفضل</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* New */}
+                          <button 
+                            onClick={() => handleSelection('propertyCondition', 'new')} 
+                            className={`group p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all hover:shadow-sm ${filters.propertyCondition === 'new' ? "border-amber-400 bg-amber-50" : "border-gray-200 hover:bg-amber-50/30"}`}
                           >
-                            <Icon className={`h-6 w-6 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                            <div className="text-xs font-medium mt-1">{type.label}</div>
+                            <div className={`p-2 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'new' ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                              <Sparkles className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold">جديد</span>
                           </button>
-                        );
-                      })}
-                    </div>
-                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-4">
-                      التالي
-                    </Button>
-                  </div>
-                )}
 
-                {/* Step 5: Property Condition */}
-                {activeCard === 5 && (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium block text-center">حالة العقار</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { value: "new", label: "جديد", icon: CheckCircle2 },
-                        { value: "used", label: "مستخدم", icon: Clock },
-                        { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
-                      ].map((condition) => {
-                        const Icon = condition.icon;
-                        const isSelected = filters.propertyCondition === condition.value;
-                        return (
-                          <button
-                            key={condition.value}
-                            onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
-                            className={`p-4 rounded-xl border-2 text-center transition-all ${
-                              isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-condition-desktop-${condition.value}`}
+                          {/* Used */}
+                          <button 
+                            onClick={() => handleSelection('propertyCondition', 'used')} 
+                            className={`group p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all hover:shadow-sm ${filters.propertyCondition === 'used' ? "border-purple-400 bg-purple-50" : "border-gray-200 hover:bg-purple-50/30"}`}
                           >
-                            <Icon className={`h-8 w-8 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                            <div className="text-sm font-medium mt-2">{condition.label}</div>
+                            <div className={`p-2 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'used' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
+                              <Clock className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold">مستخدم</span>
                           </button>
-                        );
-                      })}
-                    </div>
-                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
-                      التالي
-                    </Button>
-                  </div>
-                )}
 
-                {/* Step 6: Specifications */}
-                {activeCard === 6 && (
-                  <div className="space-y-4">
-                    {/* Rooms */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <BedDouble className="h-4 w-4 text-primary" />
-                        <label className="text-sm font-medium">عدد الغرف</label>
+                          {/* Under Construction */}
+                          <button 
+                            onClick={() => handleSelection('propertyCondition', 'under_construction')} 
+                            className={`group p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all hover:shadow-sm ${filters.propertyCondition === 'under_construction' ? "border-orange-400 bg-orange-50" : "border-gray-200 hover:bg-orange-50/30"}`}
+                          >
+                            <div className={`p-2 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'under_construction' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
+                              <Hammer className="h-5 w-5" />
+                            </div>
+                            <span className="text-xs font-bold">تحت الإنشاء</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex justify-center gap-2">
-                        {["1", "2", "3", "4", "5", "6+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
-                            className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
-                              filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-rooms-desktop-${n}`}
-                          >
-                            {n}
+
+                      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg mt-2">التالي</Button>
+                    </div>
+                  )}
+
+                  {/* ✅✅ Card 2: City with Toggle Logic */}
+                  {activeCard === 2 && (
+                    <div className="space-y-4 animate-in slide-in-from-right-8">
+                      <div className="relative"><Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="ابحث عن مدينة..." value={citySearch} onChange={(e) => setCitySearch(e.target.value)} className="h-12 pr-10 rounded-xl" /></div>
+                      <div className="h-[240px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                        {filteredCities.map(c => (
+                          <button key={c.name} onClick={() => toggleCity(c.name)} className={`py-3 px-2 rounded-lg border text-sm font-bold transition-all ${filters.cities.includes(c.name) ? "bg-primary text-white border-primary" : "bg-white hover:bg-muted border-border"}`}>
+                            {filters.cities.includes(c.name) && <Check className="inline-block w-3 h-3 ml-1" />}{c.name}
                           </button>
                         ))}
                       </div>
+                      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg">التالي</Button>
                     </div>
+                  )}
 
-                    {/* Bathrooms */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Bath className="h-4 w-4 text-primary" />
-                        <label className="text-sm font-medium">عدد الحمامات</label>
-                      </div>
-                      <div className="flex justify-center gap-2">
-                        {["1", "2", "3", "4", "5+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
-                            className={`w-10 h-10 rounded-full border-2 text-sm font-bold transition-all ${
-                              filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-bathrooms-desktop-${n}`}
-                          >
-                            {n}
+                  {/* ✅✅ Card 3: District with Toggle Logic */}
+                  {activeCard === 3 && (
+                    <div className="space-y-4 animate-in slide-in-from-right-8">
+                      <div className="relative"><Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="ابحث عن حي..." value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} className="h-12 pr-10 rounded-xl" /></div>
+                      <div className="h-[240px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                        {filteredDistricts.length > 0 ? filteredDistricts.map(d => (
+                          <button key={d.name} onClick={() => toggleDistrict(d.name)} className={`py-3 px-2 rounded-lg border text-sm font-bold transition-all ${filters.districts.includes(d.name) ? "bg-primary text-white border-primary" : "bg-white hover:bg-muted border-border"}`}>
+                            {filters.districts.includes(d.name) && <Check className="inline-block w-3 h-3 ml-1" />}{d.name}
                           </button>
-                        ))}
+                        )) : <p className="col-span-3 text-center text-muted-foreground py-10">لا توجد نتائج</p>}
                       </div>
+                      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg">التالي</Button>
                     </div>
+                  )}
 
-                    {/* Budget */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Wallet className="h-4 w-4 text-primary" />
-                        <label className="text-sm font-medium">الميزانية</label>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {budgetOptions[filters.transactionType].map((b) => (
-                          <button
-                            key={b.value}
-                            onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
-                            className={`py-2 px-2 rounded-lg border-2 text-xs font-medium transition-all ${
-                              filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-budget-desktop-${b.value}`}
-                          >
-                            {b.label}
-                          </button>
-                        ))}
-                      </div>
+                  {activeCard === 4 && <div className="space-y-4 animate-in slide-in-from-right-8"><div className="grid grid-cols-3 gap-3">{currentPropertyOptions.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => setFilters(f => ({ ...f, propertyType: type.value }))} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${filters.propertyType === type.value ? "border-primary bg-primary/5 text-primary" : "border-border hover:bg-muted/50"}`}><Icon className="h-6 w-6 opacity-70" /><span className="text-xs font-bold text-center">{type.label}</span></button>) })}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg mt-4">التالي</Button></div>}
+
+                  {/* ✅✅✅ Card 5: The Specific Specs Logic (De-Grouped) */}
+                  {activeCard === 5 && renderCard5Content()}
+
+                  {/* Card 6: Budget */}
+                  {activeCard === 6 && (
+                    <div className="space-y-6 animate-in slide-in-from-right-8 flex flex-col justify-center min-h-[400px]">
+                      <div><label className="block text-sm font-medium mb-2">الميزانية المتوقعة</label><div className="grid grid-cols-2 gap-2">{getBudgetOptions().map(b => <button key={b.value} onClick={() => setFilters(f => ({ ...f, maxPrice: b.value }))} className={`py-3 px-2 rounded-lg border text-xs font-bold transition-all hover:shadow-md ${filters.maxPrice === b.value ? "border-primary bg-primary text-white scale-105" : "border-border hover:bg-muted"}`}>{b.label}</button>)}</div></div>
+                      <div><label className="block text-sm font-medium mb-2 flex items-center gap-2"><Wallet className="h-4 w-4" /> طريقة الشراء</label><div className="grid grid-cols-2 gap-3"><button onClick={() => setFilters(f => ({ ...f, paymentMethod: "cash" }))} className={`p-3 rounded-xl border-2 font-bold ${filters.paymentMethod === "cash" ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>كاش</button><button onClick={() => setFilters(f => ({ ...f, paymentMethod: "finance" }))} className={`p-3 rounded-xl border-2 font-bold ${filters.paymentMethod === "finance" ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>تمويل بنكي</button></div></div>
+                      {filters.paymentMethod === "finance" && (<div className="space-y-3 animate-in fade-in"><label className="block text-sm font-medium mb-1">البنك</label><div className="grid grid-cols-2 gap-2">{SAUDI_BANKS.map(bank => (<button key={bank} onClick={() => setFilters(f => ({...f, bankName: bank}))} className={`py-2 px-1 rounded border text-[10px] font-bold ${filters.bankName === bank ? "bg-primary text-white" : "bg-white"}`}>{bank}</button>))}</div><Input type="number" placeholder="الراتب الشهري" value={filters.salary} onChange={e => setFilters(f => ({...f, salary: e.target.value}))} className="text-center" /></div>)}
+                      <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg">التالي</Button>
                     </div>
+                  )}
 
-                    <Button onClick={goNext} className="w-full h-11 rounded-xl" data-testid="button-next-desktop-5">
-                      التالي
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 7: Additional Details */}
-                {activeCard === 7 && (
-                  <div className="space-y-4">
-                    {/* Features */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">مميزات مطلوبة</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {featureOptions.map((feat) => {
-                          const Icon = feat.icon;
-                          const isSelected = filters.features.includes(feat.value);
-                          return (
-                            <button
-                              key={feat.value}
-                              onClick={() => toggleFeature(feat.value)}
-                              className={`p-2 rounded-lg border-2 flex items-center gap-2 transition-all ${
-                                isSelected ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                              }`}
-                              data-testid={`button-feature-desktop-${feat.value}`}
-                            >
-                              <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                              <span className="text-xs font-medium">{feat.label}</span>
+                  {/* Card 7: Extras (GRANULAR TAGS) */}
+                  {activeCard === 7 && (
+                    <div className="space-y-4 animate-in slide-in-from-right-8">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">مميزات إضافية (اختياري)</label>
+                        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                          {/* ✅ Fetch specific tags dynamically */}
+                          {(SPECIFIC_TAGS[filters.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (
+                            <button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${filters.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>
+                              {filters.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span>
                             </button>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
+                      <Textarea value={filters.notes} onChange={e => setFilters(f => ({ ...f, notes: e.target.value }))} className="h-24 resize-none rounded-xl" placeholder="أو اكتب أي تفاصيل أخرى هنا..." />
+                      <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-lg bg-gradient-to-r from-emerald-600 to-green-500 shadow-lg text-white">إرسال الطلب</Button>
                     </div>
-
-                    {/* Notes */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">ملاحظات إضافية</label>
-                      <Textarea
-                        placeholder="أضف أي تفاصيل إضافية تساعد في إيجاد العقار المناسب..."
-                        value={filters.notes}
-                        onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
-                        className="h-20 resize-none rounded-xl text-sm"
-                        data-testid="textarea-notes-desktop"
-                      />
-                    </div>
-
-                    <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-base gap-2 bg-gradient-to-r from-primary to-green-600" data-testid="button-search-desktop">
-                      <Send className="h-5 w-5" />
-                      إرسال الطلب
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Upcoming Cards Preview */}
-          {cards.slice(activeCard + 1).map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.id}
-                className="absolute inset-x-2 pointer-events-none"
-                style={{
-                  top: `${(activeCard * 40) + 360 + (idx * 20)}px`,
-                  zIndex: -idx - 1,
-                  opacity: 0.5 - (idx * 0.1),
-                }}
-              >
-                <div className="bg-muted/60 rounded-xl p-2.5 flex items-center gap-2 border border-border/40">
-                  <div className={`w-8 h-8 rounded-lg ${card.lightColor} flex items-center justify-center opacity-70`}>
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm text-muted-foreground font-medium">{card.title}</span>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* Chat with Consultant - Inside Form (Desktop) */}
-        <div className="mt-6 pt-4 border-t border-dashed max-w-md mx-auto">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <MessageCircle className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">أو تحدث مع مستشار العقارات</span>
-          </div>
-          <div className="flex items-center gap-3 bg-muted/50 border rounded-full px-4 py-2.5">
-            <Button
-              size="icon"
-              variant="default"
-              onClick={() => {
-                if (consultantMessage.trim()) {
-                  onSwitchToChat?.(consultantMessage.trim());
-                  setConsultantMessage("");
-                } else {
-                  onSwitchToChat?.();
-                }
-              }}
-              className="rounded-full h-9 w-9 flex-shrink-0"
-              data-testid="button-send-consultant-desktop"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-            <input
-              type="text"
-              dir="rtl"
-              value={consultantMessage}
-              onChange={(e) => setConsultantMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && consultantMessage.trim()) {
-                  e.preventDefault();
-                  onSwitchToChat?.(consultantMessage.trim());
-                  setConsultantMessage("");
-                }
-              }}
-              placeholder="اكتب رسالتك هنا..."
-              className="flex-1 bg-transparent border-0 outline-none text-sm px-2"
-              data-testid="input-chat-consultant-desktop"
-            />
+            )}
           </div>
         </div>
       </div>
-      {/* ==================== MOBILE VERSION ==================== */}
+
+      {/* MOBILE VERSION (REPLICATED EXACTLY) */}
       <div className="md:hidden relative px-3 py-3">
-        {/* Match Index - Shows after step 1 */}
-        {activeCard >= 1 && (
-          <div className="mb-2 px-1">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium">مؤشر التطابق</span>
-              <span className="text-xs font-bold text-primary">{reliabilityScore}%</span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-primary to-green-500 rounded-full transition-all duration-300"
-                style={{ width: `${reliabilityScore}%` }}
-              />
-            </div>
-          </div>
-        )}
+        {activeCard >= 1 && (<div className="mb-4 px-1"><div className="flex items-center justify-between mb-1"><span className="text-xs font-medium">{reliabilityScore < 50 ? "بداية..." : "قربنا!"}</span><span className="text-xs font-bold text-green-600">{reliabilityScore}%</span></div><div className="h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700" style={{ width: `${reliabilityScore}%` }} /></div></div>)}
 
-        {/* Stacked Cards Container - Dynamic height based on content */}
-        <div className="relative pt-[0px] pb-[0px]" style={{ minHeight: `${(activeCard * 24) + 320}px` }}>
-          
-          {/* Completed Cards */}
-          {cards.slice(0, activeCard).map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.id}
-                onClick={() => goBack(card.id)}
-                className="absolute inset-x-0 cursor-pointer transition-all duration-200"
-                style={{ top: `${idx * 24}px`, zIndex: idx + 1 }}
-              >
-                <div className={`${card.lightColor} rounded-xl p-2 flex items-center gap-2 border border-primary/20`}>
-                  <div className={`w-6 h-6 rounded-lg ${card.color} flex items-center justify-center`}>
-                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                  </div>
-                  <span className="text-xs font-medium truncate flex-1">{card.title}</span>
-                </div>
+        <div className="relative transition-all duration-500 ease-in-out" style={{ height: `${containerHeightMobile}px` }}>
+          {cards.slice(0, activeCard).map((card, idx) => (
+            <div key={card.id} onClick={() => goBack(card.id)} className="absolute inset-x-0 cursor-pointer z-20" style={{ top: `${idx * MOBILE_HEADER_HEIGHT}px`, height: '50px' }}>
+              <div className={`${card.lightColor} rounded-t-xl border-x border-t border-white/20 shadow-sm h-full flex items-center justify-between px-4`}>
+                <div className="flex items-center gap-2"><div className={`w-6 h-6 rounded-full ${card.color} text-white flex items-center justify-center`}><Check className="w-3.5 h-3.5" /></div><span className="font-bold text-sm">{card.title}</span></div>
+                <div className="flex items-center gap-1 text-primary/80"><Edit2 className="w-3 h-3" /><span className="text-[10px] font-medium">تعديل</span></div>
               </div>
-            );
-          })}
+            </div>
+          ))}
 
-          {/* Active Card */}
-          <div
-            className={`absolute inset-x-0 transition-all duration-200 ${isAnimating ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
-            style={{ top: `${activeCard * 24}px`, zIndex: 10 }}
-          >
-            <div className="bg-card border rounded-xl shadow-md">
-              
-              {/* Card Header */}
-              <div className="flex items-center gap-2 p-2.5 border-b">
-                <div className={`w-8 h-8 rounded-lg ${cards[activeCard].lightColor} flex items-center justify-center`}>
-                  {(() => { const Icon = cards[activeCard].icon; return <Icon className="w-4 h-4 text-primary" />; })()}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm">{cards[activeCard].title}</h3>
-                </div>
-                <span className="text-lg font-bold text-muted-foreground/30">{activeCard + 1}</span>
+          <div className={`absolute inset-x-0 transition-all duration-300 z-10 ${isAnimating ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0"}`} style={{ top: `${activeCard * MOBILE_HEADER_HEIGHT}px` }}>
+            {isAnalyzing ? (
+               <div className="bg-white border shadow-lg rounded-xl p-6 flex flex-col items-center justify-center h-[300px] text-center animate-in fade-in">
+                 <BrainCircuit className="w-8 h-8 text-primary animate-pulse mb-3" />
+                 <h3 className="font-bold">جاري المطابقة...</h3>
+               </div>
+            ) : (
+            <div className="bg-white border shadow-lg rounded-xl overflow-hidden pb-3">
+              <div className="flex items-center justify-between p-3 border-b bg-muted/10">
+                <div className="flex items-center gap-2"><div className={`w-8 h-8 rounded-lg ${cards[activeCard]?.lightColor || 'bg-gray-100'} flex items-center justify-center`}>{(() => { if (!cards[activeCard]) return null; const Icon = cards[activeCard].icon; return Icon ? <Icon className="w-4 h-4 text-primary" /> : null; })()}</div><h3 className="font-bold text-sm">{cards[activeCard]?.title}</h3></div>
+                <span className="text-xs text-muted-foreground">{activeCard + 1} / {totalCards}</span>
               </div>
 
-              {/* Card Content */}
-              <div className="p-2.5">
-                
-                {/* Step 0: Personal */}
+              <div className="p-4">
+                {/* Mobile Card 0: Improved UI with 2 Big Cards (Same as Desktop) */}
                 {activeCard === 0 && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="الاسم"
-                      value={filters.name}
-                      onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))}
-                      className="h-9 text-sm text-center rounded-lg"
-                      data-testid="input-name"
-                    />
-                    <div>
-                      <Input
-                        type="tel"
-                        placeholder="رقم الجوال"
-                        value={filters.phone}
-                        onChange={(e) => handlePhoneChange(e.target.value)}
-                        className={`h-9 text-sm text-center rounded-lg ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                        dir="ltr"
-                        data-testid="input-phone"
-                      />
-                      {phoneError && (
-                        <p className="text-[10px] text-red-500 mt-0.5 text-center">{phoneError}</p>
-                      )}
-                      {isPhoneValid && (
-                        <p className="text-[10px] text-green-500 mt-0.5 text-center flex items-center justify-center gap-0.5">
-                          <Check className="h-2.5 w-2.5" /> صحيح
-                        </p>
-                      )}
-                    </div>
-                    <div className="pb-14" />
-                  </div>
-                )}
+                  <div className="space-y-3 animate-in slide-in-from-right-4">
+                    <Input placeholder="الاسم" value={filters.name} onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))} className="h-10 text-center rounded-lg" />
+                    <Input type="tel" placeholder="05xxxxxxxx" value={filters.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-10 text-center rounded-lg ${phoneError ? 'border-red-500' : ''}`} dir="ltr" />
+                    <Input type="email" placeholder="email@example.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-10 text-center rounded-lg" dir="ltr" />
 
-                {/* Floating Next Button for Step 0 */}
-                {activeCard === 0 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-0">
-                      التالي
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 1: Type */}
-                {activeCard === 1 && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { v: "sale", l: "شراء", icon: Home },
-                        { v: "rent", l: "إيجار", icon: Building2 }
-                      ].map(t => (
-                        <button
-                          key={t.v}
-                          onClick={() => setFilters(f => ({ ...f, transactionType: t.v as "sale" | "rent", maxPrice: "" }))}
-                          className={`p-2.5 rounded-lg border-2 text-center transition-all ${
-                            filters.transactionType === t.v ? "border-primary bg-primary/10" : "border-border"
-                          }`}
-                          data-testid={`button-filter-${t.v}`}
+                    <div className="mt-2">
+                      <label className="text-xs font-medium mb-2 block text-center">تصنيف العقار المطلوب</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Residential Card */}
+                        <div 
+                          onClick={() => handleSelection('propertyCategory', 'residential')}
+                          className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 h-28 ${filters.propertyCategory === 'residential' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-gray-200 bg-white'}`}
                         >
-                          <t.icon className={`h-5 w-5 mx-auto ${filters.transactionType === t.v ? "text-primary" : "text-muted-foreground"}`} />
-                          <div className="font-bold text-xs mt-1">{t.l}</div>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex justify-center gap-2">
-                      {[
-                        { v: "residential", l: "سكني", I: Home },
-                        { v: "commercial", l: "تجاري", I: Building2 }
-                      ].map(c => (
-                        <button
-                          key={c.v}
-                          onClick={() => setFilters(f => ({ ...f, propertyCategory: c.v as "residential" | "commercial", propertyType: "" }))}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded-full border-2 text-xs transition-all ${
-                            filters.propertyCategory === c.v ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                          }`}
-                          data-testid={`button-category-${c.v}`}
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors ${filters.propertyCategory === 'residential' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-600'}`}>
+                            <Armchair className="h-5 w-5" />
+                          </div>
+                          <div className="text-center">
+                            <span className="block font-bold text-sm">سكني</span>
+                            <span className="text-[9px] text-muted-foreground">فلل، شقق</span>
+                          </div>
+                        </div>
+
+                        {/* Commercial Card */}
+                        <div 
+                          onClick={() => handleSelection('propertyCategory', 'commercial')}
+                          className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all duration-300 active:scale-95 h-28 ${filters.propertyCategory === 'commercial' ? 'border-amber-500 bg-amber-50 ring-1 ring-amber-200' : 'border-gray-200 bg-white'}`}
                         >
-                          <c.I className="h-3 w-3" />
-                          {c.l}
-                        </button>
-                      ))}
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors ${filters.propertyCategory === 'commercial' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-600'}`}>
+                            <Briefcase className="h-5 w-5" />
+                          </div>
+                          <div className="text-center">
+                            <span className="block font-bold text-sm">تجاري</span>
+                            <span className="text-[9px] text-muted-foreground">مكاتب، معارض</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="pb-14" />
+
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg mt-2">التالي</Button>
                   </div>
                 )}
 
-                {/* Floating Next Button for Step 1 */}
+                {/* Mobile Card 1: Improved Transaction Selection */}
                 {activeCard === 1 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-1">
-                      التالي
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 2: City - Smart Map */}
-                {activeCard === 2 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
-                    
-                    {/* Selected Cities */}
-                    {filters.cities.length > 0 && (
-                      <div className="flex flex-wrap gap-1 justify-center">
-                        {filters.cities.map(c => (
-                          <Badge key={c} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
-                            {c}
-                            <button onClick={() => toggleCity(c)}>
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="relative">
-                      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                      <Input
-                        placeholder="ابحث عن مدينة..."
-                        value={citySearch}
-                        onChange={(e) => setCitySearch(e.target.value)}
-                        className="h-8 pr-7 text-xs rounded-lg"
-                        data-testid="input-city-search"
-                      />
-                    </div>
-
-                    {/* Map with selected cities */}
-                    <div className="h-[140px] rounded-lg overflow-hidden border border-border">
-                      <MapContainer
-                        center={[cityMapCenter.lat, cityMapCenter.lng]}
-                        zoom={filters.cities.length > 0 ? 8 : 5}
-                        style={{ height: "100%", width: "100%" }}
-                        zoomControl={false}
-                      >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <MapCenterChanger 
-                          center={[cityMapCenter.lat, cityMapCenter.lng]} 
-                          zoom={filters.cities.length > 0 ? 8 : 5} 
-                        />
-                        {/* Show only selected cities as markers */}
-                        {filters.cities.map(cityName => {
-                          const city = saudiCities.find(c => c.name === cityName);
-                          if (!city) return null;
-                          return (
-                            <CityMarker
-                              key={city.name}
-                              city={city}
-                              isSelected={true}
-                              onToggle={toggleCity}
-                            />
-                          );
-                        })}
-                      </MapContainer>
-                    </div>
-
-                    {/* Cities Grid - All cities with scroll */}
-                    <div className="max-h-[120px] overflow-y-auto border rounded-lg p-1.5">
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {filteredCities.map((city) => {
-                          const isSelected = filters.cities.includes(city.name);
-                          return (
-                            <button
-                              key={city.name}
-                              onClick={() => toggleCity(city.name)}
-                              className={`py-1.5 px-2 rounded-lg border text-[11px] font-medium transition-all flex items-center justify-center gap-1 ${
-                                isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                              }`}
-                              data-testid={`button-city-${city.name}`}
-                            >
-                              {isSelected && <Check className="h-3 w-3" />}
-                              <span className="truncate">{city.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="pb-14" />
-                  </div>
-                )}
-
-                {/* Floating Next Button for Step 2 */}
-                {activeCard === 2 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-2">
-                      {filters.cities.length > 0 ? `التالي (${filters.cities.length})` : "اختر مدينة"}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 3: District - Smart Map */}
-                {activeCard === 3 && filters.cities.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-muted-foreground text-center">انقر على الدبابيس للتحديد</p>
-                    
-                    {/* Selected Districts */}
-                    {filters.districts.length > 0 && (
-                      <div className="flex flex-wrap gap-1 justify-center">
-                        {filters.districts.map(d => (
-                          <Badge key={d} variant="secondary" className="text-[10px] gap-0.5 pl-1.5 py-0">
-                            {d}
-                            <button onClick={() => toggleDistrict(d)}>
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="relative">
-                      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                      <Input
-                        placeholder="ابحث عن حي..."
-                        value={districtSearch}
-                        onChange={(e) => setDistrictSearch(e.target.value)}
-                        className="h-8 pr-7 text-xs rounded-lg"
-                        data-testid="input-district-search"
-                      />
-                    </div>
-
-                    {/* Map with all districts + preferred location */}
-                    <div className="h-[140px] rounded-lg overflow-hidden border border-border">
-                      <MapContainer
-                        center={[districtMapCenter.lat, districtMapCenter.lng]}
-                        zoom={11}
-                        style={{ height: "100%", width: "100%" }}
-                        zoomControl={false}
-                      >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                        <MapCenterChanger center={[districtMapCenter.lat, districtMapCenter.lng]} zoom={11} />
-                        {/* Show only selected districts as markers */}
-                        {filters.districts.map(districtName => {
-                          const data = neighborhoodCoords.get(districtName);
-                          if (!data) return null;
-                          return (
-                            <DistrictMarker
-                              key={districtName}
-                              name={districtName}
-                              cityName={data.cityName}
-                              coords={{ lat: data.lat, lng: data.lng }}
-                              isSelected={true}
-                              onToggle={toggleDistrict}
-                            />
-                          );
-                        })}
-                      </MapContainer>
-                    </div>
-
-                    {/* Districts Grid - All districts with scroll */}
-                    <div className="max-h-[100px] overflow-y-auto border rounded-lg p-1.5">
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {filteredDistricts.map((district) => {
-                          const isSelected = filters.districts.includes(district.name);
-                          return (
-                            <button
-                              key={`${district.cityName}-${district.name}`}
-                              onClick={() => toggleDistrict(district.name)}
-                              className={`py-1.5 px-1.5 rounded-lg border text-[10px] font-medium transition-all flex items-center justify-center gap-0.5 ${
-                                isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/50"
-                              }`}
-                              data-testid={`button-district-${district.name}`}
-                            >
-                              {isSelected && <Check className="h-2.5 w-2.5" />}
-                              <span className="truncate">{district.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="pb-14" />
-                  </div>
-                )}
-
-                {/* Floating Next Button for Step 3 */}
-                {activeCard === 3 && filters.cities.length > 0 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-3">
-                      {filters.districts.length > 0 ? `التالي (${filters.districts.length})` : "تخطي"}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 4: Property Type */}
-                {activeCard === 4 && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-4 gap-2">
-                      {propertyTypes.map((type) => {
-                        const Icon = type.icon;
-                        return (
-                          <button
-                            key={type.value}
-                            onClick={() => setFilters(f => ({ ...f, propertyType: f.propertyType === type.value ? "" : type.value }))}
-                            className={`p-3 rounded-xl border-2 text-center transition-all ${
-                              filters.propertyType === type.value ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-type-${type.value}`}
-                          >
-                            <Icon className={`h-7 w-7 mx-auto ${filters.propertyType === type.value ? "text-primary" : "text-muted-foreground"}`} />
-                            <div className="text-xs font-medium mt-1">{type.label}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="pb-14" />
-                  </div>
-                )}
-
-                {/* Floating Next Button for Step 4 */}
-                {activeCard === 4 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-4">
-                      التالي
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 5: Property Condition */}
-                {activeCard === 5 && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: "new", label: "جديد", icon: CheckCircle2 },
-                        { value: "used", label: "مستخدم", icon: Clock },
-                        { value: "under_construction", label: "تحت الإنشاء", icon: Hammer },
-                      ].map((condition) => {
-                        const Icon = condition.icon;
-                        const isSelected = filters.propertyCondition === condition.value;
-                        return (
-                          <button
-                            key={condition.value}
-                            onClick={() => setFilters(f => ({ ...f, propertyCondition: f.propertyCondition === condition.value ? "" : condition.value as any }))}
-                            className={`p-3 rounded-xl border-2 text-center transition-all ${
-                              isSelected ? "border-primary bg-primary/10 shadow-md" : "border-border hover:border-primary/50"
-                            }`}
-                            data-testid={`button-condition-${condition.value}`}
-                          >
-                            <Icon className={`h-7 w-7 mx-auto ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                            <div className="text-xs font-medium mt-1">{condition.label}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="pb-14" />
-                  </div>
-                )}
-
-                {/* Floating Next Button for Step 5 */}
-                {activeCard === 5 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-5">
-                      التالي
-                    </Button>
-                  </div>
-                )}
-
-                {/* Step 6: Specifications */}
-                {activeCard === 6 && (
-                  <div className="space-y-3">
-                    {/* Rooms */}
+                  <div className="space-y-4 animate-in slide-in-from-right-4">
+                    {/* Section 1: Transaction Type */}
                     <div>
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <BedDouble className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-medium">الغرف</span>
-                      </div>
-                      <div className="flex justify-center gap-1.5">
-                        {["1", "2", "3", "4", "5", "6+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setFilters(f => ({ ...f, rooms: f.rooms === n ? "" : n }))}
-                            className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
-                              filters.rooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                            }`}
-                            data-testid={`button-rooms-${n}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
+                      <label className="text-xs font-medium mb-2 block">الهدف من الطلب</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div 
+                          onClick={() => handleSelection('transactionType', 'sale')}
+                          className={`group cursor-pointer rounded-lg border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all h-28 ${filters.transactionType === 'sale' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                        >
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${filters.transactionType === 'sale' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <FileSignature className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs font-bold">شراء</span>
+                        </div>
+
+                        <div 
+                          onClick={() => handleSelection('transactionType', 'rent')}
+                          className={`cursor-pointer rounded-lg border-2 p-3 flex flex-col items-center justify-center gap-2 transition-all h-28 ${filters.transactionType === 'rent' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                        >
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${filters.transactionType === 'rent' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Key className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs font-bold">إيجار</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Bathrooms */}
+                    <div className="border-t border-dashed" />
+
+                    {/* Section 2: Property Condition */}
                     <div>
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Bath className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-medium">الحمامات</span>
-                      </div>
-                      <div className="flex justify-center gap-1.5">
-                        {["1", "2", "3", "4", "5+"].map((n) => (
-                          <button
-                            key={n}
-                            onClick={() => setFilters(f => ({ ...f, bathrooms: f.bathrooms === n ? "" : n }))}
-                            className={`w-8 h-8 rounded-full border-2 text-xs font-bold transition-all ${
-                              filters.bathrooms === n ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                            }`}
-                            data-testid={`button-bathrooms-${n}`}
-                          >
-                            {n}
-                          </button>
-                        ))}
+                      <label className="text-xs font-medium mb-2 block">حالة العقار المفضل</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* New */}
+                        <button 
+                          key="new"
+                          onClick={() => handleSelection('propertyCondition', 'new')} 
+                          className={`group p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${filters.propertyCondition === 'new' ? "border-amber-400 bg-amber-50" : "border-gray-200"}`}
+                        >
+                          <div className={`p-1.5 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'new' ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                          <span className="text-[10px] font-bold">جديد</span>
+                        </button>
+
+                        {/* Used */}
+                        <button 
+                          key="used"
+                          onClick={() => handleSelection('propertyCondition', 'used')} 
+                          className={`group p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${filters.propertyCondition === 'used' ? "border-purple-400 bg-purple-50" : "border-gray-200"}`}
+                        >
+                          <div className={`p-1.5 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'used' ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-500'}`}>
+                            <Clock className="h-4 w-4" />
+                          </div>
+                          <span className="text-[10px] font-bold">مستخدم</span>
+                        </button>
+
+                        {/* Under Construction */}
+                        <button 
+                          key="under_construction"
+                          onClick={() => handleSelection('propertyCondition', 'under_construction')} 
+                          className={`group p-2 rounded-lg border flex flex-col items-center gap-1 transition-all ${filters.propertyCondition === 'under_construction' ? "border-orange-400 bg-orange-50" : "border-gray-200"}`}
+                        >
+                          <div className={`p-1.5 rounded-full transition-transform group-hover:scale-110 ${filters.propertyCondition === 'under_construction' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
+                            <Hammer className="h-4 w-4" />
+                          </div>
+                          <span className="text-[10px] font-bold">تحت الإنشاء</span>
+                        </button>
                       </div>
                     </div>
 
-                    {/* Budget */}
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Wallet className="h-3.5 w-3.5 text-primary" />
-                        <span className="text-xs font-medium">الميزانية</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {budgetOptions[filters.transactionType].map((b) => (
-                          <button
-                            key={b.value}
-                            onClick={() => setFilters(f => ({ ...f, maxPrice: f.maxPrice === b.value ? "" : b.value }))}
-                            className={`py-1.5 px-1 rounded-lg border text-[10px] font-medium transition-all ${
-                              filters.maxPrice === b.value ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                            }`}
-                            data-testid={`button-budget-${b.value}`}
-                          >
-                            {b.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pb-14" />
+                    <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg mt-2">التالي</Button>
                   </div>
                 )}
 
-                {/* Floating Next Button for Step 6 */}
-                {activeCard === 6 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={goNext} className="w-full h-10 rounded-xl text-sm shadow-lg" data-testid="button-next-6">
-                      التالي
-                    </Button>
-                  </div>
-                )}
+                {/* ✅✅ Card 2: City with Toggle Logic */}
+                {activeCard === 2 && <div className="space-y-3 animate-in slide-in-from-right-4">{filters.cities.length > 0 && <div className="flex flex-wrap gap-1 justify-center">{filters.cities.map(c => <Badge key={c} variant="secondary" className="px-2 py-0.5 text-[10px]">{c} <X className="h-2.5 w-2.5 mr-1" onClick={() => toggleCity(c)} /></Badge>)}</div>}<div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={citySearch} onChange={e => setCitySearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5"><div className="grid grid-cols-3 gap-2">{filteredCities.map(c => { const isSelected = filters.cities.includes(c.name); return (<button key={c.name} onClick={() => toggleCity(c.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<span className="truncate">{c.name}</span></button>); })}</div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
-                {/* Step 7: Additional Details */}
-                {activeCard === 7 && (
-                  <div className="space-y-3">
-                    {/* Features */}
-                    <div>
-                      <span className="text-xs font-medium mb-1.5 block">مميزات مطلوبة</span>
-                      <div className="grid grid-cols-3 gap-1">
-                        {featureOptions.map((feat) => {
-                          const Icon = feat.icon;
-                          const isSelected = filters.features.includes(feat.value);
-                          return (
-                            <button
-                              key={feat.value}
-                              onClick={() => toggleFeature(feat.value)}
-                              className={`p-1.5 rounded-lg border flex items-center gap-1 transition-all ${
-                                isSelected ? "border-primary bg-primary/10" : "border-border"
-                              }`}
-                              data-testid={`button-feature-${feat.value}`}
-                            >
-                              <Icon className={`h-3 w-3 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                              <span className="text-[9px] font-medium">{feat.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                {/* ✅✅ Card 3: District with Toggle Logic */}
+                {activeCard === 3 && <div className="space-y-3 animate-in slide-in-from-right-4">{filters.districts.length > 0 && <div className="flex flex-wrap gap-1 justify-center">{filters.districts.map(d => <Badge key={d} variant="secondary" className="text-[10px]">{d} <X className="h-2.5 w-2.5 mr-1" onClick={() => toggleDistrict(d)} /></Badge>)}</div>}<div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5">{filteredDistricts.length > 0 ? (<div className="grid grid-cols-3 gap-2">{filteredDistricts.map(d => { const isSelected = filters.districts.includes(d.name); return (<button key={`${d.cityName}-${d.name}`} onClick={() => toggleDistrict(d.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<div className="flex flex-col items-center overflow-hidden w-full"><span className="truncate w-full">{d.name}</span><span className="text-[8px] opacity-70 font-normal truncate w-full">{d.cityName}</span></div></button>); })}</div>) : (<div className="h-full flex flex-col items-center justify-center text-muted-foreground"><MapPin className="h-6 w-6 mb-2 opacity-20" /><p className="text-xs">لا توجد أحياء مطابقة</p></div>)}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
-                    {/* Notes */}
-                    <div>
-                      <span className="text-xs font-medium mb-1.5 block">ملاحظات</span>
-                      <Textarea
-                        placeholder="أضف تفاصيل إضافية..."
-                        value={filters.notes}
-                        onChange={(e) => setFilters(f => ({ ...f, notes: e.target.value }))}
-                        className="h-16 resize-none rounded-lg text-xs"
-                        data-testid="textarea-notes"
-                      />
-                    </div>
+                {activeCard === 4 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="grid grid-cols-4 gap-2">{propertyTypes.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => handleSelection('propertyType', type.value)} className={`p-2 rounded-lg border flex flex-col items-center gap-1 transition-transform active:scale-95 ${filters.propertyType === type.value ? "border-primary bg-primary/5 scale-105" : "border-border"}`}><Icon className="h-5 w-5" /><span className="text-[10px] font-bold text-center">{type.label}</span></button>)})}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
-                    <div className="pb-14" />
-                  </div>
-                )}
+                {/* ✅✅ Card 5 Mobile: REUSED RENDER FUNCTION */}
+                {activeCard === 5 && renderCard5Content()}
 
-                {/* Floating Submit Button for Step 7 */}
-                {activeCard === 7 && (
-                  <div className="fixed bottom-4 left-3 right-3 z-50">
-                    <Button onClick={handleSearch} className="w-full h-10 rounded-xl text-sm gap-1.5 bg-gradient-to-r from-primary to-green-600 shadow-lg" data-testid="button-search">
-                      <Send className="h-4 w-4" />
-                      إرسال الطلب
-                    </Button>
-                  </div>
-                )}
+                {/* Mobile Card 6 */}
+                {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">الميزانية</label><div className="grid grid-cols-2 gap-1.5">{getBudgetOptions().map(b => <button key={b.value} onClick={() => setFilters(f => ({ ...f, maxPrice: b.value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${filters.maxPrice === b.value ? "bg-primary text-white" : "border-border"}`}>{b.label}</button>)}</div></div><div><label className="text-xs font-medium mb-1.5 block">طريقة الشراء</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentMethod', 'cash')} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش</button><button onClick={() => handleSelection('paymentMethod', 'finance', false)} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>تمويل بنكي</button></div></div>{filters.paymentMethod === "finance" && (<div className="space-y-2"><label className="text-xs font-medium mb-1.5 block">البنك</label><div className="grid grid-cols-2 gap-1.5">{SAUDI_BANKS.map(bank => (<button key={bank} onClick={() => setFilters(f => ({ ...f, bankName: bank }))} className={`py-1.5 px-1 rounded border text-[9px] font-bold ${filters.bankName === bank ? "bg-primary text-white" : "border-border"}`}>{bank}</button>))}</div><Input type="number" placeholder="الراتب" value={filters.salary} onChange={e => setFilters(f => ({ ...f, salary: e.target.value }))} className="h-9 text-center" /></div>)}<Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
+
+                {/* Mobile Card 7 */}
+                {activeCard === 7 && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">تفاصيل إضافية</label>
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">{(SPECIFIC_TAGS[filters.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (
+                  <button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${filters.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>
+                    {filters.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span>
+                  </button>
+                ))}</div>
+                <Textarea value={filters.notes} onChange={e => setFilters(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSearch} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">إرسال الطلب</Button></div>}
               </div>
             </div>
-          </div>
-
-          {/* Upcoming Cards Preview */}
-          {cards.slice(activeCard + 1).map((card, idx) => {
-            const Icon = card.icon;
-            return (
-              <div
-                key={card.id}
-                className="absolute inset-x-1 pointer-events-none"
-                style={{
-                  top: `${(activeCard * 24) + (activeCard >= 2 ? 360 : 240) + (idx * 14)}px`,
-                  zIndex: -idx - 1,
-                  opacity: 0.4 - (idx * 0.1),
-                }}
-              >
-                <div className="bg-muted/50 rounded-lg p-1.5 flex items-center gap-1.5 border border-border/30">
-                  <div className={`w-5 h-5 rounded ${card.lightColor} flex items-center justify-center opacity-60`}>
-                    <Icon className="w-3 h-3 text-muted-foreground" />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{card.title}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Chat with Consultant - Inside Form */}
-        <div className="mt-3 pt-3 border-t border-dashed">
-          <div className="flex items-center justify-center gap-1.5 mb-2">
-            <MessageCircle className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">أو تحدث مع مستشار العقارات</span>
-          </div>
-          <div className="flex items-center gap-2 bg-muted/50 border rounded-full px-3 py-2">
-            <Button
-              size="icon"
-              variant="default"
-              onClick={() => {
-                if (consultantMessage.trim()) {
-                  onSwitchToChat?.(consultantMessage.trim());
-                  setConsultantMessage("");
-                } else {
-                  onSwitchToChat?.();
-                }
-              }}
-              className="rounded-full h-7 w-7 flex-shrink-0"
-              data-testid="button-send-consultant"
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
-            <input
-              type="text"
-              dir="rtl"
-              value={consultantMessage}
-              onChange={(e) => setConsultantMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && consultantMessage.trim()) {
-                  e.preventDefault();
-                  onSwitchToChat?.(consultantMessage.trim());
-                  setConsultantMessage("");
-                }
-              }}
-              placeholder="اكتب رسالتك هنا..."
-              className="flex-1 bg-transparent border-0 outline-none text-xs px-2"
-              data-testid="input-chat-consultant"
-            />
+            )}
           </div>
         </div>
       </div>

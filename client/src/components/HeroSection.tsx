@@ -2,166 +2,53 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Send, Sparkles, Check, Users, Image, X, MapPin, TrendingUp, Brain, Eye, Zap, ArrowRight, Mic, MicOff, Loader2, ArrowDown, FileText, Handshake, MessageCircle } from "lucide-react";
+import { Building2, Sparkles, Check, Users, FileText, Handshake, Brain, Eye, Zap, ArrowRight, Image, X, MapPin, MessageCircle, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { FileUploadButton } from "./FileUploadButton";
 import { LocationPicker } from "./LocationPicker";
 import { SaudiMap } from "./SaudiMap";
 import { findCityInText } from "@shared/saudi-locations";
 import { getShuffledExamples, markExampleViewed, type Example } from "@/data/examples";
 import { useLocation } from "wouter";
-import { ReliabilityScore, calculateReliabilityScore, getMissingFieldsForScore } from "./ReliabilityScore";
 import { AdvancedSearchForm } from "./AdvancedSearchForm";
 import { ListPropertyForm } from "./ListPropertyForm";
-import { TypewriterBanner } from "./TypewriterBanner";
-import { FullScreenChat } from "./FullScreenChat";
-
-interface AIAnalysisResult {
-  success: boolean;
-  role: "buyer" | "seller" | "investor" | null;
-  intent: "question" | "data" | "greeting" | "other";
-  assistantReply: string | null;
-  data: {
-    name: string | null;
-    phone: string | null;
-    email: string | null;
-    city: string | null;
-    districts: string[];
-    propertyType: string | null;
-    transactionType: string | null;
-    budgetMin: number | null;
-    budgetMax: number | null;
-    paymentMethod: string | null;
-    purchasePurpose: string | null;
-    purchaseTimeline: string | null;
-    clientType: string | null;
-    area: number | null;
-    rooms: number | null;
-    floor: number | null;
-    additionalNotes: string | null;
-  };
-  confidence: number;
-  classificationTags: string[];
-  missingFields: string[];
-}
 
 type UserMode = "buyer" | "seller" | "investor";
-
-// Helper function for friendly Saudi-style messages
-type MessageType = "greeting" | "missingInfo" | "confirmation" | "success" | "modeSwitch";
-
-const formatFriendlyMessage = (
-  type: MessageType,
-  mode: UserMode,
-  name?: string,
-  missingFields?: string[]
-): string => {
-  // Get first name only for more personal greeting
-  const firstName = name ? name.split(" ")[0] : "";
-  const greeting = firstName ? `يا ${firstName}` : "يا غالي";
-  
-  switch (type) {
-    case "greeting":
-      return firstName 
-        ? `حياك الله ${greeting}، وش أقدر أساعدك فيه اليوم؟`
-        : `حياك الله، وش أقدر أساعدك فيه اليوم؟`;
-    
-    case "missingInfo":
-      const fieldsList = missingFields?.join(" و ") || "";
-      if (mode === "buyer") {
-        return firstName
-          ? `طيب ${greeting}، عشان أقدر أبحث لك العقار المناسب، أحتاج منك ${fieldsList}`
-          : `طيب يا غالي، عشان أبحث لك العقار المناسب، أحتاج منك ${fieldsList}`;
-      } else if (mode === "seller") {
-        return firstName
-          ? `تمام ${greeting}، عشان أوصّل عقارك للمشترين المناسبين، باقي عندي ${fieldsList}`
-          : `تمام يا غالي، عشان أوصّل عقارك للمشترين المناسبين، باقي عندي ${fieldsList}`;
-      } else {
-        return firstName
-          ? `حلو ${greeting}، عشان أرسل لك أفضل الفرص الاستثمارية، أحتاج منك ${fieldsList}`
-          : `حلو يا غالي، عشان أرسل لك أفضل الفرص الاستثمارية، أحتاج منك ${fieldsList}`;
-      }
-    
-    case "confirmation":
-      return firstName
-        ? `تمام ${greeting}، راجع البيانات وإذا كل شي صحيح قل لي "موافق"`
-        : `تمام، راجع البيانات وإذا كل شي صحيح قل لي "موافق"`;
-    
-    case "success":
-      if (mode === "buyer") {
-        return firstName
-          ? `تم ${greeting}، سجلنا طلبك وإن شاء الله أول ما نلقى عقار يناسبك بنتواصل معك`
-          : `تم يا غالي، سجلنا طلبك وإن شاء الله أول ما نلقى عقار يناسبك بنتواصل معك`;
-      } else if (mode === "seller") {
-        return firstName
-          ? `تم ${greeting}، سجلنا عقارك وإن شاء الله أول ما نلقى مشتري مناسب بنتواصل معك`
-          : `تم يا غالي، سجلنا عقارك وإن شاء الله أول ما نلقى مشتري مناسب بنتواصل معك`;
-      } else {
-        return firstName
-          ? `تم ${greeting}، سجلنا اهتمامك وإن شاء الله أول ما تطلع فرصة استثمارية مناسبة بنتواصل معك`
-          : `تم يا غالي، سجلنا اهتمامك وإن شاء الله أول ما تطلع فرصة استثمارية مناسبة بنتواصل معك`;
-      }
-    
-    case "modeSwitch":
-      return `يبدو أنك تبي تعرض عقار للبيع، تبيني أحولك لوضع البائع؟`;
-    
-    default:
-      return "";
-  }
-};
 
 export default function HeroSection() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<UserMode>("buyer");
-  const [inputText, setInputText] = useState("");
-  const [conversation, setConversation] = useState<Array<{type: "user" | "system", text: string}>>([]);
-  const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [extractedData, setExtractedData] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  const [showMicTooltip, setShowMicTooltip] = useState(false);
-  const [pendingConfirmation, setPendingConfirmation] = useState(false);
-  const [pendingData, setPendingData] = useState<Record<string, string>>({});
-  const [confirmationFields, setConfirmationFields] = useState<Array<{label: string, value: string, isCheck?: boolean}>>([]);
-  const [aiConfidence, setAiConfidence] = useState<number>(0);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [shuffledExamples, setShuffledExamples] = useState<Example[]>(() => getShuffledExamples("buyer"));
-  const [isFullScreenChat, setIsFullScreenChat] = useState(false);
   const [showSearchForm, setShowSearchForm] = useState(true);
   const [mapMarkers, setMapMarkers] = useState<Array<{city: string; lat: number; lng: number}>>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-    
-  // Live counters for social proof (herd effect) - synced from server
+
+  // Live counters
   const [liveViewers, setLiveViewers] = useState(0);
   const [requestsToday, setRequestsToday] = useState(0);
   const [dealsToday, setDealsToday] = useState(0);
-  
-  // Animation states for counter changes
+
+  // Animation states
   const [viewersAnimating, setViewersAnimating] = useState(false);
   const [requestsAnimating, setRequestsAnimating] = useState(false);
   const [dealsAnimating, setDealsAnimating] = useState(false);
   const prevViewersRef = useRef(0);
   const prevRequestsRef = useRef(0);
   const prevDealsRef = useRef(0);
-  
-  // Fetch stats from server (same for all users)
+
+  // Fetch stats
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/stats/daily');
       if (response.ok) {
         const data = await response.json();
-        
-        // Trigger animations if values changed
+
         if (data.viewers !== prevViewersRef.current && prevViewersRef.current !== 0) {
           setViewersAnimating(true);
           setTimeout(() => setViewersAnimating(false), 600);
@@ -174,11 +61,11 @@ export default function HeroSection() {
           setDealsAnimating(true);
           setTimeout(() => setDealsAnimating(false), 600);
         }
-        
+
         prevViewersRef.current = data.viewers;
         prevRequestsRef.current = data.requests;
         prevDealsRef.current = data.deals;
-        
+
         setLiveViewers(data.viewers);
         setRequestsToday(data.requests);
         setDealsToday(data.deals);
@@ -187,92 +74,29 @@ export default function HeroSection() {
       console.error('Error fetching stats:', error);
     }
   };
-  
-  // Initialize and poll stats from server
+
   useEffect(() => {
-    // Fetch immediately
     fetchStats();
-    
-    // Poll every 10 seconds (server handles deterministic calculation)
     const statsInterval = setInterval(fetchStats, 10000);
-    
-    return () => {
-      clearInterval(statsInterval);
-    };
+    return () => clearInterval(statsInterval);
   }, []);
 
-  // Track if user initiated a send (to know when to refocus)
-  const userSentMessage = useRef(false);
-  
-  // Auto-scroll to bottom when conversation updates - NO auto-focus (causes keyboard issues on mobile)
-  useEffect(() => {
-    // Scroll to bottom after each new message
-    if (messagesEndRef.current && (conversation.length > 0 || isTyping)) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 50);
-    }
-    
-    // Only refocus if user manually sent a message (not on AI response)
-    if (userSentMessage.current && !isTyping && isFullScreenChat && !isComplete) {
-      userSentMessage.current = false;
-      // Delay focus to let keyboard settle
-      setTimeout(() => {
-        inputRef.current?.focus({ preventScroll: true });
-      }, 150);
-    }
-  }, [conversation, isTyping, isFullScreenChat, isComplete]);
-
-  // Set --vh variable for iOS viewport height fix
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-    setVh();
-    window.addEventListener('resize', setVh);
-    // Also update on orientation change
-    window.addEventListener('orientationchange', setVh);
-    return () => {
-      window.removeEventListener('resize', setVh);
-      window.removeEventListener('orientationchange', setVh);
-    };
-  }, []);
-
-  // Lock body scroll when fullscreen chat is active - using overflow only (not position:fixed which breaks keyboard)
-  useEffect(() => {
-    if (isFullScreenChat) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isFullScreenChat]);
-
-  
-  // Get current example based on index from shuffled examples
   const currentExample = shuffledExamples[exampleIndex % shuffledExamples.length];
   const exampleSegments = currentExample?.segments || [];
   const fullExampleText = currentExample?.fullText || "";
-  
-  // No interval needed - rotation happens after typewriter finishes + 3 second delay
-  
-  // Reset example index and get new shuffled examples when mode changes
+
   useEffect(() => {
     setExampleIndex(0);
     setMapMarkers([]);
     setShuffledExamples(getShuffledExamples(mode));
   }, [mode]);
-  
-  // Mark current example as viewed when it's shown
+
   useEffect(() => {
     if (currentExample?.id) {
       markExampleViewed(mode, currentExample.id);
     }
   }, [currentExample?.id, mode]);
-  
-  // Update map markers when example changes
+
   useEffect(() => {
     const cityData = findCityInText(fullExampleText);
     if (cityData) {
@@ -285,42 +109,6 @@ export default function HeroSection() {
       setMapMarkers([]);
     }
   }, [fullExampleText]);
-  
-  // Add mic hint as a message after first AI response
-  useEffect(() => {
-    if (conversation.length === 2 && !showMicTooltip) {
-      // Mark that we've shown the hint
-      setShowMicTooltip(true);
-      // Add mic hint as a system message after a short delay
-      const timer = setTimeout(() => {
-        setConversation(prev => [
-          ...prev,
-          { type: "system", text: "💡 تقدر تسجل طلبك صوتياً بالضغط على زر المايكروفون وبنحلله لك فوراً!" }
-        ]);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [conversation.length, showMicTooltip]);
-
-  const buyerMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/buyers/register", data);
-    },
-    onSuccess: () => {
-      setIsComplete(true);
-      toast({
-        title: "تم يا بطل",
-        description: "سجلنا طلبك وإن شاء الله بنتواصل معك قريب",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "عذراً",
-        description: "صار خطأ، جرب مرة ثانية",
-        variant: "destructive",
-      });
-    },
-  });
 
   const sellerMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -342,2139 +130,227 @@ export default function HeroSection() {
     },
   });
 
-  const investorMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/investors/register", data);
-    },
-    onSuccess: () => {
-      setIsComplete(true);
-      toast({
-        title: "تم يا بطل",
-        description: "سجلنا اهتمامك وبنرسل لك أفضل الفرص الاستثمارية",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "عذراً",
-        description: "صار خطأ، جرب مرة ثانية",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const aiAnalysisMutation = useMutation({
-    mutationFn: async ({ text, context }: { text: string; context?: Record<string, any> }): Promise<AIAnalysisResult> => {
-      const res = await apiRequest("POST", "/api/intake/analyze", { text, context });
-      return res.json();
-    },
-  });
-
-  // Typewriter example completion handler
   const handleExampleComplete = useCallback(() => {
     setExampleIndex(prev => prev + 1);
   }, []);
 
   const handleModeSwitch = useCallback((newMode: UserMode) => {
     setMode(newMode);
-    setInputText("");
     setUploadedFiles([]);
-    setConversation([]);
     setIsComplete(false);
     setExtractedData({});
     setShowSearchForm(newMode === "buyer");
   }, []);
 
   const handleSearchFormSearch = useCallback((filters: any) => {
-    const queryParts = [];
-    
-    // Add name if provided
-    if (filters.name) queryParts.push(`اسمي ${filters.name}`);
-    
-    // Add phone if provided
-    if (filters.phone) queryParts.push(`جوالي ${filters.phone}`);
-    
-    // Build property query
-    const propertyParts = [];
-    if (filters.location) propertyParts.push(filters.location);
-    if (filters.propertyType) {
-      const types: Record<string, string> = {
-        apartment: "شقة", villa: "فيلا", duplex: "دوبلكس", floor: "دور", 
-        room: "غرفة", chalet: "شاليه", rest_house: "استراحة", townhouse: "تاون هاوس",
-        residential_building: "عمارة سكنية", residential_land: "أرض سكنية",
-        office: "مكتب", commercial_building: "عمارة تجارية", warehouse: "مستودع",
-        commercial_land: "أرض تجارية", industrial_land: "أرض صناعية", farm: "مزرعة",
-        agricultural_land: "أرض زراعية", hotel: "فندق", workshop: "ورشة",
-        factory: "مصنع", school: "مدرسة", health_center: "مركز صحي",
-        station: "محطة", showroom: "معرض"
-      };
-      propertyParts.push(types[filters.propertyType] || filters.propertyType);
-    }
-    if (filters.transactionType === "sale") propertyParts.push("للبيع");
-    else propertyParts.push("للإيجار");
-    if (filters.rooms) propertyParts.push(`${filters.rooms} غرف`);
-    if (filters.minPrice || filters.maxPrice) {
-      if (filters.minPrice && filters.maxPrice) {
-        propertyParts.push(`ميزانية من ${filters.minPrice} إلى ${filters.maxPrice}`);
-      } else if (filters.minPrice) {
-        propertyParts.push(`ميزانية أكثر من ${filters.minPrice}`);
-      } else {
-        propertyParts.push(`ميزانية أقل من ${filters.maxPrice}`);
-      }
-    }
-    if (filters.minArea || filters.maxArea) {
-      if (filters.minArea && filters.maxArea) {
-        propertyParts.push(`مساحة من ${filters.minArea} إلى ${filters.maxArea} متر`);
-      } else if (filters.minArea) {
-        propertyParts.push(`مساحة أكثر من ${filters.minArea} متر`);
-      } else {
-        propertyParts.push(`مساحة أقل من ${filters.maxArea} متر`);
-      }
-    }
-    
-    // Combine all parts
-    if (propertyParts.length > 0) {
-      queryParts.push(`أبحث عن ${propertyParts.join(" - ")}`);
-    }
-    
-    // Map property type to Arabic
-    const types: Record<string, string> = {
-      apartment: "شقة", villa: "فيلا", duplex: "دوبلكس", floor: "دور", 
-      room: "غرفة", chalet: "شاليه", rest_house: "استراحة", townhouse: "تاون هاوس",
-      residential_building: "عمارة سكنية", residential_land: "أرض سكنية",
-      office: "مكتب", commercial_building: "عمارة تجارية", warehouse: "مستودع",
-      commercial_land: "أرض تجارية", industrial_land: "أرض صناعية", farm: "مزرعة",
-      agricultural_land: "أرض زراعية", hotel: "فندق", workshop: "ورشة",
-      factory: "مصنع", school: "مدرسة", health_center: "مركز صحي",
-      station: "محطة", showroom: "معرض"
-    };
-
-    // Parse city and district from location
-    const locationParts = filters.location?.split(" - ") || [];
-    const city = locationParts[0] || filters.location;
-    const district = locationParts[1] || "";
-
-    // Set extracted data and mark as complete
-    setExtractedData({
-      name: filters.name || "",
-      phone: filters.phone || "",
-      city: city || "",
-      district: district || "",
-      propertyType: types[filters.propertyType] || filters.propertyType || "",
-      transactionType: filters.transactionType === "sale" ? "للبيع" : "للإيجار",
-      rooms: filters.rooms || "",
-      budgetMin: filters.minPrice || "",
-      budgetMax: filters.maxPrice || "",
-      area: filters.minArea || filters.maxArea || "",
-    });
-    
-    // Show success toast and go to completion screen
     toast({
       title: "تم استلام طلبك",
       description: "سنتواصل معك قريباً عند توفر عقار مناسب",
     });
-    
     setShowSearchForm(false);
     setIsComplete(true);
   }, [toast]);
 
-  // Memoized callback for ListPropertyForm to prevent re-renders
   const handleListPropertySubmit = useCallback((propertyData: any) => {
     toast({
       title: "تم استلام طلبك",
       description: "سنتواصل معك قريباً لإكمال عرض عقارك",
     });
     setIsComplete(true);
-    setExtractedData({
-      name: propertyData.ownerName,
-      phone: propertyData.ownerPhone,
-      city: propertyData.city,
-      district: propertyData.district,
-      propertyType: propertyData.propertyType,
-      transactionType: propertyData.transactionType,
-      rooms: propertyData.rooms,
-      area: propertyData.area,
-      price: propertyData.price,
-    });
   }, [toast]);
 
-  const handleSwitchToChat = useCallback((initialMessage?: string) => {
-    setShowSearchForm(false);
-    setIsFullScreenChat(true); // Open fullscreen chat
-    if (initialMessage && initialMessage.trim()) {
-      // Add the message directly to conversation and trigger AI response
-      const trimmedMessage = initialMessage.trim();
-      setConversation(prev => [...prev, { type: "user" as const, text: trimmedMessage }]);
-      setIsTyping(true);
-      setIsAnalyzing(true);
-      
-      // Trigger AI response
-      fetch("/api/intake/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text: trimmedMessage, 
-          context: { role: mode } 
-        }),
-      })
-        .then(res => res.json())
-        .then(result => {
-          setIsTyping(false);
-          setIsAnalyzing(false);
-          const reply = result.assistantReply || result.response;
-          if (reply) {
-            setConversation(prev => [...prev, { type: "system" as const, text: reply }]);
-          }
-        })
-        .catch(() => {
-          setIsTyping(false);
-          setIsAnalyzing(false);
-          setConversation(prev => [...prev, { 
-            type: "system" as const, 
-            text: "أهلاً! أنا مستشارك العقاري. كيف يمكنني مساعدتك اليوم؟" 
-          }]);
-        });
-    }
-  }, [mode]);
-
-  // Close fullscreen chat and return to homepage (reset state)
-  const handleCloseFullScreenChat = useCallback(() => {
-    setIsFullScreenChat(false);
-    // Keep conversation for history but reset to show forms
-    setShowSearchForm(true);
-    setPendingConfirmation(false);
-  }, []);
-
-  // Send message in fullscreen chat
-  const handleSendMessageFullScreen = useCallback((message: string) => {
-    if (!message.trim()) return;
-    
-    setConversation(prev => [...prev, { type: "user" as const, text: message }]);
-    setIsTyping(true);
-    setIsAnalyzing(true);
-    
-    fetch("/api/intake/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        text: message, 
-        context: { role: mode } 
-      }),
-    })
-      .then(res => res.json())
-      .then(result => {
-        setIsTyping(false);
-        setIsAnalyzing(false);
-        const reply = result.assistantReply || result.response;
-        if (reply) {
-          setConversation(prev => [...prev, { type: "system" as const, text: reply }]);
-        }
-        // Extract and update data if present
-        if (result.data) {
-          const filteredData = Object.fromEntries(
-            Object.entries(result.data)
-              .filter(([_, v]) => v != null)
-              .map(([k, v]) => [k, String(v)])
-          ) as Record<string, string>;
-          setExtractedData(prev => ({
-            ...prev,
-            ...filteredData
-          }));
-        }
-      })
-      .catch(() => {
-        setIsTyping(false);
-        setIsAnalyzing(false);
-        setConversation(prev => [...prev, { 
-          type: "system" as const, 
-          text: "عذراً، حدث خطأ. حاول مرة أخرى." 
-        }]);
-      });
-  }, [mode]);
-
-  const extractAdditionalNotes = (text: string, matchedPatterns: RegExp[]) => {
-    let remaining = text;
-    matchedPatterns.forEach(pattern => {
-      remaining = remaining.replace(pattern, "");
-    });
-    remaining = remaining.replace(/[،,\s]+/g, " ").trim();
-    if (remaining.length > 3) {
-      return remaining;
-    }
-    return "";
-  };
-
-  // Convert Arabic numerals to English
-  const arabicToEnglish = (str: string): string => {
-    const arabicNumerals = '٠١٢٣٤٥٦٧٨٩';
-    return str.replace(/[٠-٩]/g, d => String(arabicNumerals.indexOf(d)));
-  };
-
-  // Real-time extraction for live preview
-  const extractLiveData = (text: string): { found: { key: string; value: string }[]; missing: string[] } => {
-    const foundMap: Record<string, string> = {};
-    const requiredFields = mode === "buyer" 
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار", "الميزانية", "طريقة الدفع", "توقيت الشراء"]
-      : mode === "seller"
-      ? ["الاسم", "رقم الجوال", "المدينة", "الحي", "نوع العقار"]
-      : ["الاسم", "رقم الجوال", "المدينة", "نوع الاستثمار"];
-    
-    // Normalize text - convert Arabic numbers to English for matching
-    const normalizedText = arabicToEnglish(text);
-    
-    // Extract name - matches Arabic names (2-4 words starting text or after specific keywords)
-    const namePatterns = [
-      /^([أ-ي]{2,}(?:\s+[أ-ي]{2,}){0,3})/,
-      /(?:اسمي|انا|أنا)\s+([أ-ي]{2,}(?:\s+[أ-ي]{2,}){0,3})/i
-    ];
-    for (const pattern of namePatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        foundMap["الاسم"] = match[1].trim();
-        break;
-      }
-    }
-    
-    // Extract phone - support both Arabic and English numerals
-    const phoneMatch = normalizedText.match(/(05\d{8})/);
-    if (phoneMatch) {
-      foundMap["رقم الجوال"] = phoneMatch[1];
-    }
-    
-    // Extract city
-    const cities = ["الرياض", "جدة", "مكة", "المدينة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "القصيم", "الأحساء", "نجران", "جازان", "ينبع", "حائل", "الجبيل", "بريدة", "خميس مشيط", "الظهران", "القطيف"];
-    for (const city of cities) {
-      if (text.includes(city)) {
-        foundMap["المدينة"] = city;
-        break;
-      }
-    }
-    
-    // Extract district/neighborhood - common districts
-    const commonDistricts = ["الصفا", "النزهة", "العليا", "الملز", "السليمانية", "الروضة", "النسيم", "الشفا", "العزيزية", "الحمراء", "المروج", "الياسمين", "الرمال", "النخيل", "الورود", "الفيحاء", "السلامة", "الربوة", "المرسلات", "الفيصلية", "الخالدية", "البوادي", "الزهراء", "السامر", "المحمدية", "الشاطئ", "الكورنيش", "الروابي", "اشبيليا", "غرناطة", "قرطبة", "الملقا", "حطين", "العارض", "النرجس", "طويق", "لبن", "السعادة", "الدار البيضاء"];
-    
-    // First try pattern matching
-    const districtMatch = text.match(/(?:حي|منطقة)\s+([أ-ي\u0621-\u064A\s]{2,20}?)(?:\s|،|$)/i);
-    if (districtMatch) {
-      foundMap["الحي"] = districtMatch[1].trim();
-    } else {
-      // Then try direct match from common districts
-      for (const district of commonDistricts) {
-        if (text.includes(district)) {
-          foundMap["الحي"] = district;
-          break;
-        }
-      }
-    }
-    
-    // Extract property type
-    const propertyTypes = ["شقة", "فيلا", "دوبلكس", "أرض", "عمارة", "استوديو", "دور", "محل", "مكتب", "مستودع", "مزرعة"];
-    for (const type of propertyTypes) {
-      if (text.includes(type)) {
-        foundMap["نوع العقار"] = type;
-        foundMap["نوع الاستثمار"] = type;
-        break;
-      }
-    }
-    
-    // Extract budget/price (for buyers)
-    const budgetMatch = normalizedText.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:ريال|الف|ألف|مليون)?/);
-    if (budgetMatch) {
-      let budget = budgetMatch[1].replace(/,/g, '');
-      const fullMatch = normalizedText.match(/(\d+(?:,\d{3})*(?:\.\d+)?)\s*(الف|ألف|مليون)?/);
-      if (fullMatch && fullMatch[2]) {
-        if (fullMatch[2] === "مليون") {
-          budget = String(parseFloat(budget) * 1000000);
-        } else if (fullMatch[2] === "الف" || fullMatch[2] === "ألف") {
-          budget = String(parseFloat(budget) * 1000);
-        }
-      }
-      foundMap["الميزانية"] = budget + " ريال";
-    }
-    
-    // Extract payment method (cash or financing)
-    if (text.includes("كاش") || text.includes("نقد") || text.includes("نقدي") || text.includes("نقداً")) {
-      foundMap["طريقة الدفع"] = "كاش";
-    } else if (text.includes("تمويل") || text.includes("بنك") || text.includes("قرض") || text.includes("أقساط") || text.includes("اقساط")) {
-      foundMap["طريقة الدفع"] = "تمويل";
-    }
-    
-    // Extract timeline/timing - comprehensive patterns
-    const timelinePatterns = [
-      // فوري/عاجل
-      { pattern: /فور[يا]?|عاجل|سريع|الآن|الان|حالاً|حالا/, value: "فوري" },
-      // خلال أسبوع
-      { pattern: /خلال\s*(اسبوع|أسبوع)|بعد\s*(اسبوع|أسبوع)/, value: "خلال أسبوع" },
-      // خلال شهر
-      { pattern: /خلال\s*شهر|بعد\s*شهر/, value: "خلال شهر" },
-      // شهرين
-      { pattern: /خلال\s*شهرين|بعد\s*شهرين|ممكن\s*شهرين|شهرين/, value: "خلال شهرين" },
-      // 3 أشهر
-      { pattern: /خلال\s*(ثلاث[ة]?\s*[أا]شهر|٣\s*[أا]شهر|3\s*[أا]شهر)|بعد\s*(ثلاث[ة]?\s*[أا]شهر|٣\s*[أا]شهر|3\s*[أا]شهر)|من\s*شهرين\s*(الى|إلى|ل)\s*(٣|3|ثلاث)/, value: "خلال 3 أشهر" },
-      // 6 أشهر
-      { pattern: /خلال\s*(ست[ة]?\s*[أا]شهر|٦\s*[أا]شهر|6\s*[أا]شهر)|بعد\s*(ست[ة]?\s*[أا]شهر|٦\s*[أا]شهر|6\s*[أا]شهر)|نص\s*سنة|نصف\s*سنة/, value: "خلال 6 أشهر" },
-      // خلال سنة
-      { pattern: /خلال\s*سنة|خلال\s*عام|بعد\s*سنة|بعد\s*عام|هذا\s*العام|هذه\s*السنة/, value: "خلال سنة" },
-      // أكثر من سنة
-      { pattern: /بعد\s*(سنتين|عامين)|أكثر\s*من\s*سنة/, value: "أكثر من سنة" },
-      // قريباً (عام)
-      { pattern: /قريب/, value: "قريباً" },
-    ];
-    for (const { pattern, value } of timelinePatterns) {
-      if (pattern.test(text)) {
-        foundMap["توقيت الشراء"] = value;
-        break;
-      }
-    }
-    
-    // Build found array in display order (only relevant fields for current mode)
-    const found: { key: string; value: string }[] = [];
-    for (const field of requiredFields) {
-      if (foundMap[field]) {
-        found.push({ key: field, value: foundMap[field] });
-      }
-    }
-    
-    // Calculate missing fields
-    const missing = requiredFields.filter(field => !foundMap[field]);
-    
-    return { found, missing };
-  };
-
-  const extractBuyerInfo = (text: string) => {
-    const data: Record<string, string> = { ...extractedData };
-    const matchedPatterns: RegExp[] = [];
-    
-    const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) {
-      data.name = nameMatch[1];
-      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    }
-    
-    const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) {
-      data.phone = phoneMatch[1];
-      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    }
-    
-    const cityMatch = text.match(/(?:من|مدينة|في)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    if (cityMatch) {
-      data.city = cityMatch[1];
-      matchedPatterns.push(/(?:من|مدينة|في)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    }
-    
-    const districtMatch = text.match(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    if (districtMatch) {
-      data.district = districtMatch[1];
-      matchedPatterns.push(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    }
-    
-    const typeMatch = text.match(/(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    if (typeMatch) {
-      data.propertyType = typeMatch[1];
-      matchedPatterns.push(/(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    }
-    
-    const budgetMatch = text.match(/(?:الميزانية|ميزانيتي|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    if (budgetMatch) {
-      let amount = parseFloat(budgetMatch[1]);
-      if (budgetMatch[2]?.includes("مليون")) amount *= 1000000;
-      else if (budgetMatch[2]) amount *= 1000;
-      data.budget = amount.toString();
-      matchedPatterns.push(/(?:الميزانية|ميزانيتي|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    }
-    
-    const paymentMatch = text.match(/(كاش|نقد|نقدي|بنك|تمويل|قرض)/i);
-    if (paymentMatch) {
-      data.paymentMethod = paymentMatch[1].match(/كاش|نقد|نقدي/i) ? "cash" : "bank";
-      matchedPatterns.push(/(كاش|نقد|نقدي|بنك|تمويل|قرض)/i);
-    }
-    
-    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
-    if (additionalNotes) {
-      data.additionalNotes = additionalNotes;
-    }
-    
-    return data;
-  };
-
-  const extractSellerInfo = (text: string) => {
-    const data: Record<string, string> = { ...extractedData };
-    const matchedPatterns: RegExp[] = [];
-    
-    const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) {
-      data.name = nameMatch[1];
-      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    }
-    
-    const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) {
-      data.phone = phoneMatch[1];
-      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    }
-    
-    const cityMatch = text.match(/(?:في|مدينة)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    if (cityMatch) {
-      data.city = cityMatch[1];
-      matchedPatterns.push(/(?:في|مدينة)\s+(الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)/i);
-    }
-    
-    const districtMatch = text.match(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    if (districtMatch) {
-      data.district = districtMatch[1];
-      matchedPatterns.push(/(?:حي|منطقة)\s+([^\s,،.]+)/i);
-    }
-    
-    const typeMatch = text.match(/(?:أعرض|اعرض|لدي|عندي)?\s*(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    if (typeMatch) {
-      data.propertyType = typeMatch[1];
-      matchedPatterns.push(/(?:أعرض|اعرض|لدي|عندي)?\s*(شقة|فيلا|دوبلكس|أرض|عمارة|استوديو)/i);
-    }
-    
-    const priceMatch = text.match(/(?:السعر|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    if (priceMatch) {
-      let amount = parseFloat(priceMatch[1]);
-      if (priceMatch[2]?.includes("مليون")) amount *= 1000000;
-      else if (priceMatch[2]) amount *= 1000;
-      data.price = amount.toString();
-      matchedPatterns.push(/(?:السعر|بسعر|بمبلغ)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    }
-    
-    const statusMatch = text.match(/(جاهز|جاهزة|تحت الإنشاء|قيد الإنشاء)/i);
-    if (statusMatch) {
-      data.status = statusMatch[1].includes("جاهز") ? "ready" : "under_construction";
-      matchedPatterns.push(/(جاهز|جاهزة|تحت الإنشاء|قيد الإنشاء)/i);
-    }
-    
-    // Extract coordinates from Google Maps link
-    const mapsLinkMatch = text.match(/(?:maps\.google\.com|google\.com\/maps|goo\.gl\/maps)[^\s]*[?&@](-?\d+\.?\d*)[,/](-?\d+\.?\d*)/i);
-    if (mapsLinkMatch) {
-      data.latitude = mapsLinkMatch[1];
-      data.longitude = mapsLinkMatch[2];
-      matchedPatterns.push(/(?:maps\.google\.com|google\.com\/maps|goo\.gl\/maps)[^\s]*[?&@](-?\d+\.?\d*)[,/](-?\d+\.?\d*)/i);
-    }
-    
-    // Extract coordinates from direct input (e.g., "24.7136, 46.6753" or "24.7136 46.6753")
-    const coordMatch = text.match(/(-?\d{1,3}\.\d{4,})[,\s]+(-?\d{1,3}\.\d{4,})/);
-    if (coordMatch && !mapsLinkMatch) {
-      data.latitude = coordMatch[1];
-      data.longitude = coordMatch[2];
-      matchedPatterns.push(/(-?\d{1,3}\.\d{4,})[,\s]+(-?\d{1,3}\.\d{4,})/);
-    }
-    
-    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
-    if (additionalNotes) {
-      data.additionalNotes = additionalNotes;
-    }
-    
-    return data;
-  };
-
-  const extractInvestorInfo = (text: string) => {
-    const data: Record<string, string> = { ...extractedData };
-    const matchedPatterns: RegExp[] = [];
-    
-    const nameMatch = text.match(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    if (nameMatch) {
-      data.name = nameMatch[1];
-      matchedPatterns.push(/(?:اسمي|انا|أنا)\s+([^\s,،.]+(?:\s+[^\s,،.]+)?)/i);
-    }
-    
-    const phoneMatch = text.match(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    if (phoneMatch) {
-      data.phone = phoneMatch[1];
-      matchedPatterns.push(/(?:جوالي|رقمي|الجوال|هاتفي|موبايلي)?\s*(05\d{8})/);
-    }
-    
-    // Extract multiple cities
-    const citiesMatch = text.match(/(?:في|مدينة|مدن)\s+((?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)(?:\s*(?:و|،|,)\s*(?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل))*)/i);
-    if (citiesMatch) {
-      data.cities = citiesMatch[1];
-      matchedPatterns.push(/(?:في|مدينة|مدن)\s+((?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل)(?:\s*(?:و|،|,)\s*(?:الرياض|جدة|مكة|المدينة|الدمام|الخبر|الطائف|تبوك|أبها|القصيم|الأحساء|نجران|جازان|ينبع|حائل|الجبيل))*)/i);
-    }
-    
-    // Extract investment types
-    const investTypeMatch = text.match(/(تجاري|سكني|صناعي|أراضي|تجارية|سكنية|صناعية)/gi);
-    if (investTypeMatch) {
-      data.investmentTypes = investTypeMatch.join("، ");
-      matchedPatterns.push(/(تجاري|سكني|صناعي|أراضي|تجارية|سكنية|صناعية)/gi);
-    }
-    
-    // Extract budget range
-    const budgetRangeMatch = text.match(/(?:الميزانية|ميزانيتي)?\s*(?:من)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?\s*(?:إلى|الى|ل|حتى|-)\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    if (budgetRangeMatch) {
-      let minAmount = parseFloat(budgetRangeMatch[1]);
-      if (budgetRangeMatch[2]?.includes("مليون")) minAmount *= 1000000;
-      else if (budgetRangeMatch[2]) minAmount *= 1000;
-      data.budgetMin = minAmount.toString();
-      
-      let maxAmount = parseFloat(budgetRangeMatch[3]);
-      if (budgetRangeMatch[4]?.includes("مليون")) maxAmount *= 1000000;
-      else if (budgetRangeMatch[4]) maxAmount *= 1000;
-      data.budgetMax = maxAmount.toString();
-      matchedPatterns.push(/(?:الميزانية|ميزانيتي)?\s*(?:من)?\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?\s*(?:إلى|الى|ل|حتى|-)\s*(\d+(?:\.\d+)?)\s*(ألف|الف|مليون)?/i);
-    }
-    
-    // Extract return preference
-    const returnMatch = text.match(/(عائد\s*(?:مرتفع|متوسط|منخفض)|المرتفع|المتوسط|المنخفض)/i);
-    if (returnMatch) {
-      data.returnPreference = returnMatch[1];
-      matchedPatterns.push(/(عائد\s*(?:مرتفع|متوسط|منخفض)|المرتفع|المتوسط|المنخفض)/i);
-    }
-    
-    const additionalNotes = extractAdditionalNotes(text, matchedPatterns);
-    if (additionalNotes) {
-      data.additionalNotes = additionalNotes;
-    }
-    
-    return data;
-  };
-
-  const addSuggestion = (suggestion: string) => {
-    const newText = inputText ? `${inputText} ${suggestion}` : suggestion;
-    setInputText(newText);
-  };
-
-  const formatBudget = (amount: string) => {
-    const num = parseInt(amount);
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)} مليون`;
-    if (num >= 1000) return `${(num / 1000).toFixed(0)} ألف`;
-    return amount;
-  };
-
-  // Generate confirmation fields - shows ALL data mentioned without missing anything
-  const generateConfirmationFields = (data: Record<string, string>, currentMode: UserMode) => {
-    if (currentMode === "buyer") {
-      const fields = [
-        // Required fields
-        { label: "الاسم", value: data.name },
-        { label: "الجوال", value: data.phone },
-        data.email ? { label: "الإيميل", value: data.email } : null,
-        { label: "المدينة", value: data.city },
-        data.district ? { label: "الحي", value: data.district } : null,
-        { label: "نوع العقار", value: data.propertyType },
-        // Budget - show range if available
-        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : 
-          (data.budgetMin ? { label: "الميزانية (من)", value: formatBudget(data.budgetMin) } : null),
-        (data.budgetMax && !data.budgetMin) ? { label: "الميزانية (إلى)", value: formatBudget(data.budgetMax) } : null,
-        data.budget && !data.budgetMin && !data.budgetMax ? { label: "الميزانية", value: formatBudget(data.budget) } : null,
-        // Payment method
-        data.paymentMethod ? { label: "طريقة الدفع", value: data.paymentMethod === "cash" ? "كاش" : data.paymentMethod === "mortgage" ? "تمويل بنكي" : data.paymentMethod } : null,
-        // Timeline
-        data.purchaseTimeline ? { label: "موعد الشراء", value: data.purchaseTimeline } : null,
-        // Purpose
-        data.purchasePurpose ? { label: "الغرض", value: data.purchasePurpose === "personal" ? "سكن شخصي" : data.purchasePurpose === "investment" ? "استثمار" : data.purchasePurpose } : null,
-        // Client type
-        data.clientType ? { label: "نوع العميل", value: data.clientType === "individual" ? "فرد" : data.clientType === "company" ? "شركة" : data.clientType } : null,
-        // Property details
-        data.rooms ? { label: "عدد الغرف", value: data.rooms } : null,
-        data.bathrooms ? { label: "عدد دورات المياه", value: data.bathrooms } : null,
-        data.area ? { label: "المساحة", value: `${data.area} م²` } : null,
-        data.floor ? { label: "الطابق", value: data.floor } : null,
-        data.age ? { label: "عمر العقار", value: data.age } : null,
-        // Additional notes
-        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
-      ].filter(Boolean) as Array<{label: string, value: string}>;
-      return fields;
-    } else if (currentMode === "seller") {
-      const fields = [
-        { label: "الاسم", value: data.name },
-        { label: "الجوال", value: data.phone },
-        data.email ? { label: "الإيميل", value: data.email } : null,
-        { label: "المدينة", value: data.city },
-        { label: "الحي", value: data.district },
-        { label: "نوع العقار", value: data.propertyType },
-        { label: "السعر", value: formatBudget(data.price) },
-        data.area ? { label: "المساحة", value: `${data.area} م²` } : null,
-        data.rooms ? { label: "عدد الغرف", value: data.rooms } : null,
-        data.bathrooms ? { label: "عدد دورات المياه", value: data.bathrooms } : null,
-        data.floor ? { label: "الطابق", value: data.floor } : null,
-        data.age ? { label: "عمر العقار", value: data.age } : null,
-        data.status ? { label: "الحالة", value: data.status === "ready" ? "جاهز للسكن" : "تحت الإنشاء" } : null,
-        data.features ? { label: "المميزات", value: data.features } : null,
-        (data.latitude && data.longitude) ? { label: "الموقع", value: "تم تحديده", isCheck: true } : { label: "الموقع", value: "لم يتم تحديده" },
-        uploadedFiles.length > 0 ? { label: "الصور", value: `تم رفع ${uploadedFiles.length} ملف`, isCheck: true } : { label: "الصور", value: "لم يتم رفع صور" },
-        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
-      ].filter(Boolean) as Array<{label: string, value: string, isCheck?: boolean}>;
-      return fields;
-    } else {
-      // Investor mode
-      const fields = [
-        { label: "الاسم", value: data.name },
-        { label: "الجوال", value: data.phone },
-        data.email ? { label: "الإيميل", value: data.email } : null,
-        { label: "المدن المستهدفة", value: data.cities },
-        data.investmentTypes ? { label: "نوع الاستثمار", value: data.investmentTypes } : null,
-        data.propertyType ? { label: "نوع العقار", value: data.propertyType } : null,
-        (data.budgetMin && data.budgetMax) ? { label: "الميزانية", value: `من ${formatBudget(data.budgetMin)} إلى ${formatBudget(data.budgetMax)}` } : 
-          (data.budgetMin ? { label: "الميزانية (من)", value: formatBudget(data.budgetMin) } : null),
-        (data.budgetMax && !data.budgetMin) ? { label: "الميزانية (إلى)", value: formatBudget(data.budgetMax) } : null,
-        data.returnPreference ? { label: "هدف الاستثمار", value: data.returnPreference } : null,
-        data.clientType ? { label: "نوع العميل", value: data.clientType === "individual" ? "فرد" : data.clientType === "company" ? "شركة" : data.clientType } : null,
-        data.additionalNotes ? { label: "ملاحظات إضافية", value: data.additionalNotes } : null,
-      ].filter(Boolean) as Array<{label: string, value: string}>;
-      return fields;
-    }
-  };
-
-  const submitData = async (data: Record<string, string>) => {
-    if (mode === "buyer") {
-      // Use AI-extracted budgetMin/Max if available
-      const budgetMinVal = data.budgetMin ? parseInt(data.budgetMin) : 0;
-      const budgetMaxVal = data.budgetMax ? parseInt(data.budgetMax) : (data.budget ? parseInt(data.budget) : 0);
-      
-      try {
-        // Use auto-register endpoint which creates user with password
-        const response = await apiRequest("POST", "/api/auth/auto-register", {
-          name: data.name,
-          phone: data.phone,
-          email: data.email || `${data.phone}@tatabuk.sa`,
-          city: data.city,
-          districts: data.district ? [data.district] : [],
-          propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
-          budgetMin: budgetMinVal,
-          budgetMax: budgetMaxVal,
-          paymentMethod: data.paymentMethod || "cash",
-          transactionType: data.transactionType || "buy",
-        });
-        
-        const result = await response.json();
-        
-        if (result.success && result.user) {
-          // Session cookie is automatically set by the server
-          // Show success message
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: `تم تسجيل طلبك بنجاح يا ${data.name.split(" ")[0]}! رقم جوالك هو اسم المستخدم. جاري تحويلك لصفحتك الخاصة...` }
-          ]);
-          
-          // Redirect to dashboard after 2 seconds
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        }
-      } catch (error: any) {
-        console.error("Auto-register error:", error);
-        toast({
-          title: "خطأ في التسجيل",
-          description: error.message || "حدث خطأ، حاول مرة ثانية",
-          variant: "destructive",
-        });
-      }
-    } else if (mode === "seller") {
-      sellerMutation.mutate({
-        name: data.name,
-        email: `${data.phone}@temp.com`,
-        phone: data.phone,
-        city: data.city,
-        district: data.district,
-        propertyType: data.propertyType === "شقة" ? "apartment" : data.propertyType === "فيلا" ? "villa" : data.propertyType === "أرض" ? "land" : "apartment",
-        price: parseInt(data.price),
-        status: data.status || "ready",
-        images: uploadedFiles,
-        latitude: parseFloat(data.latitude),
-        longitude: parseFloat(data.longitude),
-      });
-      setConversation(prev => [
-        ...prev,
-        { type: "system", text: formatFriendlyMessage("success", "seller", data.name) }
-      ]);
-    } else {
-      investorMutation.mutate({
-        name: data.name,
-        email: `${data.phone}@temp.com`,
-        phone: data.phone,
-        cities: data.cities,
-        investmentTypes: data.investmentTypes || "",
-        budgetMin: parseInt(data.budgetMin || "0"),
-        budgetMax: parseInt(data.budgetMax || "0"),
-        returnPreference: data.returnPreference || "",
-      });
-      setConversation(prev => [
-        ...prev,
-        { type: "system", text: formatFriendlyMessage("success", "investor", data.name) }
-      ]);
-    }
-    setPendingConfirmation(false);
-    setPendingData({});
-    setConfirmationFields([]);
-  };
-
-  const handleSubmit = async () => {
-    const hasInput = inputText.trim().length > 0;
-    const userText = inputText.trim();
-    
-    // Mark that user initiated this send (for refocus logic)
-    userSentMessage.current = true;
-    
-    // Check if user is confirming
-    if (pendingConfirmation && userText.includes("موافق")) {
-      setConversation(prev => [
-        ...prev,
-        { type: "user", text: userText }
-      ]);
-      setInputText("");
-      setIsTyping(true);
-      setTimeout(() => {
-        submitData(pendingData);
-        setIsTyping(false);
-      }, 500);
-      return;
-    }
-    
-    if (!hasInput) return;
-    
-    // Switch to fullscreen chat mode on first message
-    if (!isFullScreenChat) {
-      setIsFullScreenChat(true);
-    }
-    
-    // Add user message to conversation
-    setConversation(prev => [
-      ...prev,
-      { type: "user", text: inputText }
-    ]);
-    
-    setInputText("");
-    
-    // Use AI analysis
-    setIsAnalyzing(true);
-    setIsTyping(true);
-    
-    try {
-      // Build context from previously extracted data
-      const context = {
-        name: extractedData.name || undefined,
-        phone: extractedData.phone || undefined,
-        city: extractedData.city || undefined,
-        districts: extractedData.district ? [extractedData.district] : undefined,
-        propertyType: extractedData.propertyType || undefined,
-        transactionType: extractedData.transactionType || undefined,
-        budgetMin: extractedData.budgetMin ? parseInt(extractedData.budgetMin) : undefined,
-        budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : undefined,
-        paymentMethod: extractedData.paymentMethod || undefined,
-        purchasePurpose: extractedData.purchasePurpose || undefined,
-        purchaseTimeline: extractedData.purchaseTimeline || undefined,
-        clientType: extractedData.clientType || undefined,
-        area: extractedData.area ? parseInt(extractedData.area) : undefined,
-        rooms: extractedData.rooms ? parseInt(extractedData.rooms) : undefined,
-        role: mode,
-      };
-      
-      const aiResult = await aiAnalysisMutation.mutateAsync({ text: userText, context });
-      
-      // Convert AI result to merged data format
-      let mergedData = { ...extractedData };
-      
-      // Handle questions and greetings first
-      if (aiResult && aiResult.success && (aiResult.intent === "question" || aiResult.intent === "greeting")) {
-        if (aiResult.assistantReply) {
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: aiResult.assistantReply! }
-          ]);
-        }
-        // Still extract any data that might be in the message
-        if (aiResult.data) {
-          if (aiResult.data.name) mergedData.name = aiResult.data.name;
-          if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
-          if (aiResult.data.city) mergedData.city = aiResult.data.city;
-          if (aiResult.data.districts && aiResult.data.districts.length > 0) {
-            mergedData.district = aiResult.data.districts[0];
-          }
-          if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
-          setExtractedData(mergedData);
-        }
-        setIsAnalyzing(false);
-        setIsTyping(false);
-        return; // Don't ask for missing fields after answering a question
-      }
-      
-      // Handle case when AI analysis didn't succeed - fall back to regex
-      if (!aiResult || !aiResult.success) {
-        const newData = mode === "buyer" ? extractBuyerInfo(userText) : mode === "seller" ? extractSellerInfo(userText) : extractInvestorInfo(userText);
-        Object.keys(newData).forEach(key => {
-          if (newData[key]) {
-            mergedData[key] = newData[key];
-          }
-        });
-        setExtractedData(mergedData);
-        setAiConfidence(50);
-      } else {
-        // Add AI assistant reply to conversation (for data intent)
-        if (aiResult.assistantReply) {
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: aiResult.assistantReply! }
-          ]);
-        }
-        
-        if (aiResult.data) {
-          if (aiResult.data.name) mergedData.name = aiResult.data.name;
-          if (aiResult.data.phone) mergedData.phone = aiResult.data.phone;
-          if (aiResult.data.city) mergedData.city = aiResult.data.city;
-          if (aiResult.data.districts && aiResult.data.districts.length > 0) {
-            mergedData.district = aiResult.data.districts[0];
-          }
-          if (aiResult.data.propertyType) mergedData.propertyType = aiResult.data.propertyType;
-          if (aiResult.data.transactionType) mergedData.transactionType = aiResult.data.transactionType;
-          if (aiResult.data.budgetMax) mergedData.budget = aiResult.data.budgetMax.toString();
-          if (aiResult.data.budgetMin) mergedData.budgetMin = aiResult.data.budgetMin.toString();
-          if (aiResult.data.budgetMax) mergedData.budgetMax = aiResult.data.budgetMax.toString();
-          if (aiResult.data.paymentMethod) mergedData.paymentMethod = aiResult.data.paymentMethod;
-          if (aiResult.data.purchaseTimeline) mergedData.purchaseTimeline = aiResult.data.purchaseTimeline;
-          if (aiResult.data.clientType) mergedData.clientType = aiResult.data.clientType;
-          if (aiResult.data.additionalNotes) mergedData.additionalNotes = aiResult.data.additionalNotes;
-          
-          // For sellers
-          if (aiResult.data.budgetMax && mode === "seller") {
-            mergedData.price = aiResult.data.budgetMax.toString();
-          }
-          
-          // Auto-detect role if not set
-          if (aiResult.role && mode === "buyer" && aiResult.role !== "buyer") {
-            // Suggest switching mode
-            if (aiResult.role === "seller") {
-              setConversation(prev => [
-                ...prev,
-                { type: "system", text: formatFriendlyMessage("modeSwitch", mode, mergedData.name) }
-              ]);
-            }
-          }
-          
-          setAiConfidence(aiResult.confidence);
-          setExtractedData(mergedData);
-        }
-      }
-      
-      // Check required fields based on mode - 6 fields required
-      if (mode === "buyer") {
-        // التحقق من اكتمال المؤشر 100% قبل التأكيد
-        const reliabilityScore = calculateReliabilityScore({
-          name: mergedData.name,
-          phone: mergedData.phone,
-          city: mergedData.city,
-          districts: mergedData.district ? [mergedData.district] : (Array.isArray(mergedData.districts) ? mergedData.districts : []),
-          propertyType: mergedData.propertyType,
-          budgetMax: mergedData.budgetMax ? parseInt(mergedData.budgetMax) : (mergedData.budget ? parseInt(mergedData.budget) : null),
-          paymentMethod: mergedData.paymentMethod,
-          purchaseTimeline: mergedData.purchaseTimeline,
-          area: mergedData.area ? parseInt(mergedData.area) : null,
-          purchasePurpose: mergedData.purchasePurpose,
-        });
-        
-        if (reliabilityScore >= 100) {
-          // Show confirmation card only when score is 100%
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-          // Add confirmation message
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("confirmation", mode, mergedData.name) }
-          ]);
-        } else {
-          // AI already asks follow-up questions, no need to add system message
-          // The conversation continues naturally
-        }
-      } else if (mode === "seller") {
-        // Required for seller: name, phone, city, district, propertyType, price, images, location
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && 
-          mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && 
-          mergedData.latitude && mergedData.longitude;
-        
-        if (hasAllRequired) {
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        } else {
-          // AI already asks follow-up questions, conversation continues naturally
-        }
-      } else {
-        // Investor mode - use cities from AI
-        if (aiResult?.data?.city) {
-          mergedData.cities = aiResult.data.city;
-        }
-        // Required for investor: name, phone, cities, budget, clientType
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.cities &&
-          (mergedData.budgetMin || mergedData.budgetMax) && mergedData.clientType;
-        
-        if (hasAllRequired) {
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        } else {
-          // AI already asks follow-up questions, conversation continues naturally
-        }
-      }
-    } catch (error) {
-      // Fallback to regex extraction if AI fails
-      let mergedData = { ...extractedData };
-      const newData = mode === "buyer" ? extractBuyerInfo(userText) : mode === "seller" ? extractSellerInfo(userText) : extractInvestorInfo(userText);
-      Object.keys(newData).forEach(key => {
-        if (newData[key]) {
-          mergedData[key] = newData[key];
-        }
-      });
-      setExtractedData(mergedData);
-      
-      // Check core required fields (fallback mode) - use reliability score
-      if (mode === "buyer") {
-        const reliabilityScore = calculateReliabilityScore({
-          name: mergedData.name,
-          phone: mergedData.phone,
-          city: mergedData.city,
-          districts: mergedData.district ? [mergedData.district] : (Array.isArray(mergedData.districts) ? mergedData.districts : []),
-          propertyType: mergedData.propertyType,
-          budgetMax: mergedData.budgetMax ? parseInt(mergedData.budgetMax) : (mergedData.budget ? parseInt(mergedData.budget) : null),
-          paymentMethod: mergedData.paymentMethod,
-          purchaseTimeline: mergedData.purchaseTimeline,
-          area: mergedData.area ? parseInt(mergedData.area) : null,
-          purchasePurpose: mergedData.purchasePurpose,
-        });
-        
-        if (reliabilityScore >= 100) {
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-          setConversation(prev => [
-            ...prev,
-            { type: "system", text: formatFriendlyMessage("confirmation", mode, mergedData.name) }
-          ]);
-        }
-        // No else - conversation continues naturally
-      } else if (mode === "seller") {
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.city && mergedData.district && 
-          mergedData.propertyType && mergedData.price && uploadedFiles.length > 0 && 
-          mergedData.latitude && mergedData.longitude;
-        
-        if (hasAllRequired) {
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        }
-        // No else - conversation continues naturally
-      } else {
-        const hasAllRequired = mergedData.name && mergedData.phone && mergedData.cities &&
-          (mergedData.budgetMin || mergedData.budgetMax) && mergedData.clientType;
-        
-        if (hasAllRequired) {
-          setPendingConfirmation(true);
-          setPendingData(mergedData);
-          setConfirmationFields(generateConfirmationFields(mergedData, mode));
-        }
-        // No else - conversation continues naturally
-      }
-    } finally {
-      setIsAnalyzing(false);
-      setIsTyping(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  // Voice recording using Web Speech API - LIVE CONVERSATION MODE
-  // Analyzes and asks questions while still recording!
-  const startRecording = () => {
-    // Check if Web Speech API is supported
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      toast({
-        title: "غير مدعوم",
-        description: "متصفحك لا يدعم التسجيل الصوتي. جرب Chrome أو Edge.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const recognition = new SpeechRecognition();
-    recognition.lang = "ar-SA"; // Arabic - Saudi Arabia
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    
-    let lastProcessedText = "";
-    let processingTimeout: NodeJS.Timeout | null = null;
-    
-    recognition.onstart = () => {
-      setIsRecording(true);
-      setIsFullScreenChat(true);
-    };
-    
-    recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-      let interimTranscript = "";
-      
-      for (let i = 0; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " ";
-        } else {
-          interimTranscript += transcript;
-        }
-      }
-      
-      // Show current text in input field
-      const currentText = finalTranscript + interimTranscript;
-      setInputText(currentText);
-      
-      // Auto-analyze when we have new final text (after pause in speech)
-      if (finalTranscript.trim() && finalTranscript.trim() !== lastProcessedText) {
-        // Clear any pending timeout
-        if (processingTimeout) {
-          clearTimeout(processingTimeout);
-        }
-        
-        // Wait 1.5 seconds of no new speech before analyzing
-        processingTimeout = setTimeout(() => {
-          const textToProcess = finalTranscript.trim();
-          if (textToProcess && textToProcess !== lastProcessedText && textToProcess.length > 5) {
-            lastProcessedText = textToProcess;
-            
-            // Clear input and submit for analysis (keeps recording active!)
-            setInputText("");
-            
-            // Submit for live analysis while still recording
-            handleSubmitWithText(textToProcess);
-          }
-        }, 1500);
-      }
-    };
-    
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      
-      if (event.error === "not-allowed") {
-        setIsRecording(false);
-        toast({
-          title: "خطأ",
-          description: "لم نتمكن من الوصول للميكروفون. تأكد من إعطاء الإذن.",
-          variant: "destructive",
-        });
-      } else if (event.error === "no-speech") {
-        // Don't stop on no-speech, just continue listening
-        console.log("No speech detected, continuing...");
-      } else if (event.error === "aborted") {
-        // Ignore aborted errors
-      }
-    };
-    
-    recognition.onend = () => {
-      // Auto-restart if still in recording mode (keeps conversation alive)
-      if (isRecording) {
-        try {
-          recognition.start();
-        } catch (e) {
-          setIsRecording(false);
-        }
-      }
-    };
-    
-    // Store recognition instance for stopping later
-    (window as any).currentRecognition = recognition;
-    recognition.start();
-  };
-
-  const stopRecording = () => {
-    setIsRecording(false);
-    const recognition = (window as any).currentRecognition;
-    if (recognition) {
-      recognition.stop();
-      (window as any).currentRecognition = null;
-    }
-  };
-
-  // Submit with specific text (for voice transcription)
-  const handleSubmitWithText = async (text: string) => {
-    if (!text.trim()) return;
-    
-    setConversation(prev => [
-      ...prev,
-      { type: "user", text: text }
-    ]);
-    
-    setInputText("");
-    
-    setIsAnalyzing(true);
-    setIsTyping(true);
-    
-    try {
-      const context = {
-        name: extractedData.name || undefined,
-        phone: extractedData.phone || undefined,
-        city: extractedData.city || undefined,
-        districts: extractedData.district ? [extractedData.district] : undefined,
-        propertyType: extractedData.propertyType || undefined,
-        budgetMin: extractedData.budgetMin ? parseInt(extractedData.budgetMin) : undefined,
-        budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : undefined,
-        role: mode,
-      };
-      
-      const response = await fetch("/api/intake/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, context }),
-      });
-      
-      const result: AIAnalysisResult = await response.json();
-      
-      if (result.success && result.assistantReply) {
-        setConversation(prev => [
-          ...prev,
-          { type: "system", text: result.assistantReply! }
-        ]);
-        
-        // Merge ALL new data with existing - don't miss any field!
-        const newData: Record<string, string> = { ...extractedData };
-        // Basic info
-        if (result.data.name) newData.name = result.data.name;
-        if (result.data.phone) newData.phone = result.data.phone;
-        if (result.data.email) newData.email = result.data.email;
-        // Location
-        if (result.data.city) newData.city = result.data.city;
-        if (result.data.districts && result.data.districts.length > 0) newData.district = result.data.districts.join("، ");
-        // Property
-        if (result.data.propertyType) newData.propertyType = result.data.propertyType;
-        if (result.data.transactionType) newData.transactionType = result.data.transactionType;
-        // Budget
-        if (result.data.budgetMin) newData.budgetMin = String(result.data.budgetMin);
-        if (result.data.budgetMax) newData.budgetMax = String(result.data.budgetMax);
-        // Details
-        if (result.data.paymentMethod) newData.paymentMethod = result.data.paymentMethod;
-        if (result.data.purchasePurpose) newData.purchasePurpose = result.data.purchasePurpose;
-        if (result.data.purchaseTimeline) newData.purchaseTimeline = result.data.purchaseTimeline;
-        if (result.data.clientType) newData.clientType = result.data.clientType;
-        // Property specs
-        if (result.data.area) newData.area = String(result.data.area);
-        if (result.data.rooms) newData.rooms = String(result.data.rooms);
-        if (result.data.floor) newData.floor = String(result.data.floor);
-        // Notes
-        if (result.data.additionalNotes) newData.additionalNotes = result.data.additionalNotes;
-        
-        setExtractedData(newData);
-      }
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "فشل في تحليل النص",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-      setIsTyping(false);
-    }
-  };
-
+  const addSuggestion = (suggestion: string) => {};
+  const noOp = () => {};
 
   return (
     <>
-      {/* Full-screen WhatsApp-like chat view - rendered as overlay */}
-      {isFullScreenChat && (
-      <div 
-        className="fixed left-0 right-0 top-0 z-50 flex flex-col bg-background"
-        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
-      >
-        {/* Chat Header */}
-        <div className={`flex items-center gap-3 p-4 border-b ${mode === "seller" ? "bg-green-600" : mode === "investor" ? "bg-amber-600" : "bg-primary"} text-primary-foreground`}>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => {
-              setIsFullScreenChat(false);
-              setConversation([]);
-              setExtractedData({});
-              setPendingConfirmation(false);
-              setIsComplete(false);
-            }}
-            className="text-primary-foreground"
-            data-testid="button-back-chat"
-          >
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3 flex-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${mode === "seller" ? "bg-green-700" : mode === "investor" ? "bg-amber-700" : "bg-primary-foreground/20"}`}>
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-bold text-lg">تطابق</h2>
-              <p className="text-xs opacity-80">
-                {mode === "buyer" ? "مساعد البحث عن عقار" : mode === "seller" ? "مساعد عرض العقارات" : "مساعد الاستثمار العقاري"}
-              </p>
-            </div>
-          </div>
-        </div>
+      <section className="relative min-h-screen bg-gradient-to-b from-primary/5 via-background to-background">
+        <div className="container mx-auto px-4 py-6 md:py-8">
 
-        {/* Reliability Score Bar */}
-        <div className="flex items-center justify-between px-4 py-2 border-b bg-card/80 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Brain className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">اكتمال الطلب</span>
-          </div>
-          <ReliabilityScore 
-            score={calculateReliabilityScore({
-              name: extractedData.name,
-              phone: extractedData.phone,
-              city: extractedData.city,
-              districts: extractedData.district ? [extractedData.district] : [],
-              propertyType: extractedData.propertyType,
-              budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : null,
-              paymentMethod: extractedData.paymentMethod,
-              purchaseTimeline: extractedData.purchaseTimeline,
-              area: extractedData.area ? parseInt(extractedData.area) : null,
-              propertyAge: extractedData.propertyAge ? parseInt(extractedData.propertyAge) : null,
-              facing: extractedData.facing,
-              streetWidth: extractedData.streetWidth ? parseInt(extractedData.streetWidth) : null,
-              purchasePurpose: extractedData.purchasePurpose,
-            })}
-            size="sm"
-            label=""
-          />
-        </div>
-
-        {/* Messages Area - WhatsApp style - min-h-0 is critical for flex scroll */}
-        <div 
-          className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
-          style={{ 
-            backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%239C92AC\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
-          }}
-        >
-          {conversation.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
-                  msg.type === "user"
-                    ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : mode === "investor" ? "bg-amber-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
-                    : "bg-card border rounded-tl-none"
-                }`}
-              >
-                <p className="text-[15px] leading-relaxed">{msg.text}</p>
-              </div>
-            </div>
-          ))}
-          
-          {/* Confirmation Card */}
-          {pendingConfirmation && confirmationFields.length > 0 && (
-            <div className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-tl-none bg-card border p-4 shadow-sm" data-testid="confirmation-card">
-                <p className="font-bold text-base mb-3 text-center">تأكيد البيانات</p>
-                <div className="space-y-2">
-                  {confirmationFields.map((field, idx) => (
-                    <div key={idx} className="flex gap-2 text-sm">
-                      <span className="font-bold text-muted-foreground">{field.label}:</span>
-                      <span className={field.isCheck ? "text-green-600 font-medium" : ""}>{field.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground mt-4 pt-3 border-t text-center">
-                  إذا كانت المعلومات صحيحة اكتب <span className="font-bold text-primary">"موافق"</span> لاعتمادها
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {isTyping && (
-            <div className="flex justify-end">
-              <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                  {isAnalyzing && (
-                    <div className="flex items-center gap-1 text-xs text-primary">
-                      <Brain className="h-3 w-3 animate-pulse" />
-                      <span>جارٍ التحليل</span>
-                    </div>
-                  )}
-                  {!isAnalyzing && (
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {/* Auto-scroll anchor */}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area - WhatsApp style */}
-        {!isComplete ? (
-          <div className="p-3 border-t bg-muted/30">
-            {/* Transcribing indicator */}
-            {isTranscribing && (
-              <div className="flex items-center justify-center gap-2 mb-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>جارٍ تحويل الصوت لنص...</span>
-              </div>
-            )}
-            {(() => {
-              const liveData = extractLiveData(inputText);
-              // Check if essential data already saved OR currently typed
-              // Note: API returns 'districts' (array) not 'district'
-              const savedEssentialData = !!(extractedData.name && extractedData.phone && extractedData.city && (extractedData.district || extractedData.districts) && extractedData.propertyType);
-              const typedEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
-              const hasEssentialData = savedEssentialData || typedEssentialData;
-              return (
-            <div className="flex items-center gap-2 bg-card border rounded-full px-2 py-1.5 max-w-3xl mx-auto">
-              {/* Send button */}
-              <Button
-                size="icon"
-                onClick={handleSubmit}
-                disabled={!inputText.trim() && !pendingConfirmation}
-                className="rounded-full h-10 w-10 flex-shrink-0"
-                data-testid="button-send-fullscreen"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-              
-              {/* Microphone button - always visible */}
-              <Button
-                size="icon"
-                variant={isRecording ? "destructive" : "ghost"}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing}
-                className={`rounded-full h-10 w-10 flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                data-testid="button-voice-record"
-              >
-                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </Button>
-              
-              {/* Upload button for sellers - always visible */}
-              {mode === "seller" && (
-                <FileUploadButton
-                  onFilesUploaded={(urls) => setUploadedFiles(prev => [...prev, ...urls])}
-                  buttonVariant="ghost"
-                  buttonSize="icon"
-                  buttonClassName="rounded-full h-10 w-10 flex-shrink-0"
-                >
-                  <Image className="h-4 w-4" />
-                </FileUploadButton>
-              )}
-              
-              {/* Location picker button for sellers - always visible */}
-              {mode === "seller" && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowLocationPicker(true)}
-                  className={`rounded-full h-10 w-10 flex-shrink-0 ${extractedData.latitude ? "bg-primary/10 text-primary" : ""}`}
-                  data-testid="button-open-map-fullscreen"
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-              )}
-              
-              {/* Input field - auto-expanding textarea like WhatsApp */}
-              <div className="flex-1 flex flex-col">
-                {/* Live extraction preview - only show when typing new data */}
-                {inputText.trim().length > 0 && !savedEssentialData && (
-                  <div className="text-xs text-right mb-1 px-1" dir="rtl">
-                    {liveData.found.length > 0 && (
-                      <span className="text-foreground">
-                        {liveData.found.map((item, i) => (
-                          <span key={item.key}>
-                            <span className="font-medium">{item.value}</span>
-                            {i < liveData.found.length - 1 && " "}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                    {liveData.missing.length > 0 && (
-                      <span className="text-muted-foreground mr-1">
-                        (متبقي {liveData.missing.join(" - ")})
-                      </span>
-                    )}
-                  </div>
-                )}
-                <textarea
-                  ref={inputRef}
-                  dir="rtl"
-                  value={inputText}
-                  onChange={(e) => {
-                    setInputText(e.target.value);
-                    // Auto-resize textarea
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit();
-                    }
-                  }}
-                  placeholder={isRecording ? "جارٍ التسجيل..." : "تحدث مع مستشار المبيعات"}
-                  className="w-full min-h-[40px] max-h-[120px] py-2 px-3 outline-none text-[15px] bg-transparent resize-none overflow-y-auto"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  rows={1}
-                  data-testid="input-chat"
-                />
-              </div>
-            </div>
-              );
-            })()}
-            {isRecording && (
-              <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
-                جارٍ التسجيل... اضغط مرة أخرى للإيقاف
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="p-4 border-t bg-green-50 dark:bg-green-950/30 text-center">
-            <div className="flex items-center justify-center gap-2 text-green-600">
-              <Check className="h-5 w-5" />
-              <span className="font-medium">تم تسجيل طلبك بنجاح!</span>
-            </div>
-            <Button
-              variant="outline"
-              className="mt-3"
-              onClick={() => {
-                setIsFullScreenChat(false);
-                setConversation([]);
-                setExtractedData({});
-                setIsComplete(false);
-              }}
-              data-testid="button-new-request"
-            >
-              طلب جديد
-            </Button>
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* Main landing section */}
-      {!isFullScreenChat && (
-      <section 
-        className="relative min-h-screen bg-gradient-to-b from-primary/5 via-background to-background"
-      >
-        <div className="container mx-auto px-4 py-8 md:py-12">
           {/* Header Section */}
-          <div className="max-w-2xl mx-auto text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              <Sparkles className="h-4 w-4" />
+          <div className="max-w-xl mx-auto text-center mb-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
+              <Sparkles className="h-3.5 w-3.5" />
               <span>منصة ذكية للعقارات</span>
             </div>
-            
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4" data-testid="text-hero-title">
+
+            <h1 className="text-2xl md:text-3xl font-bold leading-tight mb-2" data-testid="text-hero-title">
               {mode === "buyer" ? "ابحث عن عقارك المثالي" : "اعرض عقارك للبيع"}
             </h1>
-            
-            <p className="text-muted-foreground text-base md:text-lg" data-testid="text-hero-description">
+
+            <p className="text-muted-foreground text-sm" data-testid="text-hero-description">
               {mode === "buyer" 
                 ? "أخبرنا ماذا تبحث عنه وسنجد لك الأفضل"
                 : "سجّل بيانات عقارك وسنوصله للمشترين المناسبين"
               }
             </p>
-            
-            {/* Resume Previous Chat Button - Show if there's saved conversation */}
-            {conversation.length > 0 && !pendingConfirmation && !isComplete && (
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsFullScreenChat(true)}
-                  className="gap-2 text-primary border-primary/30 hover:border-primary/50"
-                  data-testid="button-resume-chat"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  استئناف المحادثة السابقة
-                  <Badge variant="secondary" className="text-xs px-2 py-0">
-                    {conversation.length} رسالة
-                  </Badge>
-                </Button>
-              </div>
-            )}
           </div>
 
-          {/* Main Card */}
-          <Card className="max-w-2xl mx-auto shadow-2xl border-2">
-            {/* Completion Screen - Show when registration is complete */}
+          {/* Main Card - ✅ التعديل الأساسي هنا: تم توسيع الكارد في الشاشات الكبيرة */}
+          <Card className="w-full max-w-lg md:max-w-6xl mx-auto shadow-xl border">
             {isComplete ? (
-              <div className="p-6">
-                {/* Success Header */}
+              <div className="p-6 flex flex-col items-center justify-center h-auto w-full animate-in fade-in zoom-in duration-300">
+                {/* ... (نفس محتوى النجاح لم يتغير) ... */}
+                <div className="w-16 h-16 mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2 text-center">
+                  {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
+                </h3>
+                <div className="relative w-full max-w-md bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 mt-2 overflow-hidden">
+                  <div className="absolute top-0 left-0 h-0.5 bg-primary/50 w-full animate-[loading_2s_ease-in-out_infinite]" style={{ width: '30%' }}></div>
+                  <div className="flex flex-col items-center justify-center gap-3 mb-2 relative z-10">
+                    <div className="relative flex items-center justify-center w-10 h-10">
+                      <div className="absolute inset-0 bg-primary/40 rounded-full animate-ping opacity-75"></div>
+                      <div className="relative w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center z-10 border border-primary/30">
+                        <Brain className="h-4 w-4 text-primary animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-bold text-primary text-sm animate-pulse mb-1">
+                        جارٍ البحث والمطابقة الذكية...
+                      </p>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        {mode === "buyer" 
+                          ? "يقوم نظامنا الآن بمسح آلاف العقارات لإيجاد الفرصة الأنسب لك"
+                          : "نقوم الآن بتحليل طلبات المشترين النشطين لمطابقتها مع عقارك"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Check className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">
-                    {mode === "buyer" ? "تم تسجيل رغبتك بنجاح!" : "تم تسجيل عقارك بنجاح!"}
-                  </h3>
-                </div>
-
-                {/* Matching Animation Message */}
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Brain className="h-4 w-4 text-primary animate-pulse" />
-                    </div>
-                    <p className="font-medium text-primary">جارٍ المطابقة الذكية...</p>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {mode === "buyer" 
-                      ? "سيتم الآن إجراء المطابقة والمقارنة مع العقارات المتاحة"
-                      : "سيتم الآن مطابقة عقارك مع طلبات المشترين المهتمين"
-                    }
-                  </p>
-                </div>
-
-                {/* Client Data Summary */}
-                <div className="bg-muted/30 rounded-lg p-4 mb-6">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    ملخص البيانات المسجلة
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {extractedData.name && (
-                      <div>
-                        <span className="text-muted-foreground">الاسم: </span>
-                        <span className="font-medium">{extractedData.name}</span>
-                      </div>
-                    )}
-                    {extractedData.phone && (
-                      <div>
-                        <span className="text-muted-foreground">الجوال: </span>
-                        <span className="font-medium" dir="ltr">{extractedData.phone}</span>
-                      </div>
-                    )}
-                    {extractedData.city && (
-                      <div>
-                        <span className="text-muted-foreground">المدينة: </span>
-                        <span className="font-medium">{extractedData.city}</span>
-                      </div>
-                    )}
-                    {extractedData.district && (
-                      <div>
-                        <span className="text-muted-foreground">الحي: </span>
-                        <span className="font-medium">{extractedData.district}</span>
-                      </div>
-                    )}
-                    {extractedData.propertyType && (
-                      <div>
-                        <span className="text-muted-foreground">نوع العقار: </span>
-                        <span className="font-medium">{extractedData.propertyType}</span>
-                      </div>
-                    )}
-                    {extractedData.transactionType && (
-                      <div>
-                        <span className="text-muted-foreground">نوع المعاملة: </span>
-                        <span className="font-medium">{extractedData.transactionType}</span>
-                      </div>
-                    )}
-                    {(extractedData.budgetMin || extractedData.budgetMax) && (
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">الميزانية: </span>
-                        <span className="font-medium">
-                          {extractedData.budgetMin && `من ${parseInt(extractedData.budgetMin).toLocaleString('ar-SA')} `}
-                          {extractedData.budgetMax && `إلى ${parseInt(extractedData.budgetMax).toLocaleString('ar-SA')} ريال`}
-                        </span>
-                      </div>
-                    )}
-                    {extractedData.price && (
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">السعر: </span>
-                        <span className="font-medium">{parseInt(extractedData.price).toLocaleString('ar-SA')} ريال</span>
-                      </div>
-                    )}
-                    {extractedData.area && (
-                      <div>
-                        <span className="text-muted-foreground">المساحة: </span>
-                        <span className="font-medium">{extractedData.area} م²</span>
-                      </div>
-                    )}
-                    {extractedData.rooms && (
-                      <div>
-                        <span className="text-muted-foreground">الغرف: </span>
-                        <span className="font-medium">{extractedData.rooms}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Account Info */}
-                <div className="bg-card border rounded-lg p-4 mb-6">
-                  <h4 className="font-semibold mb-3">بيانات الدخول</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">رقم الجوال:</span>
-                      <span className="font-bold" dir="ltr">{extractedData.phone || "—"}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">كلمة المرور المؤقتة:</span>
-                      <span className="font-bold text-amber-600" dir="ltr">{extractedData.phone?.slice(-4) || "1234"}</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                      <Zap className="h-3 w-3" />
-                      يُنصح بتغيير كلمة المرور بعد تسجيل الدخول لأول مرة
-                    </p>
-                  </div>
-                </div>
-
-                {/* Redirect Notice */}
-                <div className="text-center mb-6">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     سيتم تحويلك إلى صفحتك الرئيسية لمتابعة طلباتك
                   </p>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <div className="w-full max-w-sm flex flex-col gap-3">
                   <Button 
-                    size="lg"
+                    size="lg" 
                     onClick={() => window.location.href = "/profile"}
-                    className="gap-2"
+                    className="w-full gap-2 text-base font-bold bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
                     data-testid="button-go-profile"
                   >
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-5 w-5" />
                     الدخول لصفحتي الشخصية
                   </Button>
                   <Button 
-                    size="lg"
+                    size="lg" 
                     variant="outline" 
                     onClick={() => {
                       setIsComplete(false);
-                      setConversation([]);
                       setExtractedData({});
                       setUploadedFiles([]);
                       setShowSearchForm(true);
                     }}
+                    className="w-full text-sm font-medium border-2 hover:bg-gray-50 transition-colors"
                     data-testid="button-add-another"
                   >
                     {mode === "buyer" ? "إضافة رغبة أخرى" : "إضافة عقار آخر"}
                   </Button>
                 </div>
-
-                {/* Terms */}
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  بتسجيلك، أنت توافق على الشروط والأحكام وسياسة الخصوصية
-                </p>
               </div>
             ) : (
               <>
-            {/* Map Section - Shared between buyer and seller */}
-            {(mode === "buyer" || mode === "seller") && conversation.length === 0 && !pendingConfirmation && (
-              <div className="bg-muted/20 p-3">
-                {/* Stats Row above map */}
-                <div className="flex justify-center gap-3 mb-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 border border-border/30">
-                    <Eye className={`h-3.5 w-3.5 text-blue-500 transition-transform duration-500 ${viewersAnimating ? 'scale-150' : ''}`} />
-                    <span className={`font-bold text-xs text-foreground transition-all duration-500 ${viewersAnimating ? 'scale-125 text-blue-600' : ''}`}>
-                      {liveViewers.toLocaleString('ar-EG')}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">يتصفحون</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 border border-border/30">
-                    <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 ${requestsAnimating ? 'scale-150' : ''}`} />
-                    <span className={`font-bold text-xs text-foreground transition-all duration-500 ${requestsAnimating ? 'scale-125 text-amber-600' : ''}`}>
-                      {requestsToday.toLocaleString('ar-EG')}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">طلب</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/80 border border-border/30">
-                    <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-150' : ''}`} />
-                    <span className={`font-bold text-xs text-foreground transition-all duration-500 ${dealsAnimating ? 'scale-125 text-green-600' : ''}`}>
-                      {dealsToday.toLocaleString('ar-EG')}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">صفقة</span>
-                  </div>
-                </div>
-                
-                {/* Larger Map */}
-                <SaudiMap 
-                  markers={mapMarkers} 
-                  className="h-44 md:h-56 rounded-lg border border-border/30 shadow-sm"
-                />
-                
-                {/* Typewriter Example */}
-                <div className="mt-2">
-                  <TypewriterBanner
-                    segments={exampleSegments}
-                    fullText={fullExampleText}
-                    mode={mode}
-                    onExampleComplete={handleExampleComplete}
-                    onTextClick={addSuggestion}
-                  />
-                </div>
-              </div>
-            )}
-            
-            {/* Smart Matching Section with Mode Toggle */}
-            {conversation.length === 0 && !pendingConfirmation && (
-              <div className="p-4 border-t bg-background">
-                {/* Title */}
-                <div className="text-center mb-3">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Brain className="h-5 w-5 text-primary" />
-                    <h3 className="font-bold text-lg">المطابقة الذكية</h3>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {mode === "buyer" 
-                      ? "أضف طلبك الآن ودع نظامنا الذكي يجلب لك العروض المطابقة لطلبك"
-                      : "أضف عقارك الآن ودع نظامنا الذكي يجلب لك المشترين المناسبين"
-                    }
-                  </p>
-                </div>
-                
-                {/* Mode Toggle */}
-                <div className="flex justify-center">
-                  <div className="inline-flex rounded-full border border-border p-1 bg-muted/30">
-                    <Button
-                      size="sm"
-                      variant={mode === "buyer" ? "default" : "ghost"}
-                      onClick={() => handleModeSwitch("buyer")}
-                      className="gap-1.5 rounded-full px-4 text-xs"
-                      data-testid="button-mode-buyer"
-                    >
-                      <Users className="h-3.5 w-3.5" />
-                      أبحث عن عقار
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={mode === "seller" ? "default" : "ghost"}
-                      onClick={() => handleModeSwitch("seller")}
-                      className="gap-1.5 rounded-full px-4 text-xs"
-                      data-testid="button-mode-seller"
-                    >
-                      <Building2 className="h-3.5 w-3.5" />
-                      اعرض عقارك
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Buyer Search Form */}
-            {mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation && (
-              <div>
-                <AdvancedSearchForm 
-                  onSearch={handleSearchFormSearch}
-                  onSwitchToChat={handleSwitchToChat}
-                />
-              </div>
-            )}
-
-            {/* Seller Property Form */}
-            {mode === "seller" && conversation.length === 0 && !pendingConfirmation && (
-              <div>
-                <ListPropertyForm onSubmit={handleListPropertySubmit} onSwitchToChat={handleSwitchToChat} />
-              </div>
-            )}
-
-            {/* Typewriter for buyer when search form is hidden (after clicking chat link) */}
-            {mode === "buyer" && !showSearchForm && conversation.length === 0 && !pendingConfirmation && (
-              <div className="bg-muted/10"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}>
-                <div className="p-3 pb-2">
-                  <div className="flex items-center justify-between gap-3 mb-2 text-[11px] text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="font-semibold text-foreground text-[12px] leading-none">{liveViewers.toLocaleString('ar-EG')}</span>
-                      <span>يتصفحون</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <FileText className={`h-3.5 w-3.5 text-amber-500 transition-transform duration-500 origin-center ${requestsAnimating ? 'scale-[2] rotate-12' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${requestsAnimating ? 'scale-150 text-amber-600' : ''}`}>
-                        {requestsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>طلب</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Handshake className={`h-3.5 w-3.5 text-green-500 transition-transform duration-500 origin-center ${dealsAnimating ? 'scale-[2] animate-pulse' : ''}`} />
-                      <span className={`font-semibold text-foreground text-[12px] leading-none transition-all duration-500 ${dealsAnimating ? 'scale-150 text-green-600' : ''}`}>
-                        {dealsToday.toLocaleString('ar-EG')}
-                      </span>
-                      <span>صفقة</span>
-                    </div>
-                  </div>
-                  
-                  {/* Typewriter Example */}
-                  <TypewriterBanner
-                    segments={exampleSegments}
-                    fullText={fullExampleText}
-                    mode={mode}
-                    onExampleComplete={handleExampleComplete}
-                    onTextClick={addSuggestion}
-                  />
-                </div>
-                
-                <div className="px-3 pb-3">
-                  <SaudiMap 
-                    markers={mapMarkers} 
-                    className="h-36 md:h-44 rounded-lg border border-border/30 shadow-sm"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Conversation area */}
-            {(conversation.length > 0 || pendingConfirmation) && (
-              <div className="flex flex-col h-[600px]">
-                {/* Header with Close Button and Reliability Score */}
-                <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50 backdrop-blur-sm">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setConversation([]);
-                        setPendingConfirmation(false);
-                        if (mode === "buyer") {
-                          setShowSearchForm(true);
-                        }
-                      }}
-                      className="h-8 w-8"
-                      data-testid="button-close-chat"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-4 h-4 text-primary" />
-                      <span className="text-sm font-medium">مؤشر اكتمال الطلب</span>
-                    </div>
-                  </div>
-                  <ReliabilityScore 
-                    score={calculateReliabilityScore({
-                      name: extractedData.name,
-                      phone: extractedData.phone,
-                      city: extractedData.city,
-                      districts: extractedData.district ? [extractedData.district] : [],
-                      propertyType: extractedData.propertyType,
-                      budgetMax: extractedData.budgetMax ? parseInt(extractedData.budgetMax) : null,
-                      paymentMethod: extractedData.paymentMethod,
-                      purchaseTimeline: extractedData.purchaseTimeline,
-                      area: extractedData.area ? parseInt(extractedData.area) : null,
-                      propertyAge: extractedData.propertyAge ? parseInt(extractedData.propertyAge) : null,
-                      facing: extractedData.facing,
-                      streetWidth: extractedData.streetWidth ? parseInt(extractedData.streetWidth) : null,
-                      purchasePurpose: extractedData.purchasePurpose,
-                    })}
-                    size="sm"
-                    label=""
-                  />
-                </div>
-                
-                {/* Messages area */}
-                <div 
-                  className="flex-1 overflow-y-auto p-4 space-y-3"
-                  style={{
-                    backgroundColor: "hsl(var(--muted) / 0.2)",
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                  }}>
-                {conversation.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex ${msg.type === "user" ? "justify-start" : "justify-end"}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        msg.type === "user"
-                          ? mode === "seller" ? "bg-green-600 text-white rounded-tr-none" : mode === "investor" ? "bg-amber-600 text-white rounded-tr-none" : "bg-primary text-primary-foreground rounded-tr-none"
-                          : "bg-card border rounded-tl-none"
-                      }`}
-                    >
-                      <p>{msg.text}</p>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Confirmation Card */}
-                {pendingConfirmation && confirmationFields.length > 0 && (
-                  <div className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-tl-none bg-card border p-4" data-testid="confirmation-card">
-                      <p className="font-bold text-base mb-3 text-center">تأكيد البيانات</p>
-                      <div className="space-y-2">
-                        {confirmationFields.map((field, idx) => (
-                          <div key={idx} className="flex gap-2 text-sm">
-                            <span className="font-bold text-muted-foreground">{field.label}:</span>
-                            <span className={field.isCheck ? "text-green-600 font-medium" : ""}>{field.value}</span>
-                          </div>
-                        ))}
+                {/* Map Section */}
+                {(mode === "buyer" || mode === "seller") && (
+                  <div className="bg-muted/20 p-3 pb-3">
+                    <div className="flex justify-center gap-2 mb-2">
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 border border-border/30">
+                        <Eye className={`h-3 w-3 text-blue-500 transition-transform duration-500 ${viewersAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-[10px] text-foreground transition-all duration-500 ${viewersAnimating ? 'scale-125 text-blue-600' : ''}`}>
+                          {liveViewers.toLocaleString('ar-EG')}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">يتصفحون</span>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-4 pt-3 border-t text-center">
-                        إذا كانت المعلومات صحيحة اكتب <span className="font-bold text-primary">"موافق"</span> لاعتمادها
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {isTyping && (
-                  <div className="flex justify-end">
-                    <div className="bg-card border rounded-2xl rounded-tl-none px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {isAnalyzing && (
-                          <div className="flex items-center gap-1 text-xs text-primary">
-                            <Brain className="h-3 w-3 animate-pulse" />
-                            <span>جارٍ التحليل بالذكاء الاصطناعي</span>
-                          </div>
-                        )}
-                        {!isAnalyzing && (
-                          <div className="flex gap-1">
-                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                          </div>
-                        )}
+
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 border border-border/30">
+                        <FileText className={`h-3 w-3 text-amber-500 transition-transform duration-500 ${requestsAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-[10px] text-foreground transition-all duration-500 ${requestsAnimating ? 'scale-125 text-amber-600' : ''}`}>
+                          {requestsToday.toLocaleString('ar-EG')}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">طلب</span>
+                      </div>
+
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-background/80 border border-border/30">
+                        <Handshake className={`h-3 w-3 text-green-500 transition-transform duration-500 ${dealsAnimating ? 'scale-150' : ''}`} />
+                        <span className={`font-bold text-[10px] text-foreground transition-all duration-500 ${dealsAnimating ? 'scale-125 text-green-600' : ''}`}>
+                          {dealsToday.toLocaleString('ar-EG')}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">صفقة</span>
                       </div>
                     </div>
-                  </div>
-                )}
-                {/* Auto-scroll anchor */}
-                <div ref={messagesEndRef} />
-              </div>
-              </div>
-            )}
 
-            {/* Input area - hidden when search form is shown OR when seller mode (seller has own chat in ListPropertyForm) */}
-            {!(mode === "buyer" && showSearchForm && conversation.length === 0 && !pendingConfirmation) && (mode as string) !== "seller" && (
-              <div 
-                className="p-4 border-t"
-                style={{
-                  backgroundColor: "hsl(var(--card))",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2316a34a' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}>
-                {/* Uploaded files preview and location status */}
-                {mode === "seller" && (uploadedFiles.length > 0 || extractedData.latitude) && (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {uploadedFiles.map((file, idx) => (
-                      <div key={idx} className="relative group">
-                        <div className="h-16 w-16 rounded-md bg-muted flex items-center justify-center border overflow-hidden">
-                          <Image className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== idx))}
-                          className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          data-testid={`button-remove-uploaded-${idx}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    {uploadedFiles.length > 0 && (
-                      <Badge variant="secondary" className="self-center">
-                        {uploadedFiles.length} ملفات مرفوعة
-                      </Badge>
-                    )}
-                    {extractedData.latitude && extractedData.longitude && (
-                      <Badge variant="secondary" className="self-center bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                        <MapPin className="h-3 w-3 ml-1" />
-                        تم تحديد الموقع
-                      </Badge>
-                    )}
+                    {/* ✅✅✅ الخريطة الآن كبيرة وتأخذ المساحة الكاملة في الديسكتوب ✅✅✅ */}
+                    <div 
+                      className="h-[500px] md:h-[750px] rounded-lg overflow-hidden border border-border/30 shadow-sm"
+                    >
+                      <SaudiMap 
+                        markers={mapMarkers} 
+                        className="h-full w-full"
+                      />
+                    </div>
                   </div>
                 )}
-                
-                {/* Transcribing indicator */}
-                {isTranscribing && (
-                  <div className="flex items-center justify-center gap-2 mb-3 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>جارٍ تحويل الصوت لنص...</span>
+
+                {/* Smart Matching Header & Mode Toggle */}
+                <div className="p-3 border-t bg-background">
+                  <div className="text-center mb-2">
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <Brain className="h-4 w-4 text-primary" />
+                      <h3 className="font-bold text-base">المطابقة الذكية</h3>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {mode === "buyer" 
+                        ? "أضف طلبك الآن ودع نظامنا الذكي يجلب لك العروض المطابقة"
+                        : "أضف عقارك الآن ودع نظامنا الذكي يجلب لك المشترين المناسبين"
+                      }
+                    </p>
                   </div>
-                )}
-                
-                {(() => {
-                  const liveData = extractLiveData(inputText);
-                  const hasEssentialData = liveData.missing.length === 0 && liveData.found.length > 0;
-                  return (
-                <div className="flex items-start gap-3">
-                  <Button
-                    size="icon"
-                    onClick={handleSubmit}
-                    disabled={buyerMutation.isPending || sellerMutation.isPending}
-                    data-testid="button-send"
-                    className="flex-shrink-0"
-                  >
-                    <Send className="h-5 w-5" />
-                  </Button>
-                  
-                  {/* Voice recording button - always visible */}
-                  <Button
-                    size="icon"
-                    variant={isRecording ? "destructive" : "outline"}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    disabled={isTranscribing}
-                    className={`flex-shrink-0 ${isRecording ? "animate-pulse" : ""}`}
-                    data-testid="button-voice-record-landing"
-                  >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                  </Button>
-                  
-                  <div className="flex-1 flex flex-col">
-                    {/* Live extraction preview */}
-                    {inputText.trim().length > 0 && (
-                      <div className="text-sm text-right mb-2 px-2 py-1.5 bg-muted/50 rounded-lg" dir="rtl">
-                        {liveData.found.length > 0 && (
-                          <span className="text-foreground">
-                            {liveData.found.map((item, i) => (
-                              <span key={item.key}>
-                                <span className="font-medium">{item.value}</span>
-                                {i < liveData.found.length - 1 && " "}
-                              </span>
-                            ))}
-                          </span>
-                        )}
-                        {liveData.missing.length > 0 && (
-                          <span className="text-muted-foreground mr-1">
-                            (متبقي {liveData.missing.join(" - ")})
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <textarea
-                      dir="rtl"
-                      value={inputText}
-                      onChange={(e) => {
-                        setInputText(e.target.value);
-                        e.target.style.height = 'auto';
-                        e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSubmit();
-                        }
-                      }}
-                      placeholder={isRecording ? "جارٍ التسجيل..." : "تحدث مع مستشار المبيعات"}
-                      className="w-full min-h-[50px] max-h-[120px] p-3 rounded-xl border bg-background text-base focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none overflow-y-auto"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      rows={1}
-                      data-testid="input-interactive"
-                    />
+
+                  <div className="flex justify-center">
+                    <div className="inline-flex rounded-full border border-border p-0.5 bg-muted/30">
+                      <Button
+                        size="sm"
+                        variant={mode === "buyer" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("buyer")}
+                        className="gap-1.5 rounded-full px-3 h-8 text-[11px]"
+                        data-testid="button-mode-buyer"
+                      >
+                        <Users className="h-3 w-3" />
+                        أبحث عن عقار
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={mode === "seller" ? "default" : "ghost"}
+                        onClick={() => handleModeSwitch("seller")}
+                        className="gap-1.5 rounded-full px-3 h-8 text-[11px]"
+                        data-testid="button-mode-seller"
+                      >
+                        <Building2 className="h-3 w-3" />
+                        اعرض عقارك
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                  );
-                })()}
-                
-                {isRecording && (
-                  <p className="text-center text-sm text-red-500 mt-2 animate-pulse">
-                    جارٍ التسجيل... اضغط مرة أخرى للإيقاف
-                  </p>
-                )}
-              </div>
-            )}
+
+                {/* Forms - محددة بعرض مناسب عشان ما تمط بشكل قبيح داخل الكارد العريض */}
+                <div className="max-w-xl mx-auto">
+                  {mode === "buyer" && showSearchForm && (
+                    <div>
+                      <AdvancedSearchForm 
+                        onSearch={handleSearchFormSearch}
+                        onSwitchToChat={noOp} 
+                      />
+                    </div>
+                  )}
+
+                  {mode === "seller" && (
+                    <div>
+                      <ListPropertyForm onSubmit={handleListPropertySubmit} onSwitchToChat={noOp} />
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </Card>
@@ -2489,38 +365,10 @@ export default function HeroSection() {
                 latitude: lat.toString(),
                 longitude: lng.toString()
               }));
-              setConversation(prev => [
-                ...prev,
-                { type: "system", text: `تم تحديد الموقع: ${lat.toFixed(6)}, ${lng.toFixed(6)}` }
-              ]);
             }}
           />
         </div>
       </section>
-      )}
-      
-      {/* Fullscreen Chat Overlay */}
-      {isFullScreenChat && (
-        <FullScreenChat
-          mode={mode}
-          conversation={conversation.map(msg => ({
-            type: msg.type === "user" ? "user" : "assistant",
-            text: msg.text
-          }))}
-          onClose={handleCloseFullScreenChat}
-          onSendMessage={handleSendMessageFullScreen}
-          isTyping={isTyping}
-          isAnalyzing={isAnalyzing}
-          isTranscribing={isTranscribing}
-          isRecording={isRecording}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          extractedData={extractedData}
-          pendingConfirmation={pendingConfirmation}
-          confirmationFields={confirmationFields}
-          isSending={buyerMutation.isPending || sellerMutation.isPending}
-        />
-      )}
     </>
   );
 }
