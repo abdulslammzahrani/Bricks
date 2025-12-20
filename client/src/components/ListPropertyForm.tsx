@@ -115,7 +115,6 @@ interface ListingData {
 
 interface ListPropertyFormProps {
   onSubmit: (data: ListingData) => void;
-  onSwitchToChat?: (initialMessage?: string) => void;
 }
 
 // Helpers

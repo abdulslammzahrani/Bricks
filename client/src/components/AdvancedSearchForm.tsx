@@ -95,7 +95,6 @@ interface SearchFilters {
 
 interface AdvancedSearchFormProps {
   onSearch: (filters: SearchFilters) => void;
-  onSwitchToChat: (initialMessage?: string) => void;
 }
 
 const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { label: string, options: string[], selected: string, onSelect: (val: string) => void, unit?: string }) => (
@@ -120,7 +119,7 @@ const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { 
   </div>
 );
 
-export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch, onSwitchToChat }: AdvancedSearchFormProps) {
+export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }: AdvancedSearchFormProps) {
   const { toast } = useToast();
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);

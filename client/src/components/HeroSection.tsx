@@ -160,7 +160,6 @@ export default function HeroSection() {
   }, [toast]);
 
   const addSuggestion = (suggestion: string) => {};
-  const noOp = () => {};
 
   return (
     <>
@@ -338,16 +337,13 @@ export default function HeroSection() {
                 <div className="max-w-xl mx-auto">
                   {mode === "buyer" && showSearchForm && (
                     <div>
-                      <AdvancedSearchForm 
-                        onSearch={handleSearchFormSearch}
-                        onSwitchToChat={noOp} 
-                      />
+                      <AdvancedSearchForm onSearch={handleSearchFormSearch} />
                     </div>
                   )}
 
                   {mode === "seller" && (
                     <div>
-                      <ListPropertyForm onSubmit={handleListPropertySubmit} onSwitchToChat={noOp} />
+                      <ListPropertyForm onSubmit={handleListPropertySubmit} />
                     </div>
                   )}
                 </div>
