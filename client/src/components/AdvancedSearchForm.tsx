@@ -584,7 +584,6 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
           </div>
         </div>
       </div>
-
       {/* MOBILE VERSION (REPLICATED EXACTLY) */}
       <div className="md:hidden relative px-3 py-3">
         {activeCard >= 1 && (<div className="mb-4 px-1"><div className="flex items-center justify-between mb-1"><span className="text-xs font-medium">{reliabilityScore < 50 ? "بداية..." : "قربنا!"}</span><span className="text-xs font-bold text-green-600">{reliabilityScore}%</span></div><div className="h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-700" style={{ width: `${reliabilityScore}%` }} /></div></div>)}
