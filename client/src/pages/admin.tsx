@@ -90,6 +90,8 @@ import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, S
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { MatchCard, MatchCardCompact } from "@/components/MatchCard";
+import { MarketPulse, MarketPulseCompact } from "@/components/MarketPulse";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -1037,28 +1039,39 @@ export default function AdminDashboard() {
 
             {/* ✅ قسم المطابقات - التصميم الجديد: بائع، مشتري، ومحور الربط */}
             {activeSection === "matches" && (
-              <Card className="bg-slate-50/50 border-none shadow-none">
-                <CardHeader className="px-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                        <Handshake className="h-6 w-6 text-primary" />
-                        المطابقات الذكية
-                        <Badge variant="secondary" className="text-sm font-normal">
-                          {matches.length} نتيجة
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        شبكة المطابقة الشاملة مع بيانات التواصل المباشرة
-                      </CardDescription>
+              <div className="space-y-6">
+                {/* Market Pulse - نبض السوق */}
+                <MarketPulse 
+                  activeBrowsers={users.length}
+                  newRequests={preferences.filter(p => p.isActive).length}
+                  completedDeals={contactRequests.filter(c => c.status === "completed").length}
+                  matchedProperties={matches.length}
+                  newInterests={matches.filter(m => m.isSaved).length}
+                  ongoingChats={contactRequests.filter(c => c.status === "pending").length}
+                />
+
+                <Card className="bg-slate-50/50 dark:bg-slate-900/50 border-none shadow-none">
+                  <CardHeader className="px-0">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                          <Handshake className="h-6 w-6 text-primary" />
+                          المطابقات الذكية v2.0
+                          <Badge variant="secondary" className="text-sm font-normal">
+                            {matches.length} نتيجة
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          خوارزمية النقاط الموزونة: موقع (40) + سعر (30) + مواصفات (30) = 100 نقطة
+                        </CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        <Filter className="h-4 w-4 ml-2" />
+                        تصفية النتائج
+                      </Button>
                     </div>
-                    <Button variant="outline" size="sm">
-                      <Filter className="h-4 w-4 ml-2" />
-                      تصفية النتائج
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-0">
+                  </CardHeader>
+                  <CardContent className="px-0">
                   {matches.length > 0 ? (
                     <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                       <div className="grid gap-6 pb-10">
@@ -1313,6 +1326,7 @@ export default function AdminDashboard() {
                   )}
                 </CardContent>
               </Card>
+              </div>
             )}
             {/* Analytics Section - Enhanced Dashboard */}
             {activeSection === "analytics" && (

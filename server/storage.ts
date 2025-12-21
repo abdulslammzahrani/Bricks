@@ -321,51 +321,223 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  private calculateMatchScore(property: Property, preference: BuyerPreference): number {
-    let score = 0;
-    let factors = 0;
+  /**
+   * خريطة الأحياء المجاورة - تجمعات جغرافية حقيقية
+   * كل حي مرتبط بقائمة الأحياء المجاورة له جغرافياً
+   */
+  private readonly adjacencyMap: Record<string, Record<string, string[]>> = {
+    "الرياض": {
+      // شمال الرياض
+      "النرجس": ["الياسمين", "الملقا", "حطين", "العارض"],
+      "الياسمين": ["النرجس", "الملقا", "الصحافة", "الغدير"],
+      "الملقا": ["النرجس", "الياسمين", "حطين", "النخيل"],
+      "حطين": ["النرجس", "الملقا", "النخيل", "العقيق"],
+      "الصحافة": ["الياسمين", "الغدير", "النخيل", "العقيق"],
+      "الغدير": ["الياسمين", "الصحافة", "الربيع", "القيروان"],
+      "النخيل": ["الملقا", "حطين", "الصحافة", "العقيق"],
+      "العقيق": ["حطين", "النخيل", "الصحافة", "الورود"],
+      // وسط الرياض
+      "الورود": ["العقيق", "السليمانية", "المروج", "العليا"],
+      "السليمانية": ["الورود", "المروج", "العليا", "الملز"],
+      "المروج": ["الورود", "السليمانية", "الرحمانية", "العليا"],
+      "العليا": ["الورود", "السليمانية", "المروج", "الفيصلية"],
+      "الفيصلية": ["العليا", "المربع", "الديرة", "الملز"],
+      "المربع": ["الفيصلية", "الديرة", "البطحاء", "الملز"],
+      "الديرة": ["الفيصلية", "المربع", "البطحاء"],
+      "البطحاء": ["المربع", "الديرة", "الشميسي"],
+      "الملز": ["السليمانية", "الفيصلية", "المربع", "الروضة"],
+      // غرب الرياض
+      "عرقة": ["الخزامى", "طويق", "ظهرة لبن"],
+      "الخزامى": ["عرقة", "طويق", "ظهرة لبن", "الربوة"],
+      "طويق": ["عرقة", "الخزامى", "ظهرة لبن", "نمار"],
+      "ظهرة لبن": ["عرقة", "الخزامى", "طويق", "نمار"],
+      "نمار": ["طويق", "ظهرة لبن", "الدار البيضاء"],
+      // شرق الرياض
+      "المونسية": ["قرطبة", "الندى", "الروضة"],
+      "قرطبة": ["المونسية", "الندى", "الروضة", "اليرموك"],
+      "الندى": ["المونسية", "قرطبة", "الوادي"],
+      "الروضة": ["قرطبة", "المونسية", "الملز"],
+    },
+    "جدة": {
+      // شمال جدة
+      "الحمراء": ["الشاطئ", "الزهراء", "النعيم"],
+      "الشاطئ": ["الحمراء", "الزهراء", "أبحر الشمالية"],
+      "الزهراء": ["الحمراء", "الشاطئ", "النعيم", "الفيصلية"],
+      "النعيم": ["الحمراء", "الزهراء", "الصفا"],
+      "أبحر الشمالية": ["الشاطئ", "أبحر الجنوبية"],
+      "أبحر الجنوبية": ["أبحر الشمالية", "الشاطئ"],
+      // وسط جدة
+      "الفيصلية": ["الزهراء", "السلامة", "الروضة"],
+      "السلامة": ["الفيصلية", "الروضة", "النزهة"],
+      "الروضة": ["الفيصلية", "السلامة", "النزهة", "المروة"],
+      "النزهة": ["السلامة", "الروضة", "المحمدية"],
+      "المحمدية": ["النزهة", "الصفا", "العزيزية"],
+      // جنوب جدة
+      "الصفا": ["النعيم", "المحمدية", "المروة"],
+      "المروة": ["الصفا", "الروضة", "الربوة"],
+      "الربوة": ["المروة", "الثغر"],
+      "البلد": ["العزيزية", "الكندرة"],
+    },
+    "الدمام": {
+      "الشاطئ": ["الفيصلية", "الروضة"],
+      "الفيصلية": ["الشاطئ", "الروضة", "النزهة"],
+      "الروضة": ["الشاطئ", "الفيصلية", "المزروعية"],
+      "النزهة": ["الفيصلية", "الجلوية"],
+      "المزروعية": ["الروضة", "الخليج"],
+    },
+    "مكة المكرمة": {
+      "العزيزية": ["الشوقية", "الشرائع"],
+      "الشوقية": ["العزيزية", "الحمراء"],
+      "الشرائع": ["العزيزية", "العوالي"],
+      "العوالي": ["الشرائع", "العزيزية"],
+    },
+  };
 
-    // City match (mandatory)
-    if (property.city === preference.city) {
-      score += 30;
-    } else {
-      return 0; // No match if different city
+  /**
+   * التحقق من الأحياء المجاورة
+   * يستخدم خريطة التجاور الجغرافي المحددة مسبقاً
+   */
+  private isAdjacentDistrict(city: string, propertyDistrict: string, buyerDistricts: string[]): boolean {
+    const cityAdjacency = this.adjacencyMap[city];
+    if (!cityAdjacency) return false;
+    
+    // التحقق من أن حي العقار مجاور لأي من أحياء المشتري
+    const propertyNeighbors = cityAdjacency[propertyDistrict];
+    if (!propertyNeighbors) return false;
+    
+    for (const buyerDistrict of buyerDistricts) {
+      if (propertyNeighbors.includes(buyerDistrict)) {
+        return true;
+      }
+      // التحقق أيضاً من الاتجاه المعاكس
+      const buyerNeighbors = cityAdjacency[buyerDistrict];
+      if (buyerNeighbors && buyerNeighbors.includes(propertyDistrict)) {
+        return true;
+      }
     }
-    factors++;
+    
+    return false;
+  }
 
-    // District match
+  /**
+   * خوارزمية المطابقة الذكية v2.0
+   * نظام النقاط الموزونة من 100 نقطة (بالضبط):
+   * - الموقع الجغرافي (40 نقطة): مطابقة الحي = 40، حي مجاور = 25، نفس المدينة فقط = 15
+   * - التوافق السعري (30 نقطة): ضمن الميزانية = 30، أعلى بـ 5% = 20، أعلى بـ 15% = 10
+   * - المواصفات الفنية (30 نقطة): نوع العقار = 15، الغرف/المساحة = 15
+   */
+  private calculateMatchScore(property: Property, preference: BuyerPreference): number {
+    let locationScore = 0;
+    let priceScore = 0;
+    let specsScore = 0;
+    
+    // ===== 1. الموقع الجغرافي (40 نقطة كحد أقصى) =====
+    // التحقق من المدينة (إلزامي)
+    if (property.city !== preference.city) {
+      return 0; // لا توجد مطابقة إذا كانت المدينة مختلفة
+    }
+
+    // مطابقة الحي
     if (preference.districts && preference.districts.length > 0) {
       if (preference.districts.includes(property.district)) {
-        score += 25;
+        locationScore = 40; // مطابقة الحي تماماً
+      } else if (this.isAdjacentDistrict(preference.city, property.district, preference.districts)) {
+        locationScore = 25; // حي مجاور
+      } else {
+        // نفس المدينة لكن حي بعيد = نقاط جزئية فقط
+        locationScore = 15;
       }
-      factors++;
+    } else {
+      // لم يحدد أحياء معينة = نقاط جزئية
+      locationScore = 20;
     }
 
-    // Property type match
+    // ===== 2. التوافق السعري (30 نقطة كحد أقصى) =====
+    if (preference.budgetMax) {
+      const budgetFlexThreshold = preference.budgetMax * 1.05; // 5% مرونة
+      
+      if (property.price <= preference.budgetMax) {
+        if (preference.budgetMin && property.price >= preference.budgetMin) {
+          priceScore = 30; // ضمن النطاق تماماً
+        } else {
+          priceScore = 25; // أقل من الحد الأدنى لكن ضمن الأعلى
+        }
+      } else if (property.price <= budgetFlexThreshold) {
+        priceScore = 20; // أعلى بنسبة تصل إلى 5%
+      } else if (property.price <= preference.budgetMax * 1.15) {
+        priceScore = 10; // أعلى بـ 15%
+      } else {
+        priceScore = 0; // أكثر من 15% فوق الميزانية
+      }
+    } else {
+      // لم يحدد ميزانية - نقاط جزئية
+      priceScore = 15;
+    }
+
+    // ===== 3. المواصفات الفنية (30 نقطة كحد أقصى) =====
+    let propertyTypeScore = 0;
+    let roomsAreaScore = 0;
+    
+    // نوع العقار (15 نقطة كحد أقصى)
     if (property.propertyType === preference.propertyType) {
-      score += 25;
-    }
-    factors++;
-
-    // Budget match
-    if (preference.budgetMin && preference.budgetMax) {
-      if (property.price >= preference.budgetMin && property.price <= preference.budgetMax) {
-        score += 15;
-      } else if (property.price <= preference.budgetMax * 1.1) {
-        score += 7; // Slightly over budget
+      propertyTypeScore = 15; // تطابق تام
+    } else {
+      const similarTypes: Record<string, string[]> = {
+        villa: ["duplex", "townhouse"],
+        duplex: ["villa", "townhouse"],
+        apartment: ["studio"],
+        studio: ["apartment"],
+      };
+      if (similarTypes[preference.propertyType]?.includes(property.propertyType)) {
+        propertyTypeScore = 8; // نوع مشابه
+      } else {
+        propertyTypeScore = 0; // نوع مختلف تماماً
       }
-      factors++;
     }
 
-    // Rooms match
+    // الغرف والمساحة (15 نقطة كحد أقصى: 7.5 لكل منهما)
+    let roomsScore = 0;
+    let areaScore = 0;
+    
     if (preference.rooms && property.rooms) {
-      if (property.rooms === preference.rooms) {
-        score += 5;
+      const prefRooms = parseInt(preference.rooms) || 0;
+      const propRooms = parseInt(property.rooms) || 0;
+      
+      if (propRooms === prefRooms) {
+        roomsScore = 7.5;
+      } else if (Math.abs(propRooms - prefRooms) === 1) {
+        roomsScore = 5;
+      } else if (Math.abs(propRooms - prefRooms) <= 2) {
+        roomsScore = 2.5;
       }
-      factors++;
     }
 
-    return Math.min(100, score);
+    if (preference.area && property.area) {
+      const prefArea = parseInt(preference.area) || 0;
+      const propArea = parseInt(property.area) || 0;
+      
+      if (prefArea > 0) {
+        const ratio = propArea / prefArea;
+        if (ratio >= 0.9 && ratio <= 1.1) {
+          areaScore = 7.5; // ضمن 10%
+        } else if (ratio >= 0.8 && ratio <= 1.2) {
+          areaScore = 5; // ضمن 20%
+        } else if (ratio >= 0.7 && ratio <= 1.3) {
+          areaScore = 2.5; // ضمن 30%
+        }
+      }
+    }
+
+    roomsAreaScore = roomsScore + areaScore;
+    specsScore = propertyTypeScore + roomsAreaScore;
+
+    // الحد الأقصى 30 نقطة للمواصفات
+    specsScore = Math.min(30, specsScore);
+
+    // المجموع النهائي (100 نقطة كحد أقصى)
+    const totalScore = Math.min(40, locationScore) + Math.min(30, priceScore) + Math.min(30, specsScore);
+
+    return Math.min(100, Math.round(totalScore));
   }
 
   // Contact Requests
