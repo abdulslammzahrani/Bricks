@@ -1270,11 +1270,11 @@ export default function AdminDashboard() {
                           if (!pref || !prop) return null;
 
                           return (
-                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[850px] mx-auto w-full">
+                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[850px] mx-auto w-full px-10">
                               <div className="grid grid-cols-1 md:grid-cols-9">
 
                                 {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
-                                <div className="md:col-span-2 bg-blue-50/30 p-3 flex flex-col items-center text-center border-b md:border-b-0 md:border-l border-slate-100">
+                                <div className="md:col-span-2 bg-blue-50/30 p-3 flex flex-col items-center text-center border-b md:border-b-0 md:border-l border-slate-100 -mx-10">
                                   <div className="flex flex-col items-center w-full gap-1">
                                     <div className="relative">
                                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
@@ -1303,14 +1303,14 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex flex-wrap gap-1 justify-center mt-2">
+                                  <div className="flex flex-col gap-1 items-center justify-center mt-2 w-full">
                                      <Badge variant="secondary" className="text-[9px] h-4 bg-white">{pref.city}</Badge>
                                      <Badge variant="secondary" className="text-[9px] h-4 bg-white">{propertyTypeLabels[pref.propertyType]}</Badge>
                                   </div>
                                 </div>
 
                                 {/* الجزء الأوسط: محور الربط */}
-                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-6">
+                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-5 -mx-10">
                                   {/* زر الرسائل */}
                                   <Button 
                                     size="icon" 
@@ -1344,17 +1344,17 @@ export default function AdminDashboard() {
                                   {/* زر التفاصيل */}
                                   <Button 
                                     size="icon" 
-                                    variant="outline"
-                                    className="h-9 w-9 rounded-full border-slate-300"
+                                    variant="ghost"
+                                    className="h-9 w-9 rounded-full text-slate-600 hover:text-slate-800"
                                     onClick={() => handleShowMatchDetails(match.id)}
                                     data-testid={`button-full-details-${match.id}`}
                                   >
-                                    <ExternalLink className="w-4 h-4" />
+                                    <ExternalLink className="w-4 h-4" strokeWidth="2" />
                                   </Button>
                                 </div>
 
                                 {/* الجزء الأيسر: بطاقة البائع */}
-                                <div className="md:col-span-2 bg-green-50/30 p-3 flex flex-col items-center text-center border-t md:border-t-0 md:border-r border-slate-100">
+                                <div className="md:col-span-2 bg-green-50/30 p-3 flex flex-col items-center text-center border-t md:border-t-0 md:border-r border-slate-100 -mx-10">
                                   <div className="flex flex-col items-center w-full gap-1">
                                     <div className="relative">
                                       <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
@@ -1383,7 +1383,7 @@ export default function AdminDashboard() {
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex flex-wrap gap-1 justify-center mt-2">
+                                  <div className="flex flex-col gap-1 items-center justify-center mt-2 w-full">
                                      <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{prop.city}</Badge>
                                      <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{formatCurrency(prop.price)}</Badge>
                                   </div>
