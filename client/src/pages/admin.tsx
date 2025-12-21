@@ -1270,7 +1270,7 @@ export default function AdminDashboard() {
                           if (!pref || !prop) return null;
 
                           return (
-                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[850px] mx-auto w-full">
                               <div className="grid grid-cols-1 md:grid-cols-9">
 
                                 {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
@@ -1310,11 +1310,11 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* الجزء الأوسط: محور الربط */}
-                                <div className="md:col-span-5 p-3 bg-white flex items-center justify-center gap-4">
+                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-6">
                                   {/* زر الرسائل */}
                                   <Button 
                                     size="icon" 
-                                    className="h-8 w-8 rounded-full"
+                                    className="h-9 w-9 rounded-full bg-primary text-white"
                                     onClick={() => handleSendMatchNotification(match.id)}
                                     disabled={sendingMatchNotification === match.id}
                                     data-testid={`button-group-chat-${match.id}`}
@@ -1324,29 +1324,28 @@ export default function AdminDashboard() {
                                   
                                   {/* دائرة نسبة التطابق */}
                                   <div className="relative flex items-center justify-center">
-                                    <svg className="w-14 h-14 transform -rotate-90">
-                                      <circle className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="white" r="24" cx="28" cy="28" />
+                                    <svg className="w-16 h-16 transform -rotate-90">
+                                      <circle stroke="#e2e8f0" strokeWidth="4" fill="white" r="28" cx="32" cy="32" />
                                       <circle 
-                                        className="text-primary" 
-                                        strokeWidth="3" 
-                                        strokeDasharray={2 * Math.PI * 24} 
-                                        strokeDashoffset={2 * Math.PI * 24 * (1 - match.matchScore / 100)} 
+                                        stroke="#22c55e"
+                                        strokeWidth="4" 
+                                        strokeDasharray={2 * Math.PI * 28} 
+                                        strokeDashoffset={2 * Math.PI * 28 * (1 - match.matchScore / 100)} 
                                         strokeLinecap="round" 
-                                        stroke="currentColor" 
                                         fill="transparent" 
-                                        r="24" 
-                                        cx="28" 
-                                        cy="28" 
+                                        r="28" 
+                                        cx="32" 
+                                        cy="32" 
                                       />
                                     </svg>
-                                    <span className="absolute text-sm font-bold text-slate-800">{match.matchScore}%</span>
+                                    <span className="absolute text-base font-bold text-slate-800">{match.matchScore}%</span>
                                   </div>
                                   
                                   {/* زر التفاصيل */}
                                   <Button 
                                     size="icon" 
-                                    variant="ghost"
-                                    className="h-8 w-8 rounded-full"
+                                    variant="outline"
+                                    className="h-9 w-9 rounded-full border-slate-300"
                                     onClick={() => handleShowMatchDetails(match.id)}
                                     data-testid={`button-full-details-${match.id}`}
                                   >
