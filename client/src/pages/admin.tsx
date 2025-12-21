@@ -1271,244 +1271,156 @@ export default function AdminDashboard() {
 
                           return (
                             <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
-                              <div className="grid grid-cols-1 md:grid-cols-7 min-h-[180px]">
+                              <div className="grid grid-cols-1 md:grid-cols-9">
 
-                                {/* --------------------------------------- */}
                                 {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
-                                {/* --------------------------------------- */}
-                                <div className="md:col-span-2 bg-blue-50/30 p-5 flex flex-col items-center justify-between text-center border-b md:border-b-0 md:border-l border-slate-100">
-                                  <div className="flex flex-col items-center w-full">
-                                    <div className="relative mb-2">
-                                      <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shadow-sm">
-                                        <UserIcon className="w-7 h-7" />
+                                <div className="md:col-span-2 bg-blue-50/30 p-3 flex flex-col items-center text-center border-b md:border-b-0 md:border-l border-slate-100">
+                                  <div className="flex flex-col items-center w-full gap-1">
+                                    <div className="relative">
+                                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                                        <UserIcon className="w-5 h-5" />
                                       </div>
-                                      <Badge className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[9px] px-1.5 h-4 border-2 border-white">مشتري</Badge>
+                                      <Badge className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[8px] px-1 h-3.5 border border-white">مشتري</Badge>
                                     </div>
-
-                                    <h4 className="font-bold text-slate-800 text-sm truncate w-full px-2" title={buyer?.name}>
-                                      {buyer?.name || "مستخدم غير معروف"}
+                                    <h4 className="font-semibold text-slate-800 text-xs truncate w-full" title={buyer?.name}>
+                                      {buyer?.name || "مستخدم"}
                                     </h4>
-
-                                    {/* أيقونات التواصل للمشتري */}
-                                    <div className="flex items-center justify-center gap-2 mt-3">
+                                    <div className="flex items-center gap-1.5">
                                       {buyer?.phone && (
                                         <>
-                                          <a 
-                                            href={`tel:${buyer.phone}`} 
-                                            title="اتصال هاتفي" 
-                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-green-600 hover:border-green-600 hover:shadow-sm transition-all"
-                                          >
-                                            <Phone className="w-3.5 h-3.5" />
+                                          <a href={`tel:${buyer.phone}`} title="اتصال" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-600 transition-all">
+                                            <Phone className="w-3 h-3" />
                                           </a>
-                                          <a 
-                                            href={getWhatsAppLink(buyer.phone)} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
-                                            title="محادثة واتساب" 
-                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-[#25D366] hover:border-[#25D366] hover:shadow-sm transition-all"
-                                          >
-                                            <SiWhatsapp className="w-3.5 h-3.5" />
+                                          <a href={getWhatsAppLink(buyer.phone)} target="_blank" rel="noopener noreferrer" title="واتساب" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-[#25D366] hover:border-[#25D366] transition-all">
+                                            <SiWhatsapp className="w-3 h-3" />
                                           </a>
                                         </>
                                       )}
                                       {buyer?.email && (
-                                        <a 
-                                          href={`mailto:${buyer.email}`} 
-                                          title="إرسال بريد" 
-                                          className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-600 hover:shadow-sm transition-all"
-                                        >
-                                          <Mail className="w-3.5 h-3.5" />
+                                        <a href={`mailto:${buyer.email}`} title="بريد" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all">
+                                          <Mail className="w-3 h-3" />
                                         </a>
                                       )}
                                     </div>
                                   </div>
-
-                                  <div className="w-full mt-4 pt-3 border-t border-blue-100/50">
-                                    <span className="text-[10px] text-muted-foreground block mb-2">ملخص الطلب</span>
-                                    <div className="flex flex-wrap gap-1 justify-center">
-                                       <Badge variant="secondary" className="text-[10px] h-5 bg-white shadow-sm">{pref.city}</Badge>
-                                       <Badge variant="secondary" className="text-[10px] h-5 bg-white shadow-sm">{propertyTypeLabels[pref.propertyType]}</Badge>
-                                    </div>
+                                  <div className="flex flex-wrap gap-1 justify-center mt-2">
+                                     <Badge variant="secondary" className="text-[9px] h-4 bg-white">{pref.city}</Badge>
+                                     <Badge variant="secondary" className="text-[9px] h-4 bg-white">{propertyTypeLabels[pref.propertyType]}</Badge>
                                   </div>
                                 </div>
 
-                                {/* --------------------------------------- */}
-                                {/* الجزء الأوسط: محور الربط (The Hub) */}
-                                {/* --------------------------------------- */}
-                                <div className="md:col-span-3 p-4 flex flex-col items-center justify-center relative bg-white">
-                                  {/* الخط العمودي (العمود الفقري) */}
-                                  <div className="absolute left-1/2 top-6 bottom-6 w-px bg-slate-100 -translate-x-1/2 hidden md:block"></div>
-
-                                  {/* الدائرة العلوية: نسبة التطابق */}
-                                  <div className="relative z-10 mb-6 group cursor-default">
-                                    <div className="relative flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
-                                      <svg className="w-16 h-16 transform -rotate-90">
-                                        <circle className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="white" r="28" cx="32" cy="32" />
+                                {/* الجزء الأوسط: محور الربط */}
+                                <div className="md:col-span-5 p-3 flex items-center justify-between gap-2 bg-white">
+                                  {/* نسبة التطابق */}
+                                  <div className="flex-shrink-0">
+                                    <div className="relative flex items-center justify-center">
+                                      <svg className="w-12 h-12 transform -rotate-90">
+                                        <circle className="text-slate-100" strokeWidth="2.5" stroke="currentColor" fill="white" r="20" cx="24" cy="24" />
                                         <circle 
-                                          className="text-primary transition-all duration-1000 ease-out" 
-                                          strokeWidth="3" 
-                                          strokeDasharray={2 * Math.PI * 28} 
-                                          strokeDashoffset={2 * Math.PI * 28 * (1 - match.matchScore / 100)} 
+                                          className="text-primary" 
+                                          strokeWidth="2.5" 
+                                          strokeDasharray={2 * Math.PI * 20} 
+                                          strokeDashoffset={2 * Math.PI * 20 * (1 - match.matchScore / 100)} 
                                           strokeLinecap="round" 
                                           stroke="currentColor" 
                                           fill="transparent" 
-                                          r="28" 
-                                          cx="32" 
-                                          cy="32" 
+                                          r="20" 
+                                          cx="24" 
+                                          cy="24" 
                                         />
                                       </svg>
                                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-sm font-bold text-slate-800">{match.matchScore}%</span>
-                                        <span className="text-[8px] text-muted-foreground uppercase tracking-tighter">تطابق</span>
+                                        <span className="text-xs font-bold text-slate-800">{match.matchScore}%</span>
                                       </div>
                                     </div>
                                   </div>
 
-                                  {/* خيوط البيانات (Matching Threads) */}
-                                  <div className="w-full space-y-3 relative z-10 text-xs">
-
-                                    {/* خيط الموقع */}
-                                    <div className="flex items-center justify-between w-full px-2 group/row">
-                                      <div className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors" title={pref.city}>
-                                        {pref.city} <span className="text-slate-400 font-normal text-[10px]">{pref.districts?.[0]}</span>
-                                      </div>
-                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                        <MapPin className="w-3.5 h-3.5 mx-1" />
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                      </div>
-                                      <div className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors" title={prop.city}>
-                                        {prop.city} <span className="text-slate-400 font-normal text-[10px]">{prop.district}</span>
-                                      </div>
+                                  {/* خيوط المقارنة */}
+                                  <div className="flex-1 space-y-1 text-[10px]">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-slate-600 truncate">{pref.city}</span>
+                                      <MapPin className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                                      <span className="text-slate-600 truncate">{prop.city}</span>
                                     </div>
-
-                                    {/* خيط النوع */}
-                                    <div className="flex items-center justify-between w-full px-2 group/row">
-                                      <span className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
-                                        {propertyTypeLabels[pref.propertyType]}
-                                      </span>
-                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                        <Building2 className="w-3.5 h-3.5 mx-1" />
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                      </div>
-                                      <span className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
-                                        {propertyTypeLabels[prop.propertyType]}
-                                      </span>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-slate-600 truncate">{propertyTypeLabels[pref.propertyType]}</span>
+                                      <Building2 className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                                      <span className="text-slate-600 truncate">{propertyTypeLabels[prop.propertyType]}</span>
                                     </div>
-
-                                    {/* خيط المال */}
-                                    <div className="flex items-center justify-between w-full px-2 group/row">
-                                      <span className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
-                                        {maskBudget(pref.budgetMin, pref.budgetMax)}
-                                      </span>
-                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                        <ArrowRightLeft className="w-3.5 h-3.5 mx-1" />
-                                        <div className="h-px w-2 bg-current opacity-50"></div>
-                                      </div>
-                                      <span className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
-                                        {formatCurrency(prop.price)}
-                                      </span>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-slate-600 truncate">{maskBudget(pref.budgetMin, pref.budgetMax)}</span>
+                                      <ArrowRightLeft className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                                      <span className="text-slate-600 truncate">{formatCurrency(prop.price)}</span>
                                     </div>
                                   </div>
 
-                                  {/* أزرار الإجراءات في المنتصف */}
-                                  <div className="mt-6 flex gap-2 w-full justify-center pt-2">
+                                  {/* أزرار */}
+                                  <div className="flex flex-col gap-1 flex-shrink-0">
                                     <Button 
                                       size="sm" 
-                                      className="h-7 text-[11px] px-3 bg-primary hover:bg-primary/90 shadow-sm rounded-full"
+                                      className="h-6 text-[10px] px-2 rounded-full"
                                       onClick={() => handleSendMatchNotification(match.id)}
                                       disabled={sendingMatchNotification === match.id}
                                       data-testid={`button-group-chat-${match.id}`}
                                     >
-                                      {sendingMatchNotification === match.id ? (
-                                        <RefreshCw className="w-3 h-3 mr-1.5 animate-spin" />
-                                      ) : (
-                                        <MessageSquare className="w-3 h-3 mr-1.5" />
-                                      )}
-                                      محادثة جماعية
+                                      {sendingMatchNotification === match.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-6 text-[10px] px-2"
+                                      onClick={() => handleShowMatchDetails(match.id)}
+                                      data-testid={`button-full-details-${match.id}`}
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
                                     </Button>
                                   </div>
                                 </div>
 
-                                {/* --------------------------------------- */}
-                                {/* الجزء الأيسر: بطاقة البائع (Persona) */}
-                                {/* --------------------------------------- */}
-                                <div className="md:col-span-2 bg-green-50/30 p-5 flex flex-col items-center justify-between text-center border-t md:border-t-0 md:border-r border-slate-100">
-                                  <div className="flex flex-col items-center w-full">
-                                    <div className="relative mb-2">
-                                      <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-sm">
-                                        <Store className="w-7 h-7" />
+                                {/* الجزء الأيسر: بطاقة البائع */}
+                                <div className="md:col-span-2 bg-green-50/30 p-3 flex flex-col items-center text-center border-t md:border-t-0 md:border-r border-slate-100">
+                                  <div className="flex flex-col items-center w-full gap-1">
+                                    <div className="relative">
+                                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                        <Store className="w-5 h-5" />
                                       </div>
-                                      <Badge className="absolute -bottom-1 -left-1 bg-green-600 text-white text-[9px] px-1.5 h-4 border-2 border-white">بائع</Badge>
+                                      <Badge className="absolute -bottom-1 -left-1 bg-green-600 text-white text-[8px] px-1 h-3.5 border border-white">بائع</Badge>
                                     </div>
-
-                                    <h4 className="font-bold text-slate-800 text-sm truncate w-full px-2" title={seller?.name}>
+                                    <h4 className="font-semibold text-slate-800 text-xs truncate w-full" title={seller?.name}>
                                       {seller?.name || "مالك العقار"}
                                     </h4>
-
-                                    {/* أيقونات التواصل للبائع */}
-                                    <div className="flex items-center justify-center gap-2 mt-3">
+                                    <div className="flex items-center gap-1.5">
                                       {seller?.phone && (
                                         <>
-                                          <a 
-                                            href={`tel:${seller.phone}`} 
-                                            title="اتصال هاتفي" 
-                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-green-600 hover:border-green-600 hover:shadow-sm transition-all"
-                                          >
-                                            <Phone className="w-3.5 h-3.5" />
+                                          <a href={`tel:${seller.phone}`} title="اتصال" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-600 transition-all">
+                                            <Phone className="w-3 h-3" />
                                           </a>
-                                          <a 
-                                            href={getWhatsAppLink(seller.phone)} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
-                                            title="محادثة واتساب" 
-                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-[#25D366] hover:border-[#25D366] hover:shadow-sm transition-all"
-                                          >
-                                            <SiWhatsapp className="w-3.5 h-3.5" />
+                                          <a href={getWhatsAppLink(seller.phone)} target="_blank" rel="noopener noreferrer" title="واتساب" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-[#25D366] hover:border-[#25D366] transition-all">
+                                            <SiWhatsapp className="w-3 h-3" />
                                           </a>
                                         </>
                                       )}
                                       {seller?.email && (
-                                        <a 
-                                          href={`mailto:${seller.email}`} 
-                                          title="إرسال بريد" 
-                                          className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-600 hover:shadow-sm transition-all"
-                                        >
-                                          <Mail className="w-3.5 h-3.5" />
+                                        <a href={`mailto:${seller.email}`} title="بريد" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all">
+                                          <Mail className="w-3 h-3" />
                                         </a>
                                       )}
                                     </div>
                                   </div>
-
-                                  <div className="w-full mt-4 pt-3 border-t border-green-100/50">
-                                    <span className="text-[10px] text-muted-foreground block mb-2">العقار المعروض</span>
-                                    <div className="flex flex-wrap gap-1 justify-center">
-                                       <Badge variant="outline" className="text-[10px] h-5 bg-white text-slate-600 border-slate-200">{prop.city}</Badge>
-                                       <Badge variant="outline" className="text-[10px] h-5 bg-white text-slate-600 border-slate-200">{formatCurrency(prop.price)}</Badge>
-                                    </div>
+                                  <div className="flex flex-wrap gap-1 justify-center mt-2">
+                                     <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{prop.city}</Badge>
+                                     <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{formatCurrency(prop.price)}</Badge>
                                   </div>
                                 </div>
 
                               </div>
-
-                              {/* الشريط السفلي: الحالة والتفاصيل */}
-                              <div className="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-between">
-                                 <div className="flex gap-2">
-                                    {match.isSaved && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] gap-1"><Save className="w-3 h-3"/> محفوظ</Badge>}
-                                    {match.isContacted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] gap-1"><CheckCircle className="w-3 h-3"/> تم التواصل</Badge>}
-                                 </div>
-                                 <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="h-7 text-xs hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary"
-                                    onClick={() => handleShowMatchDetails(match.id)}
-                                    data-testid={`button-full-details-${match.id}`}
-                                 >
-                                    <ExternalLink className="w-3 h-3 mr-1" /> التفاصيل الكاملة
-                                 </Button>
-                              </div>
+                              {/* الشريط السفلي المدمج */}
+                              {(match.isSaved || match.isContacted) && (
+                                <div className="bg-slate-50 border-t border-slate-100 px-3 py-1.5 flex items-center gap-2">
+                                  {match.isSaved && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[9px] h-4 gap-0.5"><Save className="w-2.5 h-2.5"/> محفوظ</Badge>}
+                                  {match.isContacted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[9px] h-4 gap-0.5"><CheckCircle className="w-2.5 h-2.5"/> تم التواصل</Badge>}
+                                </div>
+                              )}
                             </Card>
                           );
                         })}
