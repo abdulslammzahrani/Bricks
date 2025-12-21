@@ -550,6 +550,7 @@ export async function registerRoutes(
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
+      let isNewUser = false;
       if (!user) {
         user = await storage.createUser({
           email: email.trim(),
@@ -557,6 +558,7 @@ export async function registerRoutes(
           name: name.trim(),
           role: "buyer",
         });
+        isNewUser = true;
       }
 
       // Parse budget values safely
@@ -581,7 +583,7 @@ export async function registerRoutes(
       // Find matches for this preference
       await storage.findMatchesForPreference(preference.id);
 
-      res.json({ success: true, user, preference });
+      res.json({ success: true, user, preference, isNewUser, phone: phone.trim() });
     } catch (error: any) {
       console.error("Error registering buyer:", error);
       res.status(500).json({ error: error.message });
@@ -788,6 +790,7 @@ export async function registerRoutes(
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
+      let isNewUser = false;
       if (!user) {
         user = await storage.createUser({
           email: email.trim(),
@@ -797,6 +800,7 @@ export async function registerRoutes(
           accountType: accountType || null,
           entityName: entityName || null,
         });
+        isNewUser = true;
       }
 
       // Create property
@@ -819,7 +823,7 @@ export async function registerRoutes(
       // Find matches for this property
       await storage.findMatchesForProperty(property.id);
 
-      res.json({ success: true, user, property });
+      res.json({ success: true, user, property, isNewUser, phone: phone.trim() });
     } catch (error: any) {
       console.error("Error registering seller:", error);
       res.status(500).json({ error: error.message });
@@ -846,6 +850,7 @@ export async function registerRoutes(
 
       // Check if user exists
       let user = await storage.getUserByEmail(email);
+      let isNewUser = false;
       if (!user) {
         user = await storage.createUser({
           email: email.trim(),
@@ -855,6 +860,7 @@ export async function registerRoutes(
           accountType: null,
           entityName: null,
         });
+        isNewUser = true;
       }
 
       res.json({ 
@@ -866,7 +872,9 @@ export async function registerRoutes(
           budgetMin,
           budgetMax,
           returnPreference
-        }
+        },
+        isNewUser,
+        phone: phone.trim()
       });
     } catch (error: any) {
       console.error("Error registering investor:", error);
