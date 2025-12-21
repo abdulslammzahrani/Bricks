@@ -65,11 +65,24 @@ To comply with Saudi Arabia's Real Estate General Authority (REGA) regulations, 
 - **PostgreSQL**: Primary database accessed via `pg` driver and connection pooling.
 - **Saudi Arabia Locations Database**: `shared/saudi-locations.ts` contains a comprehensive database of Saudi cities and neighborhoods, used for dynamic dropdowns.
 
+### Authentication System (WebAuthn + Password)
+
+The platform implements a comprehensive authentication system supporting both traditional password-based login and modern WebAuthn biometric authentication (Face ID, Touch ID, fingerprint):
+
+- **Password Authentication**: Phone number + password login at `/login`
+- **WebAuthn Biometrics**: Platform authenticator support for Face ID/Touch ID/fingerprint across iOS, Android, Windows
+- **Session Management**: Express sessions with PostgreSQL storage
+- **Auth Middleware**: `requireAuth` and `requireAdmin` middleware in `server/auth-middleware.ts`
+- **Key Files**:
+  - `server/webauthn.ts`: WebAuthn registration/authentication logic using @simplewebauthn
+  - `client/src/pages/login.tsx`: Unified login page (password + biometric)
+  - `client/src/pages/setup-password.tsx`: New user password setup with optional biometric enrollment
+  - `shared/schema.ts`: Contains `webauthnCredentials` and `webauthnChallenges` tables
+
 ### Planned/Implied External Services (not fully implemented)
 
 - WhatsApp Business API
 - Email service (Nodemailer)
 - Payment processing (Stripe)
 - File upload handling (Multer)
-- Authentication (Passport.js)
-```
+- OTP Verification (Twilio) - deferred for future implementation
