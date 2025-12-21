@@ -6,6 +6,7 @@ import { Send, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface ExtractedData {
   name: string;
@@ -98,6 +99,7 @@ const paymentMethodMap: Record<string, string> = {
 
 export default function InteractiveWishForm() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const textareaRef = useRef<HTMLDivElement>(null);
   const [inputText, setInputText] = useState("");
   const [conversation, setConversation] = useState<Array<{ type: "user" | "system"; text: string; highlights?: string[] }>>([
@@ -122,6 +124,9 @@ export default function InteractiveWishForm() {
   const [isTyping, setIsTyping] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [charIndex, setCharIndex] = useState(0);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [userPhone, setUserPhone] = useState("");
+  const [countdown, setCountdown] = useState(3);
 
   // Typewriter effect for the example text
   useEffect(() => {
@@ -169,6 +174,18 @@ export default function InteractiveWishForm() {
     return elements;
   };
 
+  // Countdown timer for new users
+  useEffect(() => {
+    if (isComplete && isNewUser && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (isComplete && isNewUser && countdown === 0) {
+      navigate(`/setup-password?phone=${encodeURIComponent(userPhone)}`);
+    }
+  }, [isComplete, isNewUser, countdown, navigate, userPhone]);
+
   const registerMutation = useMutation({
     mutationFn: async (data: ExtractedData) => {
       const response = await apiRequest("POST", "/api/buyers/register", {
@@ -186,11 +203,17 @@ export default function InteractiveWishForm() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setIsComplete(true);
+      if (result.isNewUser) {
+        setIsNewUser(true);
+        setUserPhone(result.phone || extractedData.phone);
+      }
       toast({
         title: "تم تسجيل رغبتك بنجاح!",
-        description: "سنرسل لك العروض المناسبة قريباً عبر واتساب والإيميل",
+        description: result.isNewUser 
+          ? "سيتم تحويلك لإعداد حسابك..."
+          : "سنرسل لك العروض المناسبة قريباً عبر واتساب والإيميل",
       });
     },
     onError: () => {
@@ -489,14 +512,20 @@ export default function InteractiveWishForm() {
 
 
         {isComplete && (
-          <Card className="mt-6 p-6 bg-primary/5 border-primary/20 text-center">
+          <Card className="mt-6 p-6 bg-primary/5 border-primary/20 text-center" data-testid="card-completion">
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
               <Check className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold mb-2">تم تسجيل رغبتك بنجاح!</h3>
-            <p className="text-muted-foreground">
-              سنبدأ بالبحث عن العقارات المناسبة لك وسنرسل لك العروض عبر واتساب والإيميل
-            </p>
+            <h3 className="text-xl font-bold mb-2" data-testid="text-completion-title">تم تسجيل رغبتك بنجاح!</h3>
+            {isNewUser ? (
+              <p className="text-muted-foreground" data-testid="text-countdown">
+                جاري تحويلك لصفحة الشخصية خلال {countdown} ثانية...
+              </p>
+            ) : (
+              <p className="text-muted-foreground" data-testid="text-completion-message">
+                سنبدأ بالبحث عن العقارات المناسبة لك وسنرسل لك العروض عبر واتساب والإيميل
+              </p>
+            )}
           </Card>
         )}
       </div>
