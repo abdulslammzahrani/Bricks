@@ -36,22 +36,14 @@ import {
   Eye,
   Phone,
   Mail,
-  Calendar,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  BarChart3,
-  PieChart as PieChartIcon,
   Activity,
   Target,
   MessageSquare,
   Clock,
-  ArrowUpRight,
-  ArrowDownRight,
   Filter,
-  Download,
   UserCheck,
-  UserX,
   Building,
   Handshake,
   LayoutDashboard,
@@ -68,10 +60,16 @@ import {
   PowerOff,
   ExternalLink,
   FileText,
-  Save
+  Save,
+  User as UserIcon,
+  Store,
+  ArrowRightLeft,
+  // ✅ هنا الإصلاح: استيراد الأيقونة باسم مستعار لتجنب التعارض
+  PieChart as PieChartIcon 
 } from "lucide-react";
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp } from "react-icons/si";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
+// ✅ استيراد المكون البياني باسمه الأصلي
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, StaticPage } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -108,20 +106,16 @@ const formatCurrency = (value: number) => {
   return value.toString();
 };
 
-// Convert phone number to Arabic numerals with last 3 digits masked
 const toArabicPhone = (phone: string) => {
   if (!phone) return '';
   const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-  // Convert all digits to Arabic first
   const arabicPhone = phone.replace(/[0-9]/g, (d) => arabicNumerals[parseInt(d)]);
-  // Mask last 3 characters
   if (arabicPhone.length > 3) {
     return arabicPhone.slice(0, -3) + '***';
   }
   return arabicPhone;
 };
 
-// Mask budget for privacy
 const maskBudget = (min?: number | null, max?: number | null) => {
   if (!min && !max) return "غير محدد";
   return "**";
@@ -136,14 +130,12 @@ const formatDate = (dateStr: string) => {
   });
 };
 
-// Client type with user info
 interface ClientWithUser extends BuyerPreference {
   userName: string;
   userPhone: string;
   userEmail: string;
 }
 
-// Send log with enriched data
 interface EnrichedSendLog extends SendLog {
   userName: string;
   userPhone: string;
@@ -151,7 +143,6 @@ interface EnrichedSendLog extends SendLog {
   propertyDetails: Array<{ id: string; city: string; district: string; price: number }>;
 }
 
-// Marketing setting type (matches API response - dates as strings)
 interface MarketingSetting {
   id: string;
   platform: "facebook" | "snapchat" | "tiktok" | "google" | "mailchimp";
@@ -167,7 +158,6 @@ interface MarketingSetting {
   updatedAt: string;
 }
 
-// Platform display info
 const platformInfo: Record<string, { name: string; icon: typeof SiFacebook; color: string; description: string }> = {
   facebook: { 
     name: "فيسبوك", 
@@ -201,7 +191,6 @@ const platformInfo: Record<string, { name: string; icon: typeof SiFacebook; colo
   },
 };
 
-// Sidebar menu items
 const menuItems = [
   { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
   { id: "users", label: "المستخدمين", icon: Users },
@@ -222,7 +211,6 @@ export default function AdminDashboard() {
   const [userFilter, setUserFilter] = useState<string>("all");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [sendingClientId, setSendingClientId] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
@@ -256,22 +244,18 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/contact-requests"],
   });
 
-  // Clients with preferences for sending
   const { data: clients = [], refetch: refetchClients } = useQuery<ClientWithUser[]>({
     queryKey: ["/api/admin/clients"],
   });
 
-  // Send logs
   const { data: sendLogs = [], refetch: refetchSendLogs } = useQuery<EnrichedSendLog[]>({
     queryKey: ["/api/admin/send-logs"],
   });
 
-  // Marketing settings
   const { data: marketingSettings = [], refetch: refetchMarketing } = useQuery<MarketingSetting[]>({
     queryKey: ["/api/admin/marketing"],
   });
 
-  // New marketing platform state
   const [newPlatform, setNewPlatform] = useState<string>("");
   const [newPixelId, setNewPixelId] = useState("");
   const [newApiKey, setNewApiKey] = useState("");
@@ -300,68 +284,47 @@ export default function AdminDashboard() {
     },
   });
 
-  // Send to single client
   const sendToClientMutation = useMutation({
     mutationFn: async (preferenceId: string) => {
       setSendingClientId(preferenceId);
       return apiRequest("POST", `/api/admin/clients/${preferenceId}/send`, { maxProperties: 5 });
     },
     onSuccess: (data: any) => {
-      toast({
-        title: "تم الإرسال",
-        description: data.message || `تم إرسال العقارات بنجاح`,
-      });
+      toast({ title: "تم الإرسال", description: data.message || `تم إرسال العقارات بنجاح` });
       refetchSendLogs();
       refetchClients();
       setSendingClientId(null);
     },
     onError: (error: any) => {
-      toast({
-        title: "فشل الإرسال",
-        description: error.message || "حدث خطأ أثناء الإرسال",
-        variant: "destructive",
-      });
+      toast({ title: "فشل الإرسال", description: error.message || "حدث خطأ أثناء الإرسال", variant: "destructive" });
       setSendingClientId(null);
     },
   });
 
-  // Toggle client status
   const toggleClientStatusMutation = useMutation({
     mutationFn: async (preferenceId: string) => {
       return apiRequest("PATCH", `/api/admin/clients/${preferenceId}/toggle-status`);
     },
     onSuccess: () => {
       refetchClients();
-      toast({
-        title: "تم التحديث",
-        description: "تم تغيير حالة العميل",
-      });
+      toast({ title: "تم التحديث", description: "تم تغيير حالة العميل" });
     },
   });
 
-  // Bulk send to all
   const bulkSendMutation = useMutation({
     mutationFn: async () => {
       return apiRequest("POST", "/api/admin/send-all", { maxPropertiesPerClient: 5 });
     },
     onSuccess: (data: any) => {
-      toast({
-        title: "تم الإرسال الجماعي",
-        description: `تم الإرسال لـ ${data.successful} عميل من أصل ${data.total}`,
-      });
+      toast({ title: "تم الإرسال الجماعي", description: `تم الإرسال لـ ${data.successful} عميل من أصل ${data.total}` });
       refetchSendLogs();
       refetchClients();
     },
     onError: (error: any) => {
-      toast({
-        title: "فشل الإرسال",
-        description: error.message || "حدث خطأ أثناء الإرسال الجماعي",
-        variant: "destructive",
-      });
+      toast({ title: "فشل الإرسال", description: error.message || "حدث خطأ أثناء الإرسال الجماعي", variant: "destructive" });
     },
   });
 
-  // Create or update marketing setting (uses PUT with platform in URL)
   const createMarketingMutation = useMutation({
     mutationFn: async (data: { platform: string; pixelId?: string; apiKey?: string; accessToken?: string; isEnabled?: boolean }) => {
       return apiRequest("PUT", `/api/admin/marketing/${data.platform}`, {
@@ -384,7 +347,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Update marketing setting
   const updateMarketingMutation = useMutation({
     mutationFn: async ({ platform, ...data }: { platform: string; pixelId?: string; apiKey?: string; accessToken?: string; isEnabled?: boolean }) => {
       return apiRequest("PUT", `/api/admin/marketing/${platform}`, data);
@@ -399,7 +361,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Delete marketing setting
   const deleteMarketingMutation = useMutation({
     mutationFn: async (platform: string) => {
       return apiRequest("DELETE", `/api/admin/marketing/${platform}`);
@@ -413,7 +374,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Toggle marketing setting status
   const toggleMarketingMutation = useMutation({
     mutationFn: async ({ platform, isEnabled }: { platform: string; isEnabled: boolean }) => {
       return apiRequest("PUT", `/api/admin/marketing/${platform}`, { isEnabled });
@@ -435,7 +395,6 @@ export default function AdminDashboard() {
     refetchProperties();
   };
 
-  // Derived data
   const buyers = users.filter(u => u.role === "buyer");
   const sellers = users.filter(u => u.role === "seller");
   const activePreferences = preferences.filter(p => p.isActive);
@@ -465,7 +424,6 @@ export default function AdminDashboard() {
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
-        {/* Sidebar */}
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="p-4">
             <Link href="/" className="flex items-center gap-2">
@@ -475,7 +433,7 @@ export default function AdminDashboard() {
               <span className="text-lg font-bold group-data-[collapsible=icon]:hidden">تطابق</span>
             </Link>
           </SidebarHeader>
-          
+
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>لوحة التحكم</SidebarGroupLabel>
@@ -509,9 +467,7 @@ export default function AdminDashboard() {
           </SidebarFooter>
         </Sidebar>
 
-        {/* Main Content */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header */}
           <header className="flex items-center justify-between gap-4 p-4 border-b bg-background sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -531,7 +487,6 @@ export default function AdminDashboard() {
             </div>
           </header>
 
-          {/* Main Area */}
           <main className="flex-1 overflow-auto p-6">
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -623,11 +578,10 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Dynamic Content Based on Active Section */}
+            {/* Overview Section */}
             {activeSection === "overview" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Quick Stats */}
                   <Card className="lg:col-span-2">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -661,7 +615,6 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* Recent Activity */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -692,7 +645,6 @@ export default function AdminDashboard() {
                   </Card>
                 </div>
 
-                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -723,6 +675,7 @@ export default function AdminDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
+                        {/* ✅ استخدام الأيقونة المستوردة باسم مستعار */}
                         <PieChartIcon className="h-5 w-5 text-primary" />
                         توزيع أنواع العقارات المطلوبة
                       </CardTitle>
@@ -730,6 +683,7 @@ export default function AdminDashboard() {
                     <CardContent>
                       {demandByType && demandByType.length > 0 ? (
                         <ResponsiveContainer width="100%" height={250}>
+                          {/* ✅ استخدام المكون البياني من recharts */}
                           <PieChart>
                             <Pie
                               data={demandByType.map(d => ({ ...d, name: propertyTypeLabels[d.propertyType] || d.propertyType }))}
@@ -758,6 +712,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Users Section */}
             {activeSection === "users" && (
               <Card>
                 <CardHeader>
@@ -874,6 +829,7 @@ export default function AdminDashboard() {
               </Card>
             )}
 
+            {/* Preferences Section */}
             {activeSection === "preferences" && (
               <Card>
                 <CardHeader>
@@ -948,6 +904,7 @@ export default function AdminDashboard() {
               </Card>
             )}
 
+            {/* Properties Section */}
             {activeSection === "properties" && (
               <Card>
                 <CardHeader>
@@ -981,13 +938,13 @@ export default function AdminDashboard() {
                           const seller = users.find(u => u.id === prop.sellerId);
                           return (
                             <Card key={prop.id} className="p-4">
-                              <div className="flex items-start justify-between gap-4 flex-wrap">
-                                <div className="space-y-2 flex-1">
+                              <div className="flex items-start justify-between gap-3 flex-wrap">
+                                <div className="flex-1 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <Badge variant="secondary">{prop.city}</Badge>
                                     <Badge variant="outline">{prop.district}</Badge>
                                     <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
-                                    <Badge variant="outline">{statusLabels[prop.status] || prop.status}</Badge>
+                                    <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
                                   </div>
                                   <div className="text-xl font-bold text-primary">
                                     {formatCurrency(prop.price)} ريال
@@ -1025,6 +982,7 @@ export default function AdminDashboard() {
                                     variant={prop.isActive ? "destructive" : "default"}
                                     onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
                                     disabled={togglePropertyMutation.isPending}
+                                    data-testid={`button-toggle-property-${prop.id}`}
                                   >
                                     {prop.isActive ? (
                                       <>
@@ -1054,49 +1012,265 @@ export default function AdminDashboard() {
               </Card>
             )}
 
+            {/* ✅ قسم المطابقات - التصميم الجديد: بائع، مشتري، ومحور الربط */}
             {activeSection === "matches" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>المطابقات ({matches.length})</CardTitle>
-                  <CardDescription>نتائج المطابقة بين الرغبات والعقارات</CardDescription>
+              <Card className="bg-slate-50/50 border-none shadow-none">
+                <CardHeader className="px-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                        <Handshake className="h-6 w-6 text-primary" />
+                        المطابقات الذكية
+                        <Badge variant="secondary" className="text-sm font-normal">
+                          {matches.length} نتيجة
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        شبكة المطابقة الشاملة مع بيانات التواصل المباشرة
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 ml-2" />
+                      تصفية النتائج
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0">
                   {matches.length > 0 ? (
-                    <ScrollArea className="h-[400px]">
-                      <div className="space-y-3">
+                    <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+                      <div className="grid gap-6 pb-10">
                         {matches.map((match) => {
+                          // استخراج البيانات المرتبطة بالمطابقة
                           const pref = preferences.find(p => p.id === match.buyerPreferenceId);
                           const prop = properties.find(p => p.id === match.propertyId);
                           const buyer = pref ? users.find(u => u.id === pref.userId) : null;
-                          
+                          const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+
+                          // تخطي إذا كانت البيانات ناقصة
+                          if (!pref || !prop) return null;
+
                           return (
-                            <Card key={match.id} className="p-4">
-                              <div className="flex items-center justify-between gap-4 flex-wrap">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-4 flex-wrap">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-blue-500" />
-                                      <span className="font-medium">{buyer?.name || "مشتري"}</span>
+                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+                              <div className="grid grid-cols-1 md:grid-cols-7 min-h-[180px]">
+
+                                {/* --------------------------------------- */}
+                                {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
+                                {/* --------------------------------------- */}
+                                <div className="md:col-span-2 bg-blue-50/30 p-5 flex flex-col items-center justify-between text-center border-b md:border-b-0 md:border-l border-slate-100">
+                                  <div className="flex flex-col items-center w-full">
+                                    <div className="relative mb-2">
+                                      <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shadow-sm">
+                                        <UserIcon className="w-7 h-7" />
+                                      </div>
+                                      <Badge className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[9px] px-1.5 h-4 border-2 border-white">مشتري</Badge>
                                     </div>
-                                    <Handshake className="h-4 w-4 text-muted-foreground" />
-                                    <div className="flex items-center gap-2">
-                                      <Home className="h-4 w-4 text-green-500" />
-                                      <span className="font-medium">{prop?.district || "عقار"}</span>
+
+                                    <h4 className="font-bold text-slate-800 text-sm truncate w-full px-2" title={buyer?.name}>
+                                      {buyer?.name || "مستخدم غير معروف"}
+                                    </h4>
+
+                                    {/* أيقونات التواصل للمشتري */}
+                                    <div className="flex items-center justify-center gap-2 mt-3">
+                                      {buyer?.phone && (
+                                        <>
+                                          <a 
+                                            href={`tel:${buyer.phone}`} 
+                                            title="اتصال هاتفي" 
+                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-green-600 hover:border-green-600 hover:shadow-sm transition-all"
+                                          >
+                                            <Phone className="w-3.5 h-3.5" />
+                                          </a>
+                                          <a 
+                                            href={getWhatsAppLink(buyer.phone)} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            title="محادثة واتساب" 
+                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-[#25D366] hover:border-[#25D366] hover:shadow-sm transition-all"
+                                          >
+                                            <SiWhatsapp className="w-3.5 h-3.5" />
+                                          </a>
+                                        </>
+                                      )}
+                                      {buyer?.email && (
+                                        <a 
+                                          href={`mailto:${buyer.email}`} 
+                                          title="إرسال بريد" 
+                                          className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-600 hover:shadow-sm transition-all"
+                                        >
+                                          <Mail className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-                                    {pref && <Badge variant="outline">{pref.city}</Badge>}
-                                    {prop && <Badge variant="outline">{formatCurrency(prop.price)} ريال</Badge>}
+
+                                  <div className="w-full mt-4 pt-3 border-t border-blue-100/50">
+                                    <span className="text-[10px] text-muted-foreground block mb-2">ملخص الطلب</span>
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                       <Badge variant="secondary" className="text-[10px] h-5 bg-white shadow-sm">{pref.city}</Badge>
+                                       <Badge variant="secondary" className="text-[10px] h-5 bg-white shadow-sm">{propertyTypeLabels[pref.propertyType]}</Badge>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="text-center">
-                                    <div className="text-2xl font-bold text-primary">{match.matchScore}%</div>
-                                    <div className="text-xs text-muted-foreground">تطابق</div>
+
+                                {/* --------------------------------------- */}
+                                {/* الجزء الأوسط: محور الربط (The Hub) */}
+                                {/* --------------------------------------- */}
+                                <div className="md:col-span-3 p-4 flex flex-col items-center justify-center relative bg-white">
+                                  {/* الخط العمودي (العمود الفقري) */}
+                                  <div className="absolute left-1/2 top-6 bottom-6 w-px bg-slate-100 -translate-x-1/2 hidden md:block"></div>
+
+                                  {/* الدائرة العلوية: نسبة التطابق */}
+                                  <div className="relative z-10 mb-6 group cursor-default">
+                                    <div className="relative flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
+                                      <svg className="w-16 h-16 transform -rotate-90">
+                                        <circle className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="white" r="28" cx="32" cy="32" />
+                                        <circle 
+                                          className="text-primary transition-all duration-1000 ease-out" 
+                                          strokeWidth="3" 
+                                          strokeDasharray={2 * Math.PI * 28} 
+                                          strokeDashoffset={2 * Math.PI * 28 * (1 - match.matchScore / 100)} 
+                                          strokeLinecap="round" 
+                                          stroke="currentColor" 
+                                          fill="transparent" 
+                                          r="28" 
+                                          cx="32" 
+                                          cy="32" 
+                                        />
+                                      </svg>
+                                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span className="text-sm font-bold text-slate-800">{match.matchScore}%</span>
+                                        <span className="text-[8px] text-muted-foreground uppercase tracking-tighter">تطابق</span>
+                                      </div>
+                                    </div>
                                   </div>
-                                  {match.isSaved && <Badge className="bg-yellow-500">محفوظ</Badge>}
-                                  {match.isContacted && <Badge className="bg-green-500">تم التواصل</Badge>}
+
+                                  {/* خيوط البيانات (Matching Threads) */}
+                                  <div className="w-full space-y-3 relative z-10 text-xs">
+
+                                    {/* خيط الموقع */}
+                                    <div className="flex items-center justify-between w-full px-2 group/row">
+                                      <div className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors" title={pref.city}>
+                                        {pref.city} <span className="text-slate-400 font-normal text-[10px]">{pref.districts?.[0]}</span>
+                                      </div>
+                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                        <MapPin className="w-3.5 h-3.5 mx-1" />
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                      </div>
+                                      <div className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors" title={prop.city}>
+                                        {prop.city} <span className="text-slate-400 font-normal text-[10px]">{prop.district}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* خيط النوع */}
+                                    <div className="flex items-center justify-between w-full px-2 group/row">
+                                      <span className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
+                                        {propertyTypeLabels[pref.propertyType]}
+                                      </span>
+                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                        <Building2 className="w-3.5 h-3.5 mx-1" />
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                      </div>
+                                      <span className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
+                                        {propertyTypeLabels[prop.propertyType]}
+                                      </span>
+                                    </div>
+
+                                    {/* خيط المال */}
+                                    <div className="flex items-center justify-between w-full px-2 group/row">
+                                      <span className="w-[42%] text-left truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
+                                        {maskBudget(pref.budgetMin, pref.budgetMax)}
+                                      </span>
+                                      <div className="flex items-center justify-center w-[16%] text-slate-300 group-hover/row:text-primary transition-colors">
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                        <ArrowRightLeft className="w-3.5 h-3.5 mx-1" />
+                                        <div className="h-px w-2 bg-current opacity-50"></div>
+                                      </div>
+                                      <span className="w-[42%] text-right truncate text-slate-600 font-medium group-hover/row:text-primary transition-colors">
+                                        {formatCurrency(prop.price)}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* أزرار الإجراءات في المنتصف */}
+                                  <div className="mt-6 flex gap-2 w-full justify-center pt-2">
+                                    <Button size="sm" className="h-7 text-[11px] px-3 bg-primary hover:bg-primary/90 shadow-sm rounded-full">
+                                      <MessageSquare className="w-3 h-3 mr-1.5" /> محادثة جماعية
+                                    </Button>
+                                  </div>
                                 </div>
+
+                                {/* --------------------------------------- */}
+                                {/* الجزء الأيسر: بطاقة البائع (Persona) */}
+                                {/* --------------------------------------- */}
+                                <div className="md:col-span-2 bg-green-50/30 p-5 flex flex-col items-center justify-between text-center border-t md:border-t-0 md:border-r border-slate-100">
+                                  <div className="flex flex-col items-center w-full">
+                                    <div className="relative mb-2">
+                                      <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-sm">
+                                        <Store className="w-7 h-7" />
+                                      </div>
+                                      <Badge className="absolute -bottom-1 -left-1 bg-green-600 text-white text-[9px] px-1.5 h-4 border-2 border-white">بائع</Badge>
+                                    </div>
+
+                                    <h4 className="font-bold text-slate-800 text-sm truncate w-full px-2" title={seller?.name}>
+                                      {seller?.name || "مالك العقار"}
+                                    </h4>
+
+                                    {/* أيقونات التواصل للبائع */}
+                                    <div className="flex items-center justify-center gap-2 mt-3">
+                                      {seller?.phone && (
+                                        <>
+                                          <a 
+                                            href={`tel:${seller.phone}`} 
+                                            title="اتصال هاتفي" 
+                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-green-600 hover:border-green-600 hover:shadow-sm transition-all"
+                                          >
+                                            <Phone className="w-3.5 h-3.5" />
+                                          </a>
+                                          <a 
+                                            href={getWhatsAppLink(seller.phone)} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            title="محادثة واتساب" 
+                                            className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-[#25D366] hover:border-[#25D366] hover:shadow-sm transition-all"
+                                          >
+                                            <SiWhatsapp className="w-3.5 h-3.5" />
+                                          </a>
+                                        </>
+                                      )}
+                                      {seller?.email && (
+                                        <a 
+                                          href={`mailto:${seller.email}`} 
+                                          title="إرسال بريد" 
+                                          className="p-1.5 bg-white rounded-full border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-600 hover:shadow-sm transition-all"
+                                        >
+                                          <Mail className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="w-full mt-4 pt-3 border-t border-green-100/50">
+                                    <span className="text-[10px] text-muted-foreground block mb-2">العقار المعروض</span>
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                       <Badge variant="outline" className="text-[10px] h-5 bg-white text-slate-600 border-slate-200">{prop.city}</Badge>
+                                       <Badge variant="outline" className="text-[10px] h-5 bg-white text-slate-600 border-slate-200">{formatCurrency(prop.price)}</Badge>
+                                    </div>
+                                  </div>
+                                </div>
+
+                              </div>
+
+                              {/* الشريط السفلي: الحالة والتفاصيل */}
+                              <div className="bg-slate-50 border-t border-slate-100 px-4 py-2 flex items-center justify-between">
+                                 <div className="flex gap-2">
+                                    {match.isSaved && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] gap-1"><Save className="w-3 h-3"/> محفوظ</Badge>}
+                                    {match.isContacted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] gap-1"><CheckCircle className="w-3 h-3"/> تم التواصل</Badge>}
+                                 </div>
+                                 <Button size="sm" variant="ghost" className="h-7 text-xs hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary">
+                                    <ExternalLink className="w-3 h-3 mr-1" /> التفاصيل الكاملة
+                                 </Button>
                               </div>
                             </Card>
                           );
@@ -1104,14 +1278,20 @@ export default function AdminDashboard() {
                       </div>
                     </ScrollArea>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      لا توجد مطابقات بعد
+                    <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-lg border border-dashed m-1">
+                      <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-4">
+                        <Handshake className="w-10 h-10 text-primary/40" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-slate-800">لا توجد مطابقات حالياً</h3>
+                      <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                        النظام يقوم بالبحث عن مطابقات جديدة تلقائياً عند إضافة عقارات أو رغبات جديدة.
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
-
+            {/* Analytics Section */}
             {activeSection === "analytics" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1198,9 +1378,9 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Sending Section */}
             {activeSection === "sending" && (
               <div className="space-y-4">
-                {/* Bulk Send Button */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1234,7 +1414,6 @@ export default function AdminDashboard() {
                   </CardHeader>
                 </Card>
 
-                {/* Clients Table */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -1321,62 +1500,6 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Properties Table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      جدول العقارات ({properties.length})
-                    </CardTitle>
-                    <CardDescription>
-                      العقارات المتاحة للإرسال - تغيير التوفر
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[300px]">
-                      {properties.length > 0 ? (
-                        <div className="space-y-3">
-                          {properties.map((prop) => (
-                            <Card 
-                              key={prop.id} 
-                              className="p-4"
-                              data-testid={`row-property-${prop.id}`}
-                            >
-                              <div className="flex items-start justify-between gap-3 flex-wrap">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge variant="secondary">{prop.city}</Badge>
-                                    <Badge variant="outline">{prop.district}</Badge>
-                                    <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
-                                    <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
-                                  </div>
-                                  <div className="text-lg font-bold text-primary">
-                                    {formatCurrency(prop.price)} ريال
-                                  </div>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant={prop.isActive ? "default" : "destructive"}
-                                  onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
-                                  disabled={togglePropertyMutation.isPending}
-                                  data-testid={`button-toggle-property-${prop.id}`}
-                                >
-                                  {prop.isActive ? "متاح" : "غير متاح"}
-                                </Button>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-8 text-center text-muted-foreground">
-                          لا توجد عقارات
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-
-                {/* Send Logs */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -1439,6 +1562,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Marketing Section */}
             {activeSection === "marketing" && (
               <div className="space-y-6">
                 <Card>
@@ -1806,7 +1930,6 @@ function StaticPagesSection() {
     queryKey: ["/api/admin/pages"],
   });
 
-  // Update local state when pages are loaded
   useState(() => {
     if (pages.length > 0) {
       const newData: Record<string, { titleAr: string; contentAr: string; isPublished: boolean }> = { ...pageData };
@@ -1846,7 +1969,7 @@ function StaticPagesSection() {
 <p>تطابق هي منصة مطابقة عقارية ذكية تربط بين المشترين والبائعين في السوق العقاري السعودي.</p>
 
 <h2>كيف يمكنني تسجيل رغبتي العقارية؟</h2>
-<p>يمكنك تسجيل رغبتك العقارية من خلال الصفحة الرئيسية عبر المحادثة الذكية مع مساعدنا الآلي.</p>
+<p>يمكنك تسجيل رغبتي العقارية من خلال الصفحة الرئيسية عبر المحادثة الذكية مع مساعدنا الآلي.</p>
 
 <h2>هل الخدمة مجانية؟</h2>
 <p>نعم، تسجيل الرغبات العقارية مجاني تماماً.</p>
@@ -1919,7 +2042,7 @@ function StaticPagesSection() {
                   {!isEditing ? (
                     <Button 
                       variant="outline" 
-                      size="sm"
+                      size="sm" 
                       onClick={() => {
                         if (!pageData[slug]?.contentAr) {
                           setPageData(prev => ({

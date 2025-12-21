@@ -19,14 +19,14 @@ const KINGDOM_ZOOM = 5;
 
 // 🏙️ إعدادات المدن
 const CITY_CONFIG: Record<string, { lat: number; lng: number; spread: number }> = {
-  "الرياض": { lat: 24.7136, lng: 46.6753, spread: 0.09 }, 
-  "جدة": { lat: 21.5800, lng: 39.1800, spread: 0.08 }, 
-  "مكة المكرمة": { lat: 21.4225, lng: 39.8262, spread: 0.07 },
-  "المدينة المنورة": { lat: 24.4672, lng: 39.6100, spread: 0.07 },
-  "الدمام": { lat: 26.3900, lng: 50.0800, spread: 0.09 },   
-  "الخبر": { lat: 26.2800, lng: 50.1800, spread: 0.06 },    
-  "أبها": { lat: 18.2205, lng: 42.5055, spread: 0.05 },
-  "تبوك": { lat: 28.3972, lng: 36.5489, spread: 0.08 },
+  "الرياض": { lat: 24.7136, lng: 46.6753, spread: 0.12 },
+  "جدة": { lat: 21.5800, lng: 39.1800, spread: 0.10 }, 
+  "مكة المكرمة": { lat: 21.4225, lng: 39.8262, spread: 0.08 },
+  "المدينة المنورة": { lat: 24.4672, lng: 39.6100, spread: 0.08 },
+  "الدمام": { lat: 26.3900, lng: 50.0800, spread: 0.10 },   
+  "الخبر": { lat: 26.2800, lng: 50.1800, spread: 0.07 },    
+  "أبها": { lat: 18.2205, lng: 42.5055, spread: 0.06 },
+  "تبوك": { lat: 28.3972, lng: 36.5489, spread: 0.09 },
 };
 
 const CITIES_ORDER = ["الرياض", "جدة", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر", "أبها", "تبوك"];
@@ -73,7 +73,12 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const cityIndexRef = useRef(0);
 
+  const wait = (ms: number) => new Promise(resolve => {
+    timerRef.current = setTimeout(resolve, ms);
+  });
+
   const points = useMemo(() => {
+    // 🛑 عدم توليد نقاط أثناء الانتقال
     if (isTransitioning || displayLabel === "المملكة العربية السعودية" || !currentFocusPoint) return [];
 
     const config = CITY_CONFIG[currentCityForPoints];
@@ -81,11 +86,28 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
 
     const center = currentFocusPoint; 
     const generated = [];
-    const categoryPool = [...Array(4).fill('request'), ...Array(2).fill('offer'), ...Array(1).fill('investment')];
+
+    // ✅ التعديل هنا: توليد عدد عشوائي بين 35 و 75
+    const minPoints = 35;
+    const maxPoints = 75;
+    const totalPoints = Math.floor(Math.random() * (maxPoints - minPoints + 1)) + minPoints;
+
+    // توزيع النسب (تقريباً: 70% طلبات، 20% عروض، 10% فرص)
+    const offersCount = Math.floor(totalPoints * 0.20);
+    const investmentCount = Math.floor(totalPoints * 0.10);
+    const requestsCount = totalPoints - offersCount - investmentCount;
+
+    const categoryPool = [
+        ...Array(requestsCount).fill('request'), 
+        ...Array(offersCount).fill('offer'), 
+        ...Array(investmentCount).fill('investment')
+    ];
+
+    // خلط المصفوفة لعشوائية الظهور
     const shuffledCategories = categoryPool.sort(() => Math.random() - 0.5);
 
     shuffledCategories.forEach((catKey) => {
-      const spreadFactor = 0.04; 
+      const spreadFactor = config.spread * 0.8; 
       const latOffset = (Math.random() - 0.5) * spreadFactor;
       const lngOffset = (Math.random() - 0.5) * spreadFactor; 
 
@@ -100,16 +122,15 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
 
       generated.push({
         lat: ptLat, lng: ptLng, ...user, category: category,
-        request: pickRandom(category.texts), delay: Math.random() * 3000 
+        request: pickRandom(category.texts), 
+        // تأخير عشوائي لظهور النقاط "Popcorn effect"
+        delay: Math.random() * 2000 
       });
     });
 
     return generated;
   }, [currentFocusPoint, isTransitioning, displayLabel, currentCityForPoints]);
 
-  const wait = (ms: number) => new Promise(resolve => {
-    timerRef.current = setTimeout(resolve, ms);
-  });
 
   // 1. السيناريو السينمائي
   useEffect(() => {
@@ -128,15 +149,18 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
 
         setCurrentCityForPoints(currentCityName);
         setDisplayLabel(currentCityName);
+
+        // بدء الانتقال - مسح النقاط فوراً (Cut Effect)
         setIsTransitioning(true);
         setCurrentFocusPoint(null); 
 
-        // 1. الذهاب للمدينة (الوسط) - ✅ تم تعديل الزووم إلى 11
+        // 1. الذهاب للمدينة
         map.flyTo([cityConfig.lat, cityConfig.lng], 11, { duration: 3, easeLinearity: 0.2 });
         await wait(3500); 
         if (!isMountedRef.current) break;
 
-        setIsTransitioning(false);
+        // توقف الحركة - ظهور النقاط
+        setIsTransitioning(false); 
 
         // 2. التنقل بين الجهات
         for (const sector of SECTORS) {
@@ -148,22 +172,31 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
             const newLng = cityConfig.lng + sector.dLng;
             const newCenter = { lat: newLat, lng: newLng };
 
-            // ✅ تم تعديل الزووم إلى 11 هنا أيضاً
+            // 🛑 بدء الانتقال للجهة التالية - مسح النقاط فوراً
+            setIsTransitioning(true);
+            setCurrentFocusPoint(null);
+
+            // تحريك الكاميرا
             map.flyTo([newLat, newLng], 11, { 
                 animate: true, 
                 duration: 2.5, 
                 easeLinearity: 0.1 
             });
 
-            await wait(1000); 
+            await wait(2500); // انتظار انتهاء الحركة
 
+            if (!isMountedRef.current) break;
+
+            // 🛑 التوقف - إظهار النقاط الجديدة
+            setIsTransitioning(false);
             setCurrentFocusPoint(newCenter);
 
-            await wait(5000); 
+            await wait(4500); // وقت كافٍ لاستعراض الـ 35-75 نقطة
         }
 
         if (!isMountedRef.current) break;
 
+        // العودة للزوم العام
         setIsTransitioning(true);
         setCurrentFocusPoint(null); 
         setDisplayLabel("المملكة العربية السعودية");
@@ -223,35 +256,27 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
     return () => { map.remove(); mapInstanceRef.current = null; };
   }, []);
 
-  // 3. رسم النقاط (مع CSS Fix للاهتزاز)
+  // 3. رسم وحذف النقاط (تأثير القطع Cut Effect)
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
     const layer = markersLayerRef.current;
 
-    layer.eachLayer((marker: any) => {
-        const el = marker.getElement();
-        if (el) {
-            const innerDiv = el.firstElementChild as HTMLElement;
-            if (innerDiv) {
-                // إيقاف الأنميشن
-                const animChildren = innerDiv.querySelectorAll('.animate-pop-in, .animate-message-cycle, .animate-ripple');
-                animChildren.forEach((child: any) => { child.style.animation = 'none'; });
-
-                // إخفاء ناعم للمحتوى الداخلي
-                innerDiv.style.transition = "opacity 0.5s ease-out";
-                innerDiv.style.opacity = "0";
-            }
-        }
-        setTimeout(() => { try { layer.removeLayer(marker); } catch (e) {} }, 500);
-    });
-
+    // تنظيف أي مؤقتات سابقة فوراً
     requestTimersRef.current.forEach(clearTimeout);
     requestTimersRef.current = [];
 
-    if (isTransitioning || !currentFocusPoint) return;
+    // 🛑 إذا كانت الكاميرا تتحرك، احذف جميع النقاط فوراً (بدون تلاشي)
+    if (isTransitioning) {
+        layer.clearLayers();
+        return;
+    }
+
+    // إذا توقفنا ولدينا مركز جديد، ابدأ الرسم
+    if (!currentFocusPoint) return;
 
     points.forEach((pt) => {
       const timeoutId = setTimeout(() => {
+        // تأكد مرة أخرى أننا لا نتحرك قبل الرسم
         if (!mapInstanceRef.current || isTransitioning) return;
 
         const color = pt.category.color;
@@ -299,7 +324,7 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
   return (
     <>
       <style>{`
-        /* ✅ منع الاهتزاز */
+        /* ✅ ثبات الرسم ومنع الاهتزاز */
         .leaflet-marker-icon, 
         .leaflet-marker-shadow, 
         .radar-marker {
