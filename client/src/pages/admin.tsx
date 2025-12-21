@@ -1310,7 +1310,7 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* الجزء الأوسط: محور الربط بخلفية متدرجة */}
-                                <div className="md:col-span-5 p-4 bg-gradient-to-l from-green-400/90 via-green-500/80 to-green-400/90 flex flex-col items-center justify-center gap-3 pl-[1px] pr-[1px] pt-[1px] pb-[1px]">
+                                <div className="md:col-span-5 p-4 bg-gradient-to-l from-green-400/90 via-green-500/80 to-green-400/90 flex flex-col items-center justify-center gap-3 pl-[5px] pr-[5px] pt-[5px] pb-[5px]">
                                   {/* الصف العلوي: زر + دائرة النسبة + زر */}
                                   <div className="flex items-center justify-center gap-4 w-full">
                                     <Button 
