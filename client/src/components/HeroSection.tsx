@@ -19,6 +19,10 @@ import { ListPropertyForm } from "./ListPropertyForm";
 
 type UserMode = "buyer" | "seller" | "investor";
 
+interface HeroSectionProps {
+  onCompleteChange?: (isComplete: boolean) => void;
+}
+
 // --- مكون الإشعارات العلوية (Live Ticker) ---
 const LIVE_EVENTS = [
   { text: "فهد من الرياض يبحث عن فيلا", type: "search" },
@@ -58,7 +62,7 @@ function LiveTicker() {
   );
 }
 
-export default function HeroSection() {
+export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<UserMode>("buyer");
@@ -180,7 +184,8 @@ export default function HeroSection() {
     });
     setShowSearchForm(false);
     setIsComplete(true);
-  }, [toast]);
+    onCompleteChange?.(true);
+  }, [toast, onCompleteChange]);
 
   const handleListPropertySubmit = useCallback((propertyData: any) => {
     toast({
@@ -188,7 +193,8 @@ export default function HeroSection() {
       description: "سنتواصل معك قريباً لإكمال عرض عقارك",
     });
     setIsComplete(true);
-  }, [toast]);
+    onCompleteChange?.(true);
+  }, [toast, onCompleteChange]);
 
   const noOp = () => {};
 
@@ -347,7 +353,7 @@ export default function HeroSection() {
                     </Button>
                     <Button 
                         variant="outline"
-                        onClick={() => { setIsComplete(false); setShowSearchForm(true); }}
+                        onClick={() => { setIsComplete(false); setShowSearchForm(true); onCompleteChange?.(false); }}
                         className="w-full"
                       >
                         عودة للرئيسية
