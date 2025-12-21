@@ -205,28 +205,30 @@ export default function HeroSection() {
   return (
     <section className="relative min-h-screen bg-slate-50 flex flex-col pb-12 font-sans">
 
-      {/* 1. Header Section */}
-      <div className="container mx-auto px-4 pt-8 pb-4 text-center z-10 relative">
-        <div className="absolute top-4 right-4 hidden md:block">
-           <LiveTicker />
+      {/* 1. Header Section - Hidden when complete */}
+      {!isComplete && (
+        <div className="container mx-auto px-4 pt-8 pb-4 text-center z-10 relative">
+          <div className="absolute top-4 right-4 hidden md:block">
+             <LiveTicker />
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>منصة ذكية للعقارات</span>
+          </div>
+
+          <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-3 text-slate-900 font-sans">
+            {mode === "buyer" ? "ابحث عن عقارك المثالي" : "اعرض عقارك للبيع"}
+          </h1>
+
+          <p className="text-slate-600 text-sm md:text-lg max-w-2xl mx-auto font-sans">
+            {mode === "buyer" 
+              ? "أخبرنا ماذا تبحث عنه وسنجد لك الأفضل"
+              : "سجّل بيانات عقارك وسنوصله للمشترين المناسبين"
+            }
+          </p>
         </div>
-
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>منصة ذكية للعقارات</span>
-        </div>
-
-        <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-3 text-slate-900 font-sans">
-          {mode === "buyer" ? "ابحث عن عقارك المثالي" : "اعرض عقارك للبيع"}
-        </h1>
-
-        <p className="text-slate-600 text-sm md:text-lg max-w-2xl mx-auto font-sans">
-          {mode === "buyer" 
-            ? "أخبرنا ماذا تبحث عنه وسنجد لك الأفضل"
-            : "سجّل بيانات عقارك وسنوصله للمشترين المناسبين"
-          }
-        </p>
-      </div>
+      )}
 
       {/* ======================================================== */}
       {/* ✅ شريط الجوال (Scrollable) - ثابت وقابل للسحب باليد */}
@@ -295,31 +297,34 @@ export default function HeroSection() {
       )}
 
       {/* 3. Form Section (Below Map) */}
-      <div className={`container mx-auto px-4 relative z-20 ${!isComplete ? '-mt-20' : 'mt-8'}`}>
-        <Card className="w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm p-2 md:p-4">
+      <div className={`container mx-auto px-4 relative z-20 ${!isComplete ? '-mt-20' : 'flex-1 flex items-center justify-center'}`}>
+        <Card className={`w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm p-2 md:p-4 ${isComplete ? 'my-auto' : ''}`}>
 
-          <div className="flex justify-center mb-6 pt-2">
-            <div className="inline-flex bg-slate-100 p-1 rounded-xl">
-              <Button
-                size="sm"
-                variant={mode === "buyer" ? "default" : "ghost"}
-                onClick={() => handleModeSwitch("buyer")}
-                className={`w-32 rounded-lg ${mode === 'buyer' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <Users className="h-4 w-4 ml-2" />
-                مشتري
-              </Button>
-              <Button
-                size="sm"
-                variant={mode === "seller" ? "default" : "ghost"}
-                onClick={() => handleModeSwitch("seller")}
-                className={`w-32 rounded-lg ${mode === 'seller' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <Building2 className="h-4 w-4 ml-2" />
-                بائع
-              </Button>
+          {/* Mode Toggle - Hidden when complete */}
+          {!isComplete && (
+            <div className="flex justify-center mb-6 pt-2">
+              <div className="inline-flex bg-slate-100 p-1 rounded-xl">
+                <Button
+                  size="sm"
+                  variant={mode === "buyer" ? "default" : "ghost"}
+                  onClick={() => handleModeSwitch("buyer")}
+                  className={`w-32 rounded-lg ${mode === 'buyer' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Users className="h-4 w-4 ml-2" />
+                  مشتري
+                </Button>
+                <Button
+                  size="sm"
+                  variant={mode === "seller" ? "default" : "ghost"}
+                  onClick={() => handleModeSwitch("seller")}
+                  className={`w-32 rounded-lg ${mode === 'seller' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <Building2 className="h-4 w-4 ml-2" />
+                  بائع
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="px-2 pb-4">
             {isComplete ? (
