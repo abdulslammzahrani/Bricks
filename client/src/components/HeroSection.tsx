@@ -196,8 +196,6 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
     onCompleteChange?.(true);
   }, [toast, onCompleteChange]);
 
-  const noOp = () => {};
-
   const statsList = [
     { id: 'viewers', icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50', label: 'متصفح نشط', value: liveViewers },
     { id: 'requests', icon: FileText, color: 'text-amber-600', bg: 'bg-amber-50', label: 'طلب جديد', value: requestsToday },
@@ -208,10 +206,44 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
     { id: 'chats', icon: MessageCircle, color: 'text-teal-600', bg: 'bg-teal-50', label: 'محادثة جارية', value: activeChats },
   ];
 
-  return (
-    <section className={`relative min-h-screen bg-slate-50 flex flex-col font-sans ${isComplete ? 'pb-0' : 'pb-12'}`}>
+  // شاشة جاري البحث - تظهر في منتصف الشاشة
+  if (isComplete) {
+    return (
+      <section className="min-h-[70vh] bg-slate-50 flex items-center justify-center font-sans py-8">
+        <style>{`
+          @keyframes scan { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
+          .radar-sweep { background: conic-gradient(from 0deg at 50% 50%, rgba(34, 197, 94, 0) 0deg, rgba(34, 197, 94, 0.1) 200deg, rgba(34, 197, 94, 0.6) 360deg); animation: scan 3s linear infinite; }
+          .radar-ring { border: 2px solid rgba(34, 197, 94, 0.4); animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        `}</style>
 
-      {/* 1. Header Section - يظهر دائماً */}
+        <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex flex-col items-center w-full max-w-md mx-4 animate-in fade-in zoom-in duration-500">
+          <div className="relative flex items-center justify-center w-36 h-36 mb-8">
+            <div className="absolute inset-0 border border-green-100 rounded-full"></div>
+            <div className="absolute inset-4 border border-green-200 rounded-full"></div>
+            <div className="absolute inset-1 rounded-full overflow-hidden z-10"><div className="radar-sweep absolute inset-0 rounded-full"></div></div>
+            <div className="absolute inset-0 rounded-full radar-ring"></div>
+            <div className="absolute inset-0 rounded-full radar-ring" style={{ animationDelay: '1s' }}></div>
+            <div className="relative z-20 w-5 h-5 bg-green-600 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.8)] animate-pulse flex items-center justify-center"><div className="w-2 h-2 bg-white rounded-full"></div></div>
+            <div className="absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-sm z-30 animate-bounce"><Search className="h-4 w-4 text-green-600" /></div>
+          </div>
+
+          <h3 className="text-2xl font-bold mb-3 text-center text-slate-900 font-sans animate-pulse">جاري البحث عن عقارك...</h3>
+          <p className="text-slate-600 text-center text-sm mb-8 font-sans leading-relaxed">نظامنا الذكي يقوم الآن بمسح السوق ومطابقة طلبك مع أفضل الفرص المتاحة حالياً</p>
+
+          <div className="flex gap-3 w-full flex-col">
+            <Button onClick={() => window.location.href = "/profile"} className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-md">الذهاب لصفحتي</Button>
+            <Button variant="outline" onClick={() => { setIsComplete(false); setShowSearchForm(true); onCompleteChange?.(false); }} className="w-full h-11 text-base border-slate-300">عودة للرئيسية</Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="relative min-h-screen bg-slate-50 flex flex-col pb-12 font-sans">
+
+      {/* 1. Header Section */}
       <div className="container mx-auto px-4 pt-8 pb-4 text-center z-10 relative shrink-0">
         <div className="absolute top-4 right-4 hidden md:block">
            <LiveTicker />
@@ -234,13 +266,9 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
         </p>
       </div>
 
-      {/* ======================================================== */}
-      {/* 2. Map & Ticker - يظهر فقط في البداية (قبل الطلب) */}
-      {/* ======================================================== */}
-      {!isComplete && (
-        <>
-          {/* Mobile Ticker */}
-          <div className="w-full md:hidden bg-white border-y border-slate-100 py-2 mb-0 z-20 shrink-0">
+      {/* 2. Map & Ticker */}
+      {/* Mobile Ticker */}
+      <div className="w-full md:hidden bg-white border-y border-slate-100 py-2 mb-0 z-20 shrink-0">
               <div className="flex gap-2 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-100 flex-shrink-0 h-9">
                       <Activity className="h-3.5 w-3.5 text-red-500 animate-pulse" />
@@ -285,83 +313,40 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
               </div>
             </div>
           </div>
-        </>
-      )}
 
-      {/* ======================================================== */}
-      {/* 3. Form & Success Section - تتوسط الشاشة عند النجاح */}
-      {/* ======================================================== */}
-      <div className={`container mx-auto px-4 relative z-20 ${!isComplete ? '-mt-20' : 'flex-1 flex flex-col justify-center items-center py-10'}`}>
-
-        <Card className={`w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm p-2 md:p-4 ${isComplete ? 'shadow-none bg-transparent' : ''}`}>
-
-          {/* Mode Toggle - Hidden when complete */}
-          {!isComplete && (
-            <div className="flex justify-center mb-6 pt-2">
-              <div className="inline-flex bg-slate-100 p-1 rounded-xl">
-                <Button
-                  size="sm"
-                  variant={mode === "buyer" ? "default" : "ghost"}
-                  onClick={() => handleModeSwitch("buyer")}
-                  className={`w-32 rounded-lg ${mode === 'buyer' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Users className="h-4 w-4 ml-2" />
-                  مشتري
-                </Button>
-                <Button
-                  size="sm"
-                  variant={mode === "seller" ? "default" : "ghost"}
-                  onClick={() => handleModeSwitch("seller")}
-                  className={`w-32 rounded-lg ${mode === 'seller' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <Building2 className="h-4 w-4 ml-2" />
-                  بائع
-                </Button>
-              </div>
+      {/* 3. Form Section */}
+      <div className="container mx-auto px-4 relative z-20 -mt-20">
+        <Card className="w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm p-2 md:p-4">
+          {/* Mode Toggle */}
+          <div className="flex justify-center mb-6 pt-2">
+            <div className="inline-flex bg-slate-100 p-1 rounded-xl">
+              <Button
+                size="sm"
+                variant={mode === "buyer" ? "default" : "ghost"}
+                onClick={() => handleModeSwitch("buyer")}
+                className={`w-32 rounded-lg ${mode === 'buyer' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Users className="h-4 w-4 ml-2" />
+                مشتري
+              </Button>
+              <Button
+                size="sm"
+                variant={mode === "seller" ? "default" : "ghost"}
+                onClick={() => handleModeSwitch("seller")}
+                className={`w-32 rounded-lg ${mode === 'seller' ? 'shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Building2 className="h-4 w-4 ml-2" />
+                بائع
+              </Button>
             </div>
-          )}
+          </div>
 
           <div className="px-2 pb-4 w-full">
-            {isComplete ? (
-               // ✅ هذا القسم الآن يظهر في المنتصف بالضبط وبدون خلفية كارد بيضاء إضافية
-               <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-                  <style>{`
-                      @keyframes scan { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                      @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(2); opacity: 0; } }
-                      .radar-sweep { background: conic-gradient(from 0deg at 50% 50%, rgba(34, 197, 94, 0) 0deg, rgba(34, 197, 94, 0.1) 200deg, rgba(34, 197, 94, 0.6) 360deg); animation: scan 3s linear infinite; }
-                      .radar-ring { border: 2px solid rgba(34, 197, 94, 0.4); animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-                  `}</style>
-
-                  {/* بطاقة الرادار */}
-                  <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 flex flex-col items-center w-full max-w-md">
-                      <div className="relative flex items-center justify-center w-36 h-36 mb-8">
-                          <div className="absolute inset-0 border border-green-100 rounded-full"></div>
-                          <div className="absolute inset-4 border border-green-200 rounded-full"></div>
-                          <div className="absolute inset-1 rounded-full overflow-hidden z-10"><div className="radar-sweep absolute inset-0 rounded-full"></div></div>
-                          <div className="absolute inset-0 rounded-full radar-ring"></div>
-                          <div className="absolute inset-0 rounded-full radar-ring" style={{ animationDelay: '1s' }}></div>
-                          <div className="relative z-20 w-5 h-5 bg-green-600 rounded-full shadow-[0_0_15px_rgba(34,197,94,0.8)] animate-pulse flex items-center justify-center"><div className="w-2 h-2 bg-white rounded-full"></div></div>
-                          <div className="absolute -top-2 -right-2 bg-white p-1 rounded-full shadow-sm z-30 animate-bounce"><Search className="h-4 w-4 text-green-600" /></div>
-                      </div>
-
-                      <h3 className="text-2xl font-bold mb-3 text-center text-slate-900 font-sans animate-pulse">جاري البحث عن عقارك...</h3>
-                      <p className="text-slate-600 text-center text-sm mb-8 font-sans leading-relaxed">نظامنا الذكي يقوم الآن بمسح السوق ومطابقة طلبك مع أفضل الفرص المتاحة حالياً.</p>
-
-                      <div className="flex gap-3 w-full flex-col">
-                        <Button onClick={() => window.location.href = "/profile"} className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-md transition-transform hover:scale-[1.02]">الذهاب لصفحتي</Button>
-                        <Button variant="outline" onClick={() => { setIsComplete(false); setShowSearchForm(true); onCompleteChange?.(false); }} className="w-full h-11 text-base hover:bg-slate-50 border-slate-300">عودة للرئيسية</Button>
-                      </div>
-                  </div>
-              </div>
-            ) : (
-              <>
-                {mode === "buyer" && showSearchForm && (
-                  <AdvancedSearchForm onSearch={handleSearchFormSearch} onSwitchToChat={noOp} />
-                )}
-                {mode === "seller" && (
-                  <ListPropertyForm onSubmit={handleListPropertySubmit} onSwitchToChat={noOp} />
-                )}
-              </>
+            {mode === "buyer" && showSearchForm && (
+              <AdvancedSearchForm onSearch={handleSearchFormSearch} />
+            )}
+            {mode === "seller" && (
+              <ListPropertyForm onSubmit={handleListPropertySubmit} />
             )}
           </div>
         </Card>
