@@ -1203,61 +1203,53 @@ export default function AdminDashboard() {
                             تصفية النتائج
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80" align="start" dir="rtl">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">نسبة التطابق: {matchFilters.minScore}% - {matchFilters.maxScore}%</label>
-                              <Slider value={[matchFilters.minScore, matchFilters.maxScore]} onValueChange={(val) => setMatchFilters({...matchFilters, minScore: val[0], maxScore: val[1]})} min={0} max={100} step={1} data-testid="slider-score-filter" />
+                        <PopoverContent className="w-64 p-3" align="start" dir="rtl">
+                          <div className="space-y-3">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium block">التطابق: {matchFilters.minScore}%-{matchFilters.maxScore}%</label>
+                              <Slider value={[matchFilters.minScore, matchFilters.maxScore]} onValueChange={(val) => setMatchFilters({...matchFilters, minScore: val[0], maxScore: val[1]})} min={0} max={100} step={1} className="h-1" data-testid="slider-score-filter" />
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">الحالة</label>
-                              <Select value={matchFilters.status} onValueChange={(val) => setMatchFilters({...matchFilters, status: val as any})} data-testid="select-status-filter">
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">الكل</SelectItem>
-                                  <SelectItem value="saved">محفوظ</SelectItem>
-                                  <SelectItem value="contacted">تم التواصل</SelectItem>
-                                </SelectContent>
-                              </Select>
+                            <Separator className="my-2" />
+                            <Select value={matchFilters.status} onValueChange={(val) => setMatchFilters({...matchFilters, status: val as any})} data-testid="select-status-filter">
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="الحالة" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">الكل</SelectItem>
+                                <SelectItem value="saved">محفوظ</SelectItem>
+                                <SelectItem value="contacted">تم التواصل</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select value={matchFilters.propertyType} onValueChange={(val) => setMatchFilters({...matchFilters, propertyType: val})} data-testid="select-property-filter">
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="النوع" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">الكل</SelectItem>
+                                <SelectItem value="apartment">شقة</SelectItem>
+                                <SelectItem value="villa">فيلا</SelectItem>
+                                <SelectItem value="land">أرض</SelectItem>
+                                <SelectItem value="building">عمارة</SelectItem>
+                                <SelectItem value="duplex">دوبلكس</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select value={matchFilters.city} onValueChange={(val) => setMatchFilters({...matchFilters, city: val})} data-testid="select-city-filter">
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="المدينة" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">الكل</SelectItem>
+                                <SelectItem value="جدة">جدة</SelectItem>
+                                <SelectItem value="الرياض">الرياض</SelectItem>
+                                <SelectItem value="الدمام">الدمام</SelectItem>
+                                <SelectItem value="مكة">مكة</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium block">السعر: {formatCurrency(matchFilters.minPrice / 1000000).replace('.00', '')}M - {formatCurrency(matchFilters.maxPrice / 1000000).replace('.00', '')}M</label>
+                              <Slider value={[matchFilters.minPrice, matchFilters.maxPrice]} onValueChange={(val) => setMatchFilters({...matchFilters, minPrice: val[0], maxPrice: val[1]})} min={0} max={10000000} step={50000} className="h-1" data-testid="slider-price-filter" />
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">نوع العقار</label>
-                              <Select value={matchFilters.propertyType} onValueChange={(val) => setMatchFilters({...matchFilters, propertyType: val})} data-testid="select-property-filter">
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">الكل</SelectItem>
-                                  <SelectItem value="apartment">شقة</SelectItem>
-                                  <SelectItem value="villa">فيلا</SelectItem>
-                                  <SelectItem value="land">أرض</SelectItem>
-                                  <SelectItem value="building">عمارة</SelectItem>
-                                  <SelectItem value="duplex">دوبلكس</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">المدينة</label>
-                              <Select value={matchFilters.city} onValueChange={(val) => setMatchFilters({...matchFilters, city: val})} data-testid="select-city-filter">
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">الكل</SelectItem>
-                                  <SelectItem value="جدة">جدة</SelectItem>
-                                  <SelectItem value="الرياض">الرياض</SelectItem>
-                                  <SelectItem value="الدمام">الدمام</SelectItem>
-                                  <SelectItem value="مكة">مكة</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">السعر: {formatCurrency(matchFilters.minPrice)} - {formatCurrency(matchFilters.maxPrice)}</label>
-                              <Slider value={[matchFilters.minPrice, matchFilters.maxPrice]} onValueChange={(val) => setMatchFilters({...matchFilters, minPrice: val[0], maxPrice: val[1]})} min={0} max={10000000} step={50000} data-testid="slider-price-filter" />
-                            </div>
-                            <Button className="w-full" onClick={() => setShowMatchFilters(false)} data-testid="button-apply-filters">تطبيق</Button>
+                            <Button size="sm" className="w-full h-7 text-xs" onClick={() => setShowMatchFilters(false)} data-testid="button-apply-filters">تطبيق</Button>
                           </div>
                         </PopoverContent>
                       </Popover>
