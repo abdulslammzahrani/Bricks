@@ -11,7 +11,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!isFormComplete && <Header />}
+      <Header />
       <main className="flex-1">
         <HeroSection onCompleteChange={setIsFormComplete} />
         {!isFormComplete && (
@@ -22,7 +22,7 @@ export default function Home() {
           </>
         )}
       </main>
-      {!isFormComplete && <Footer />}
+      <Footer />
     </div>
   );
 }
