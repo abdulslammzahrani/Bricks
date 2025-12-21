@@ -296,6 +296,192 @@ export async function registerRoutes(
     }
   });
 
+  // ============ PASSWORD RESET ROUTES ============
+
+  // Request password reset (sends email)
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Don't reveal if email exists for security
+        return res.json({ success: true, message: "إذا كان البريد الإلكتروني مسجلاً، ستصلك رسالة استعادة كلمة المرور" });
+      }
+
+      // Generate secure reset token
+      const crypto = await import("crypto");
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Save token to database
+      await storage.createPasswordResetToken({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+
+      // Send email
+      const { sendPasswordResetEmail } = await import("./email");
+      await sendPasswordResetEmail(user.email, token, user.name);
+
+      res.json({ success: true, message: "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني" });
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "حدث خطأ أثناء إرسال رابط الاستعادة" });
+    }
+  });
+
+  // Verify reset token
+  app.get("/api/auth/verify-reset-token", async (req, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ valid: false, error: "رمز غير صالح" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.json({ valid: false, error: "رمز الاستعادة غير موجود" });
+      }
+
+      if (resetToken.usedAt) {
+        return res.json({ valid: false, error: "تم استخدام هذا الرابط مسبقاً" });
+      }
+
+      if (new Date() > resetToken.expiresAt) {
+        return res.json({ valid: false, error: "انتهت صلاحية رابط الاستعادة" });
+      }
+
+      res.json({ valid: true });
+    } catch (error: any) {
+      console.error("Verify reset token error:", error);
+      res.status(500).json({ valid: false, error: "حدث خطأ" });
+    }
+  });
+
+  // Reset password using token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ error: "الرمز وكلمة المرور الجديدة مطلوبان" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
+
+      const resetToken = await storage.getPasswordResetToken(token);
+      
+      if (!resetToken) {
+        return res.status(400).json({ error: "رمز الاستعادة غير موجود" });
+      }
+
+      if (resetToken.usedAt) {
+        return res.status(400).json({ error: "تم استخدام هذا الرابط مسبقاً" });
+      }
+
+      if (new Date() > resetToken.expiresAt) {
+        return res.status(400).json({ error: "انتهت صلاحية رابط الاستعادة" });
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      // Update user password
+      await storage.updateUser(resetToken.userId, {
+        passwordHash,
+        requiresPasswordReset: false,
+      });
+
+      // Mark token as used
+      await storage.markPasswordResetTokenUsed(token);
+
+      res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "حدث خطأ أثناء تغيير كلمة المرور" });
+    }
+  });
+
+  // ============ REGISTRATION ROUTE ============
+
+  // Direct registration (without form)
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { name, phone, email, password } = req.body;
+      
+      if (!name || !phone || !email || !password) {
+        return res.status(400).json({ error: "جميع الحقول مطلوبة" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
+
+      // Check if user already exists
+      const existingByPhone = await storage.getUserByPhone(phone);
+      if (existingByPhone) {
+        return res.status(400).json({ error: "رقم الجوال مسجل مسبقاً" });
+      }
+
+      const existingByEmail = await storage.getUserByEmail(email);
+      if (existingByEmail) {
+        return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = await storage.createUser({
+        name,
+        phone,
+        email,
+        passwordHash,
+        role: "buyer",
+        requiresPasswordReset: false,
+      });
+
+      // Set session
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+      req.session.userRole = user.role;
+
+      // Send welcome email (non-blocking)
+      try {
+        const { sendWelcomeEmail } = await import("./email");
+        await sendWelcomeEmail(user.email, user.name);
+      } catch (e) {
+        console.error("Failed to send welcome email:", e);
+      }
+
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+        }
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ WEBAUTHN ROUTES (Biometric Authentication) ============
 
   // Generate registration options for WebAuthn (Face ID, Touch ID, Fingerprint)

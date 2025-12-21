@@ -11,7 +11,8 @@ import {
   messages, type Message, type InsertMessage,
   staticPages, type StaticPage, type InsertStaticPage,
   webauthnCredentials, type WebauthnCredential, type InsertWebauthnCredential,
-  webauthnChallenges, type WebauthnChallenge, type InsertWebauthnChallenge
+  webauthnChallenges, type WebauthnChallenge, type InsertWebauthnChallenge,
+  passwordResetTokens, type PasswordResetToken, type InsertPasswordResetToken
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -120,6 +121,11 @@ export interface IStorage {
   getWebauthnChallenge(challenge: string): Promise<WebauthnChallenge | undefined>;
   deleteWebauthnChallenge(challenge: string): Promise<void>;
   deleteExpiredWebauthnChallenges(): Promise<void>;
+
+  // Password Reset Tokens
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(token: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -694,6 +700,23 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpiredWebauthnChallenges(): Promise<void> {
     await db.delete(webauthnChallenges).where(lte(webauthnChallenges.expiresAt, new Date()));
+  }
+
+  // Password Reset Tokens
+  async createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [result] = await db.insert(passwordResetTokens).values(token).returning();
+    return result;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [result] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+    return result || undefined;
+  }
+
+  async markPasswordResetTokenUsed(token: string): Promise<void> {
+    await db.update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.token, token));
   }
 }
 
