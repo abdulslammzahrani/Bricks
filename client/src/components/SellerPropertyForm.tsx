@@ -166,15 +166,19 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
 
   const firstName = listingData.name ? listingData.name.split(" ")[0] : "";
 
-  // Countdown timer for new users
+  // Countdown timer for redirect after completion
   useEffect(() => {
-    if (isComplete && isNewUser && countdown > 0) {
+    if (isComplete && countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown(prev => prev - 1);
       }, 1000);
       return () => clearTimeout(timer);
-    } else if (isComplete && isNewUser && countdown === 0) {
-      navigate(`/setup-password?phone=${encodeURIComponent(userPhone)}`);
+    } else if (isComplete && countdown === 0) {
+      if (isNewUser) {
+        navigate(`/setup-password?phone=${encodeURIComponent(userPhone)}`);
+      } else {
+        navigate("/login");
+      }
     }
   }, [isComplete, isNewUser, countdown, navigate, userPhone]);
 
@@ -533,15 +537,22 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
                       <Check className="h-8 w-8 text-primary" />
                     </div>
                     <h3 className="text-xl font-bold" data-testid="text-seller-completion-title">تم نشر عقارك بنجاح!</h3>
-                    {isNewUser ? (
-                      <p className="text-muted-foreground" data-testid="text-seller-countdown">
-                        جاري تحويلك لصفحة الشخصية خلال {countdown} ثانية...
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground" data-testid="text-seller-completion-message">
-                        سنبدأ بالبحث عن مشترين مناسبين لعقارك وسنرسل لك العروض
-                      </p>
-                    )}
+                    <p className="text-muted-foreground" data-testid="text-seller-completion-message">
+                      سنبدأ بالبحث عن مشترين مناسبين لعقارك وسنرسل لك العروض
+                    </p>
+                    <p className="text-sm text-muted-foreground" data-testid="text-seller-countdown">
+                      {isNewUser 
+                        ? `سيتم تحويلك لإعداد كلمة المرور خلال ${countdown} ثوانٍ...`
+                        : `سيتم تحويلك لتسجيل الدخول خلال ${countdown} ثوانٍ...`
+                      }
+                    </p>
+                    <Button 
+                      onClick={() => navigate(isNewUser ? `/setup-password?phone=${encodeURIComponent(userPhone)}` : "/login")}
+                      className="mt-2"
+                      data-testid="button-seller-go-to-login"
+                    >
+                      {isNewUser ? "إعداد كلمة المرور الآن" : "تسجيل الدخول الآن"}
+                    </Button>
                   </div>
                 )}
               </div>

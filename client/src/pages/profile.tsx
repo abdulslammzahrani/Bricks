@@ -48,7 +48,7 @@ export default function ProfilePage() {
   const searchParams = new URLSearchParams(searchString);
   const tabParam = searchParams.get("tab");
   const conversationParam = searchParams.get("conversation");
-  
+
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loginType, setLoginType] = useState<"user" | "admin">("user");
@@ -61,7 +61,7 @@ export default function ProfilePage() {
   );
   // Tracks whether dialog is for preference or property (decoupled from activeTab)
   const [formMode, setFormMode] = useState<"preference" | "property">("preference");
-  
+
   const [formData, setFormData] = useState({
     city: "",
     district: "",
@@ -73,7 +73,7 @@ export default function ProfilePage() {
     rooms: "",
     images: [] as string[],
   });
-  
+
   // State for expandable inline editing
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [inlineEditData, setInlineEditData] = useState<Record<string, any>>({});
@@ -274,13 +274,13 @@ export default function ProfilePage() {
     // Safe arrays with null guards to prevent runtime errors when queries are loading
     const preferencesArray = (preferences as any[]) ?? [];
     const propertiesArray = (properties as any[]) ?? [];
-    
+
     // Check if item is a preference (by checking if it exists in preferences array)
     const isPreferenceItem = preferencesArray.some((p: any) => p.id === itemId);
     const currentItem = isPreferenceItem 
       ? preferencesArray.find((p: any) => p.id === itemId)
       : propertiesArray.find((p: any) => p.id === itemId);
-    
+
     if (!currentItem) return;
 
     // Check if value actually changed
@@ -386,7 +386,7 @@ export default function ProfilePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formMode === "preference") {
       const data = {
         userId: userData.id,
@@ -399,7 +399,7 @@ export default function ProfilePage() {
         rooms: formData.rooms || null,
         isActive: true,
       };
-      
+
       if (editingItem) {
         updatePreferenceMutation.mutate({ id: editingItem.id, data });
       } else {
@@ -410,7 +410,7 @@ export default function ProfilePage() {
         toast({ title: "يجب رفع صور أو فيديوهات للعقار", variant: "destructive" });
         return;
       }
-      
+
       const data = {
         sellerId: userData.id,
         city: formData.city,
@@ -422,7 +422,7 @@ export default function ProfilePage() {
         images: formData.images,
         isActive: true,
       };
-      
+
       if (editingItem) {
         updatePropertyMutation.mutate({ id: editingItem.id, data });
       } else {
@@ -498,7 +498,7 @@ export default function ProfilePage() {
                 مستخدم
               </button>
             </div>
-            
+
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium">رقم الجوال</Label>
@@ -546,11 +546,12 @@ export default function ProfilePage() {
                 {loginMutation.isPending ? "جاري الدخول..." : "تسجيل الدخول"}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 ليس لديك حساب؟{" "}
-                <Link href="/buyer-form">
+                {/* ✅ تم تحديث الرابط هنا ليتوجه إلى صفحة seller-form */}
+                <Link href="/seller-form">
                   <span className="text-primary font-medium hover:underline cursor-pointer">سجل الآن مجاناً</span>
                 </Link>
               </p>
@@ -578,7 +579,7 @@ export default function ProfilePage() {
   // Calculate stats
   const preferencesCount = Array.isArray(preferences) ? preferences.length : 0;
   const propertiesCount = Array.isArray(properties) ? properties.length : 0;
-  
+
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
@@ -607,7 +608,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </SidebarHeader>
-          
+
           <SidebarContent className="p-2">
             <SidebarGroup>
               <SidebarGroupLabel>القائمة</SidebarGroupLabel>
@@ -700,7 +701,7 @@ export default function ProfilePage() {
                   </div>
                 </Card>
               </div>
-              
+
               {/* Card 2 - Properties */}
               <div 
                 className="relative cursor-pointer group"
@@ -728,7 +729,7 @@ export default function ProfilePage() {
                   </div>
                 </Card>
               </div>
-              
+
               {/* Card 3 - Matches */}
               <div 
                 className="relative cursor-pointer group"
@@ -756,7 +757,7 @@ export default function ProfilePage() {
                   </div>
                 </Card>
               </div>
-              
+
               {/* Card 4 - Messages */}
               <div 
                 className="relative cursor-pointer group"
@@ -785,7 +786,7 @@ export default function ProfilePage() {
                 </Card>
               </div>
             </div>
-            
+
             {/* Quick Actions Bar */}
             <Card className="p-4">
               <div className="flex flex-wrap items-center gap-4">
@@ -828,7 +829,7 @@ export default function ProfilePage() {
                     إضافة رغبة
                   </Button>
                 </div>
-              
+
               {preferences && Array.isArray(preferences) && preferences.length > 0 ? (
                 <div className="grid gap-4">
                   {preferences.map((pref: any) => (
@@ -868,7 +869,7 @@ export default function ProfilePage() {
                         <div className="text-sm text-muted-foreground">
                           الميزانية: {pref.budgetMin?.toLocaleString() || 0} - {pref.budgetMax?.toLocaleString() || "غير محدد"} ريال
                         </div>
-                        
+
                         {/* Expandable Inline Edit Section */}
                         {expandedItemId === pref.id && (
                           <div className="mt-4 pt-4 border-t space-y-4">
@@ -879,7 +880,7 @@ export default function ProfilePage() {
                                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
                               )}
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">المدينة</Label>
@@ -1094,7 +1095,7 @@ export default function ProfilePage() {
                                 </SelectContent>
                               </Select>
                             </div>
-                            
+
                             <div className="flex items-center gap-2 text-xs text-green-600">
                               <Check className="h-3 w-3" />
                               <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
@@ -1139,7 +1140,7 @@ export default function ProfilePage() {
                     <PropertyMap properties={properties as any[]} />
                   </div>
                 ) : null}
-              
+
                 {properties && Array.isArray(properties) && properties.length > 0 ? (
                 <div className="grid gap-4">
                   {properties.map((prop: any) => (
@@ -1185,7 +1186,7 @@ export default function ProfilePage() {
                             {prop.viewsCount || 0} مشاهدة
                           </div>
                         </div>
-                        
+
                         {/* Expandable Inline Edit Section for Properties */}
                         {expandedItemId === prop.id && (
                           <div className="mt-4 pt-4 border-t space-y-4">
@@ -1196,7 +1197,7 @@ export default function ProfilePage() {
                                 <Loader2 className="h-4 w-4 animate-spin text-green-600" />
                               )}
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">المدينة</Label>
@@ -1313,7 +1314,7 @@ export default function ProfilePage() {
                                 </div>
                               </div>
                             )}
-                            
+
                             <div className="flex items-center gap-2 text-xs text-green-600">
                               <Check className="h-3 w-3" />
                               <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
@@ -1490,7 +1491,7 @@ export default function ProfilePage() {
                     رفع الملفات
                   </FileUploadButton>
                 </div>
-                
+
                 {formData.images.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {formData.images.map((url, index) => (

@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import BuyerFormPage from "@/pages/buyer-form";
 import SellerFormPage from "@/pages/seller-form";
 import AdminDashboard from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
@@ -28,7 +27,6 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/setup-password" component={SetupPasswordPage} />
-      <Route path="/buyer-form" component={BuyerFormPage} />
       <Route path="/seller-form" component={SellerFormPage} />
       <Route path="/investor" component={InvestorPage} />
       <Route path="/admin" component={AdminDashboard} />
