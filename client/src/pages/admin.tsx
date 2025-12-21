@@ -1309,68 +1309,49 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
 
-                                {/* الجزء الأوسط: محور الربط بخلفية متدرجة */}
-                                <div className="md:col-span-5 p-4 bg-gradient-to-l from-green-400/90 via-green-500/80 to-green-400/90 flex flex-col items-center justify-center gap-3 pl-[5px] pr-[5px] pt-[5px] pb-[5px]">
-                                  {/* الصف العلوي: زر + دائرة النسبة + زر */}
-                                  <div className="flex items-center justify-center gap-4 w-full">
-                                    <Button 
-                                      size="icon" 
-                                      className="h-8 w-8 rounded-full bg-white/90 hover:bg-white text-green-600 shadow-sm"
-                                      onClick={() => handleSendMatchNotification(match.id)}
-                                      disabled={sendingMatchNotification === match.id}
-                                      data-testid={`button-group-chat-${match.id}`}
-                                    >
-                                      {sendingMatchNotification === match.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
-                                    </Button>
-                                    
-                                    {/* دائرة نسبة التطابق */}
-                                    <div className="relative flex items-center justify-center">
-                                      <svg className="w-16 h-16 transform -rotate-90">
-                                        <circle className="text-white/30" strokeWidth="3" stroke="currentColor" fill="white" r="28" cx="32" cy="32" />
-                                        <circle 
-                                          className="text-white" 
-                                          strokeWidth="3" 
-                                          strokeDasharray={2 * Math.PI * 28} 
-                                          strokeDashoffset={2 * Math.PI * 28 * (1 - match.matchScore / 100)} 
-                                          strokeLinecap="round" 
-                                          stroke="currentColor" 
-                                          fill="transparent" 
-                                          r="28" 
-                                          cx="32" 
-                                          cy="32" 
-                                        />
-                                      </svg>
-                                      <span className="absolute text-sm font-bold text-green-600">{match.matchScore}%</span>
-                                    </div>
-                                    
-                                    <Button 
-                                      size="icon" 
-                                      className="h-8 w-8 rounded-full bg-white/90 hover:bg-white text-green-600 shadow-sm"
-                                      onClick={() => handleShowMatchDetails(match.id)}
-                                      data-testid={`button-full-details-${match.id}`}
-                                    >
-                                      <ExternalLink className="w-4 h-4" />
-                                    </Button>
+                                {/* الجزء الأوسط: محور الربط */}
+                                <div className="md:col-span-5 p-3 bg-white flex items-center justify-center gap-4">
+                                  {/* زر الرسائل */}
+                                  <Button 
+                                    size="icon" 
+                                    className="h-8 w-8 rounded-full"
+                                    onClick={() => handleSendMatchNotification(match.id)}
+                                    disabled={sendingMatchNotification === match.id}
+                                    data-testid={`button-group-chat-${match.id}`}
+                                  >
+                                    {sendingMatchNotification === match.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                                  </Button>
+                                  
+                                  {/* دائرة نسبة التطابق */}
+                                  <div className="relative flex items-center justify-center">
+                                    <svg className="w-14 h-14 transform -rotate-90">
+                                      <circle className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="white" r="24" cx="28" cy="28" />
+                                      <circle 
+                                        className="text-primary" 
+                                        strokeWidth="3" 
+                                        strokeDasharray={2 * Math.PI * 24} 
+                                        strokeDashoffset={2 * Math.PI * 24 * (1 - match.matchScore / 100)} 
+                                        strokeLinecap="round" 
+                                        stroke="currentColor" 
+                                        fill="transparent" 
+                                        r="24" 
+                                        cx="28" 
+                                        cy="28" 
+                                      />
+                                    </svg>
+                                    <span className="absolute text-sm font-bold text-slate-800">{match.matchScore}%</span>
                                   </div>
-
-                                  {/* عنوان المقارنة */}
-                                  <div className="text-white font-semibold text-sm">النصوص</div>
-
-                                  {/* صفوف المقارنة بـ Badges */}
-                                  <div className="flex flex-col gap-2 w-full">
-                                    {/* صف الموقع والنوع */}
-                                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{pref.city}</Badge>
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{propertyTypeLabels[pref.propertyType]}</Badge>
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{maskBudget(pref.budgetMin, pref.budgetMax)}</Badge>
-                                    </div>
-                                    {/* صف البائع */}
-                                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{prop.city}</Badge>
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{propertyTypeLabels[prop.propertyType]}</Badge>
-                                      <Badge className="bg-white/90 text-green-700 text-[10px] h-5 px-2 border-0">{formatCurrency(prop.price)}</Badge>
-                                    </div>
-                                  </div>
+                                  
+                                  {/* زر التفاصيل */}
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost"
+                                    className="h-8 w-8 rounded-full"
+                                    onClick={() => handleShowMatchDetails(match.id)}
+                                    data-testid={`button-full-details-${match.id}`}
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </Button>
                                 </div>
 
                                 {/* الجزء الأيسر: بطاقة البائع */}
