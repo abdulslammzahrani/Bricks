@@ -87,14 +87,14 @@ export function MarketPulse({
   ];
 
   return (
-    <Card className="bg-slate-900 dark:bg-slate-950 border-0 rounded-2xl overflow-hidden" data-testid="market-pulse">
+    <Card className="bg-white dark:bg-slate-950 border-0 rounded-2xl overflow-hidden" data-testid="market-pulse">
       <CardContent className="p-4" dir="rtl">
         <div className="flex items-center gap-2 mb-4">
           <div className="relative" aria-hidden="true">
             <Activity className="h-5 w-5 text-emerald-400" />
             <span className="absolute -top-1 -left-1 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
           </div>
-          <h3 className="font-bold text-white" data-testid="market-pulse-title">نبض السوق</h3>
+          <h3 className="font-bold text-slate-900" data-testid="market-pulse-title">نبض السوق</h3>
           <span className="text-xs text-slate-400 mr-auto" data-testid="market-pulse-status">تحديث مباشر</span>
         </div>
         
@@ -102,7 +102,7 @@ export function MarketPulse({
           {metrics.map((metric) => (
             <div 
               key={metric.id}
-              className="flex flex-col items-center p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors"
+              className="flex flex-col items-center p-3 rounded-xl bg-slate-100/50 hover:bg-slate-200 transition-colors"
               data-testid={`pulse-metric-${metric.id}`}
               role="group"
               aria-label={`${metric.label}: ${metric.value}`}
@@ -110,7 +110,7 @@ export function MarketPulse({
               <div className={`w-10 h-10 rounded-full ${metric.bgColor} flex items-center justify-center ${metric.color} mb-2`} aria-hidden="true">
                 {metric.icon}
               </div>
-              <span className="text-2xl font-bold text-white" data-testid={`pulse-value-${metric.id}`}>{metric.value}</span>
+              <span className="text-2xl font-bold text-slate-900" data-testid={`pulse-value-${metric.id}`}>{metric.value}</span>
               <span className="text-xs text-slate-400 text-center" data-testid={`pulse-label-${metric.id}`}>{metric.label}</span>
             </div>
           ))}

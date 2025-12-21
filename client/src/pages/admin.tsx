@@ -1270,7 +1270,7 @@ export default function AdminDashboard() {
                           if (!pref || !prop) return null;
 
                           return (
-                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[850px] mx-auto w-full px-10">
+                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[750px] mx-auto w-full px-6">
                               <div className="grid grid-cols-1 md:grid-cols-9">
 
                                 {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
@@ -1310,7 +1310,7 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* الجزء الأوسط: محور الربط */}
-                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-5 -mx-10">
+                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-2 -mx-6">
                                   {/* زر الرسائل */}
                                   <Button 
                                     size="icon" 
@@ -1338,14 +1338,14 @@ export default function AdminDashboard() {
                                         cy="32" 
                                       />
                                     </svg>
-                                    <span className="absolute text-base font-bold text-slate-800">{match.matchScore}%</span>
+                                    <span className="absolute text-base font-bold text-black">{match.matchScore}%</span>
                                   </div>
                                   
                                   {/* زر التفاصيل */}
                                   <Button 
                                     size="icon" 
                                     variant="ghost"
-                                    className="h-9 w-9 rounded-full text-slate-600 hover:text-slate-800"
+                                    className="h-9 w-9 rounded-full text-slate-900 hover:text-slate-800"
                                     onClick={() => handleShowMatchDetails(match.id)}
                                     data-testid={`button-full-details-${match.id}`}
                                   >
