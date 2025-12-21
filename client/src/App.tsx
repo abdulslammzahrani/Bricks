@@ -15,12 +15,18 @@ import StaticPageView from "@/pages/static-page";
 import Dashboard from "@/pages/dashboard";
 import LoginPage from "@/pages/login";
 import SetupPasswordPage from "@/pages/setup-password";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
+import RegisterPage from "@/pages/register";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/setup-password" component={SetupPasswordPage} />
       <Route path="/buyer-form" component={BuyerFormPage} />
       <Route path="/seller-form" component={SellerFormPage} />
