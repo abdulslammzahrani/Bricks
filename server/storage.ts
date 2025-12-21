@@ -9,7 +9,9 @@ import {
   marketingEvents, type MarketingEvent, type InsertMarketingEvent,
   conversations, type Conversation, type InsertConversation,
   messages, type Message, type InsertMessage,
-  staticPages, type StaticPage, type InsertStaticPage
+  staticPages, type StaticPage, type InsertStaticPage,
+  webauthnCredentials, type WebauthnCredential, type InsertWebauthnCredential,
+  webauthnChallenges, type WebauthnChallenge, type InsertWebauthnChallenge
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, gte, lte, sql, desc, asc, inArray } from "drizzle-orm";
@@ -105,6 +107,19 @@ export interface IStorage {
   getStaticPage(slug: string): Promise<StaticPage | undefined>;
   getAllStaticPages(): Promise<StaticPage[]>;
   upsertStaticPage(page: InsertStaticPage): Promise<StaticPage>;
+
+  // WebAuthn Credentials
+  createWebauthnCredential(cred: InsertWebauthnCredential): Promise<WebauthnCredential>;
+  getWebauthnCredentialsByUser(userId: string): Promise<WebauthnCredential[]>;
+  getWebauthnCredentialById(credentialId: string): Promise<WebauthnCredential | undefined>;
+  updateWebauthnCredential(id: string, data: Partial<InsertWebauthnCredential>): Promise<WebauthnCredential | undefined>;
+  deleteWebauthnCredential(id: string): Promise<void>;
+
+  // WebAuthn Challenges
+  createWebauthnChallenge(challenge: InsertWebauthnChallenge): Promise<WebauthnChallenge>;
+  getWebauthnChallenge(challenge: string): Promise<WebauthnChallenge | undefined>;
+  deleteWebauthnChallenge(challenge: string): Promise<void>;
+  deleteExpiredWebauthnChallenges(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -633,6 +648,52 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db.insert(staticPages).values(page).returning();
       return created;
     }
+  }
+
+  // WebAuthn Credentials
+  async createWebauthnCredential(cred: InsertWebauthnCredential): Promise<WebauthnCredential> {
+    const [result] = await db.insert(webauthnCredentials).values(cred).returning();
+    return result;
+  }
+
+  async getWebauthnCredentialsByUser(userId: string): Promise<WebauthnCredential[]> {
+    return db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, userId));
+  }
+
+  async getWebauthnCredentialById(credentialId: string): Promise<WebauthnCredential | undefined> {
+    const [cred] = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.credentialId, credentialId));
+    return cred || undefined;
+  }
+
+  async updateWebauthnCredential(id: string, data: Partial<InsertWebauthnCredential>): Promise<WebauthnCredential | undefined> {
+    const [result] = await db.update(webauthnCredentials)
+      .set(data)
+      .where(eq(webauthnCredentials.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async deleteWebauthnCredential(id: string): Promise<void> {
+    await db.delete(webauthnCredentials).where(eq(webauthnCredentials.id, id));
+  }
+
+  // WebAuthn Challenges
+  async createWebauthnChallenge(challenge: InsertWebauthnChallenge): Promise<WebauthnChallenge> {
+    const [result] = await db.insert(webauthnChallenges).values(challenge).returning();
+    return result;
+  }
+
+  async getWebauthnChallenge(challenge: string): Promise<WebauthnChallenge | undefined> {
+    const [result] = await db.select().from(webauthnChallenges).where(eq(webauthnChallenges.challenge, challenge));
+    return result || undefined;
+  }
+
+  async deleteWebauthnChallenge(challenge: string): Promise<void> {
+    await db.delete(webauthnChallenges).where(eq(webauthnChallenges.challenge, challenge));
+  }
+
+  async deleteExpiredWebauthnChallenges(): Promise<void> {
+    await db.delete(webauthnChallenges).where(lte(webauthnChallenges.expiresAt, new Date()));
   }
 }
 

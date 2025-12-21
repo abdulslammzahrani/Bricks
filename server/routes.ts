@@ -19,6 +19,12 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
 import bcrypt from "bcryptjs";
 import { statsEngine } from "./stats-engine";
+import {
+  generateRegistrationOptionsForUser,
+  verifyRegistration,
+  generateAuthenticationOptionsForUser,
+  verifyAuthentication,
+} from "./webauthn";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
@@ -286,6 +292,164 @@ export async function registerRoutes(
       res.json({ success: true, message: "تم تغيير كلمة المرور بنجاح" });
     } catch (error: any) {
       console.error("Change password error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ WEBAUTHN ROUTES (Biometric Authentication) ============
+
+  // Generate registration options for WebAuthn (Face ID, Touch ID, Fingerprint)
+  app.post("/api/auth/webauthn/register-options", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "يجب تسجيل الدخول أولاً" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "المستخدم غير موجود" });
+      }
+
+      const options = await generateRegistrationOptionsForUser(userId, user.name);
+      res.json(options);
+    } catch (error: any) {
+      console.error("WebAuthn register options error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Verify WebAuthn registration
+  app.post("/api/auth/webauthn/register-verify", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "يجب تسجيل الدخول أولاً" });
+      }
+
+      const { response, deviceName } = req.body;
+      const result = await verifyRegistration(userId, response, deviceName);
+      res.json(result);
+    } catch (error: any) {
+      console.error("WebAuthn register verify error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate authentication options for WebAuthn
+  app.post("/api/auth/webauthn/auth-options", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      let userId: string | undefined;
+
+      if (phone) {
+        const user = await storage.getUserByPhone(phone);
+        if (user) {
+          userId = user.id;
+        }
+      }
+
+      const options = await generateAuthenticationOptionsForUser(userId);
+      res.json(options);
+    } catch (error: any) {
+      console.error("WebAuthn auth options error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Verify WebAuthn authentication
+  app.post("/api/auth/webauthn/auth-verify", async (req, res) => {
+    try {
+      const { response, challenge } = req.body;
+      const result = await verifyAuthentication(response, challenge);
+
+      if (result.verified && result.user) {
+        req.session.userId = result.user.id;
+        req.session.userName = result.user.name;
+        req.session.userRole = result.user.role;
+
+        res.json({
+          verified: true,
+          user: {
+            id: result.user.id,
+            name: result.user.name,
+            phone: result.user.phone,
+            email: result.user.email,
+            role: result.user.role,
+          },
+        });
+      } else {
+        res.status(401).json({ error: "فشل التحقق" });
+      }
+    } catch (error: any) {
+      console.error("WebAuthn auth verify error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's registered WebAuthn credentials
+  app.get("/api/auth/webauthn/credentials", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مسجل الدخول" });
+      }
+
+      const credentials = await storage.getWebauthnCredentialsByUser(userId);
+      res.json(credentials.map((c) => ({
+        id: c.id,
+        deviceName: c.deviceName,
+        deviceType: c.deviceType,
+        lastUsedAt: c.lastUsedAt,
+        createdAt: c.createdAt,
+      })));
+    } catch (error: any) {
+      console.error("Get credentials error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a WebAuthn credential
+  app.delete("/api/auth/webauthn/credentials/:id", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مسجل الدخول" });
+      }
+
+      const credentialId = req.params.id;
+      const credentials = await storage.getWebauthnCredentialsByUser(userId);
+      const credential = credentials.find((c) => c.id === credentialId);
+
+      if (!credential) {
+        return res.status(404).json({ error: "الجهاز غير موجود" });
+      }
+
+      await storage.deleteWebauthnCredential(credentialId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete credential error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Check if user has biometric credentials
+  app.get("/api/auth/webauthn/has-credentials", async (req, res) => {
+    try {
+      const { phone } = req.query;
+      if (!phone || typeof phone !== "string") {
+        return res.json({ hasCredentials: false });
+      }
+
+      const user = await storage.getUserByPhone(phone);
+      if (!user) {
+        return res.json({ hasCredentials: false });
+      }
+
+      const credentials = await storage.getWebauthnCredentialsByUser(user.id);
+      res.json({ hasCredentials: credentials.length > 0 });
+    } catch (error: any) {
+      console.error("Check credentials error:", error);
       res.status(500).json({ error: error.message });
     }
   });
