@@ -258,17 +258,15 @@ export default function HeroSection() {
         </div>
       )}
 
-      {/* 2. Map Section (Full Width & Big) */}
-      <div className="relative w-full h-[500px] md:h-[650px] bg-slate-100 border-b border-slate-200 shadow-inner overflow-hidden group">
-        {!isComplete && (
+      {/* 2. Map Section (Full Width & Big) - Hidden when form is complete */}
+      {!isComplete && (
+        <div className="relative w-full h-[500px] md:h-[650px] bg-slate-100 border-b border-slate-200 shadow-inner overflow-hidden group">
           <SaudiMap 
             markers={mapMarkers} 
             className="w-full h-full"
           />
-        )}
 
-        {/* ✅ عرض سطح المكتب فقط (البطاقة العمودية) */}
-        {!isComplete && (
+          {/* ✅ عرض سطح المكتب فقط (البطاقة العمودية) */}
           <div className="absolute top-4 left-4 z-20 hidden md:block">
             <div className="bg-white/95 backdrop-blur-md shadow-xl border border-slate-200/60 rounded-2xl p-4 min-w-[240px] transition-transform hover:scale-[1.02]">
               <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
@@ -293,11 +291,11 @@ export default function HeroSection() {
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 3. Form Section (Below Map) */}
-      <div className="container mx-auto px-4 -mt-20 relative z-20">
+      <div className={`container mx-auto px-4 relative z-20 ${!isComplete ? '-mt-20' : 'mt-8'}`}>
         <Card className="w-full max-w-2xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm p-2 md:p-4">
 
           <div className="flex justify-center mb-6 pt-2">
