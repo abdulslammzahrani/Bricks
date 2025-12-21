@@ -1310,70 +1310,74 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* الجزء الأوسط: محور الربط */}
-                                <div className="md:col-span-5 p-3 flex items-center justify-between gap-2 bg-white">
-                                  {/* نسبة التطابق */}
-                                  <div className="flex-shrink-0">
-                                    <div className="relative flex items-center justify-center">
-                                      <svg className="w-12 h-12 transform -rotate-90">
-                                        <circle className="text-slate-100" strokeWidth="2.5" stroke="currentColor" fill="white" r="20" cx="24" cy="24" />
-                                        <circle 
-                                          className="text-primary" 
-                                          strokeWidth="2.5" 
-                                          strokeDasharray={2 * Math.PI * 20} 
-                                          strokeDashoffset={2 * Math.PI * 20 * (1 - match.matchScore / 100)} 
-                                          strokeLinecap="round" 
-                                          stroke="currentColor" 
-                                          fill="transparent" 
-                                          r="20" 
-                                          cx="24" 
-                                          cy="24" 
-                                        />
-                                      </svg>
-                                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-xs font-bold text-slate-800">{match.matchScore}%</span>
+                                <div className="md:col-span-5 p-3 bg-white">
+                                  <div className="flex items-center gap-4">
+                                    {/* نسبة التطابق */}
+                                    <div className="flex-shrink-0">
+                                      <div className="relative flex items-center justify-center">
+                                        <svg className="w-11 h-11 transform -rotate-90">
+                                          <circle className="text-slate-100" strokeWidth="2" stroke="currentColor" fill="white" r="18" cx="22" cy="22" />
+                                          <circle 
+                                            className="text-primary" 
+                                            strokeWidth="2" 
+                                            strokeDasharray={2 * Math.PI * 18} 
+                                            strokeDashoffset={2 * Math.PI * 18 * (1 - match.matchScore / 100)} 
+                                            strokeLinecap="round" 
+                                            stroke="currentColor" 
+                                            fill="transparent" 
+                                            r="18" 
+                                            cx="22" 
+                                            cy="22" 
+                                          />
+                                        </svg>
+                                        <span className="absolute text-[10px] font-bold text-slate-800">{match.matchScore}%</span>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  {/* خيوط المقارنة */}
-                                  <div className="flex-1 space-y-1 text-[10px]">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-slate-600 truncate">{pref.city}</span>
-                                      <MapPin className="w-3 h-3 text-slate-300 flex-shrink-0" />
-                                      <span className="text-slate-600 truncate">{prop.city}</span>
+                                    {/* جدول المقارنة */}
+                                    <div className="flex-1 grid grid-cols-[1fr_auto_1fr] gap-x-3 gap-y-0.5 text-[10px]">
+                                      {/* رأس الجدول */}
+                                      <span className="text-[9px] text-muted-foreground text-right">طلب المشتري</span>
+                                      <span></span>
+                                      <span className="text-[9px] text-muted-foreground text-left">عرض البائع</span>
+                                      
+                                      {/* صف الموقع */}
+                                      <span className="text-slate-700 font-medium text-right truncate">{pref.city}</span>
+                                      <MapPin className="w-3 h-3 text-slate-300 mx-auto" />
+                                      <span className="text-slate-700 font-medium text-left truncate">{prop.city}</span>
+                                      
+                                      {/* صف النوع */}
+                                      <span className="text-slate-700 font-medium text-right truncate">{propertyTypeLabels[pref.propertyType]}</span>
+                                      <Building2 className="w-3 h-3 text-slate-300 mx-auto" />
+                                      <span className="text-slate-700 font-medium text-left truncate">{propertyTypeLabels[prop.propertyType]}</span>
+                                      
+                                      {/* صف السعر */}
+                                      <span className="text-slate-700 font-medium text-right truncate">{maskBudget(pref.budgetMin, pref.budgetMax)}</span>
+                                      <ArrowRightLeft className="w-3 h-3 text-slate-300 mx-auto" />
+                                      <span className="text-slate-700 font-medium text-left truncate">{formatCurrency(prop.price)}</span>
                                     </div>
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-slate-600 truncate">{propertyTypeLabels[pref.propertyType]}</span>
-                                      <Building2 className="w-3 h-3 text-slate-300 flex-shrink-0" />
-                                      <span className="text-slate-600 truncate">{propertyTypeLabels[prop.propertyType]}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="text-slate-600 truncate">{maskBudget(pref.budgetMin, pref.budgetMax)}</span>
-                                      <ArrowRightLeft className="w-3 h-3 text-slate-300 flex-shrink-0" />
-                                      <span className="text-slate-600 truncate">{formatCurrency(prop.price)}</span>
-                                    </div>
-                                  </div>
 
-                                  {/* أزرار */}
-                                  <div className="flex flex-col gap-1 flex-shrink-0">
-                                    <Button 
-                                      size="sm" 
-                                      className="h-6 text-[10px] px-2 rounded-full"
-                                      onClick={() => handleSendMatchNotification(match.id)}
-                                      disabled={sendingMatchNotification === match.id}
-                                      data-testid={`button-group-chat-${match.id}`}
-                                    >
-                                      {sendingMatchNotification === match.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
-                                    </Button>
-                                    <Button 
-                                      size="sm" 
-                                      variant="ghost" 
-                                      className="h-6 text-[10px] px-2"
-                                      onClick={() => handleShowMatchDetails(match.id)}
-                                      data-testid={`button-full-details-${match.id}`}
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                    </Button>
+                                    {/* أزرار الإجراءات */}
+                                    <div className="flex-shrink-0 flex gap-1">
+                                      <Button 
+                                        size="icon" 
+                                        className="h-7 w-7 rounded-full"
+                                        onClick={() => handleSendMatchNotification(match.id)}
+                                        disabled={sendingMatchNotification === match.id}
+                                        data-testid={`button-group-chat-${match.id}`}
+                                      >
+                                        {sendingMatchNotification === match.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                                      </Button>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        className="h-7 w-7"
+                                        onClick={() => handleShowMatchDetails(match.id)}
+                                        data-testid={`button-full-details-${match.id}`}
+                                      >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
 
