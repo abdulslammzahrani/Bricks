@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -80,6 +80,9 @@ import {
   ArrowDownRight,
   Landmark,
   ShoppingBag,
+  Bed,
+  Bath,
+  Ruler,
   // ✅ هنا الإصلاح: استيراد الأيقونة باسم مستعار لتجنب التعارض
   PieChart as PieChartIcon 
 } from "lucide-react";
@@ -237,6 +240,9 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [sendingClientId, setSendingClientId] = useState<string | null>(null);
   const [analyticsTimeFilter, setAnalyticsTimeFilter] = useState<"week" | "month" | "year">("month");
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [showMatchDetailsDialog, setShowMatchDetailsDialog] = useState(false);
+  const [sendingMatchNotification, setSendingMatchNotification] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
@@ -411,6 +417,85 @@ export default function AdminDashboard() {
       toast({ title: "خطأ", description: error.message || "فشل في التحديث", variant: "destructive" });
     },
   });
+
+  // دالة عرض تفاصيل المطابقة الكاملة
+  const handleShowMatchDetails = (matchId: string) => {
+    setSelectedMatchId(matchId);
+    setShowMatchDetailsDialog(true);
+  };
+
+  // الحصول على بيانات المطابقة المحددة
+  const getSelectedMatchData = () => {
+    if (!selectedMatchId) return null;
+    const match = matches.find(m => m.id === selectedMatchId);
+    if (!match) return null;
+    
+    const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+    const prop = properties.find(p => p.id === match.propertyId);
+    const buyer = pref ? users.find(u => u.id === pref.userId) : null;
+    const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+    
+    return { match, pref, prop, buyer, seller };
+  };
+
+  // دالة إرسال إشعار واتساب للبائع والمشتري
+  const handleSendMatchNotification = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+    
+    const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+    const prop = properties.find(p => p.id === match.propertyId);
+    const buyer = pref ? users.find(u => u.id === pref.userId) : null;
+    const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+    
+    if (!buyer?.phone && !seller?.phone) {
+      toast({ title: "لا يوجد أرقام", description: "لا يوجد أرقام هواتف لإرسال الإشعار", variant: "destructive" });
+      return;
+    }
+    
+    setSendingMatchNotification(matchId);
+    
+    // رسالة للمشتري
+    const buyerMessage = encodeURIComponent(
+      `تطابق - مطابقة عقارية جديدة\n\n` +
+      `مرحباً ${buyer?.name || 'عميلنا الكريم'},\n\n` +
+      `تم إيجاد عقار يتوافق مع رغباتك بنسبة ${match.matchScore}%\n\n` +
+      `الموقع: ${prop?.city || ''} - ${prop?.district || ''}\n` +
+      `السعر: ${prop?.price ? formatCurrency(prop.price) + ' ريال' : 'غير محدد'}\n\n` +
+      `الرجاء الدخول لصفحتك الخاصة لتأكيد طلبك ومشاهدة التفاصيل.\n\n` +
+      `منصة تطابق العقارية`
+    );
+    
+    // رسالة للبائع
+    const sellerMessage = encodeURIComponent(
+      `تطابق - مشتري محتمل لعقارك\n\n` +
+      `مرحباً ${seller?.name || 'عميلنا الكريم'},\n\n` +
+      `يوجد مشتري مهتم بعقارك بنسبة تطابق ${match.matchScore}%\n\n` +
+      `النوع: ${prop?.propertyType ? propertyTypeLabels[prop.propertyType] : 'عقار'}\n` +
+      `الموقع: ${prop?.city || ''} - ${prop?.district || ''}\n\n` +
+      `الرجاء الدخول لصفحتك الخاصة لتأكيد العرض والتواصل مع المشتري.\n\n` +
+      `منصة تطابق العقارية`
+    );
+    
+    // فتح واتساب للمشتري
+    if (buyer?.phone) {
+      const buyerWhatsApp = getWhatsAppLink(buyer.phone) + `?text=${buyerMessage}`;
+      window.open(buyerWhatsApp, '_blank');
+    }
+    
+    // فتح واتساب للبائع بعد تأخير قصير
+    setTimeout(() => {
+      if (seller?.phone) {
+        const sellerWhatsApp = getWhatsAppLink(seller.phone) + `?text=${sellerMessage}`;
+        window.open(sellerWhatsApp, '_blank');
+      }
+      setSendingMatchNotification(null);
+      toast({ 
+        title: "تم فتح الواتساب", 
+        description: "تم فتح نوافذ واتساب لإرسال الإشعارات للبائع والمشتري" 
+      });
+    }, 500);
+  };
 
   const isLoading = statsLoading || usersLoading || prefsLoading || propsLoading;
 
@@ -1231,8 +1316,19 @@ export default function AdminDashboard() {
 
                                   {/* أزرار الإجراءات في المنتصف */}
                                   <div className="mt-6 flex gap-2 w-full justify-center pt-2">
-                                    <Button size="sm" className="h-7 text-[11px] px-3 bg-primary hover:bg-primary/90 shadow-sm rounded-full">
-                                      <MessageSquare className="w-3 h-3 mr-1.5" /> محادثة جماعية
+                                    <Button 
+                                      size="sm" 
+                                      className="h-7 text-[11px] px-3 bg-primary hover:bg-primary/90 shadow-sm rounded-full"
+                                      onClick={() => handleSendMatchNotification(match.id)}
+                                      disabled={sendingMatchNotification === match.id}
+                                      data-testid={`button-group-chat-${match.id}`}
+                                    >
+                                      {sendingMatchNotification === match.id ? (
+                                        <RefreshCw className="w-3 h-3 mr-1.5 animate-spin" />
+                                      ) : (
+                                        <MessageSquare className="w-3 h-3 mr-1.5" />
+                                      )}
+                                      محادثة جماعية
                                     </Button>
                                   </div>
                                 </div>
@@ -1304,7 +1400,13 @@ export default function AdminDashboard() {
                                     {match.isSaved && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] gap-1"><Save className="w-3 h-3"/> محفوظ</Badge>}
                                     {match.isContacted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] gap-1"><CheckCircle className="w-3 h-3"/> تم التواصل</Badge>}
                                  </div>
-                                 <Button size="sm" variant="ghost" className="h-7 text-xs hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary">
+                                 <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-7 text-xs hover:bg-white hover:shadow-sm text-muted-foreground hover:text-primary"
+                                    onClick={() => handleShowMatchDetails(match.id)}
+                                    data-testid={`button-full-details-${match.id}`}
+                                 >
                                     <ExternalLink className="w-3 h-3 mr-1" /> التفاصيل الكاملة
                                  </Button>
                               </div>
@@ -2378,6 +2480,189 @@ export default function AdminDashboard() {
           </main>
         </div>
       </div>
+
+      {/* Match Details Dialog */}
+      <Dialog open={showMatchDetailsDialog} onOpenChange={setShowMatchDetailsDialog}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" dir="rtl">
+          {(() => {
+            const data = getSelectedMatchData();
+            if (!data) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            const { match, pref, prop, buyer, seller } = data;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl flex items-center gap-3">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 text-white font-bold text-lg">
+                      {match.matchScore}%
+                    </div>
+                    <span>تفاصيل المطابقة</span>
+                  </DialogTitle>
+                  <DialogDescription>
+                    مقارنة تفصيلية بين متطلبات المشتري والعقار المعروض
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-6 mt-4">
+                  {/* Header with parties */}
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="text-center">
+                      <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-2">
+                        <UserIcon className="w-6 h-6" />
+                      </div>
+                      <p className="font-bold text-sm">{buyer?.name || "مشتري"}</p>
+                      <p className="text-xs text-muted-foreground">{buyer?.phone || "لا يوجد رقم"}</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-primary">
+                        <ArrowRightLeft className="w-6 h-6" />
+                      </div>
+                    </div>
+                    
+                    <div className="text-center">
+                      <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
+                        <Store className="w-6 h-6" />
+                      </div>
+                      <p className="font-bold text-sm">{seller?.name || "بائع"}</p>
+                      <p className="text-xs text-muted-foreground">{seller?.phone || "لا يوجد رقم"}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Scoring breakdown */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        تفصيل النتيجة (100 نقطة)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-blue-500" /> الموقع
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(match.locationScore || 0) / 40 * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-mono w-12 text-left">{match.locationScore || 0}/40</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm flex items-center gap-2">
+                            <Wallet className="w-4 h-4 text-green-500" /> السعر
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500 rounded-full" style={{ width: `${(match.priceScore || 0) / 30 * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-mono w-12 text-left">{match.priceScore || 0}/30</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-purple-500" /> المواصفات
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${(match.specsScore || 0) / 30 * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-mono w-12 text-left">{match.specsScore || 0}/30</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Comparison table */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">مقارنة تفصيلية</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-right py-2 px-3 font-medium text-muted-foreground w-1/3">يريد المشتري</th>
+                              <th className="text-center py-2 px-3 font-medium text-muted-foreground w-1/3">المعيار</th>
+                              <th className="text-left py-2 px-3 font-medium text-muted-foreground w-1/3">يعرض البائع</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.city || "-"}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />المدينة</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.city || "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.districts?.join(", ") || "أي حي"}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />الحي</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.district || "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.propertyType ? propertyTypeLabels[pref.propertyType] : "-"}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Building2 className="w-3 h-3 mr-1" />النوع</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.propertyType ? propertyTypeLabels[prop.propertyType] : "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{maskBudget(pref?.budgetMin || 0, pref?.budgetMax || 0)}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Wallet className="w-3 h-3 mr-1" />الميزانية</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.price ? formatCurrency(prop.price) + " ريال" : "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.bedroomsMin || 0} - {pref?.bedroomsMax || "∞"}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Bed className="w-3 h-3 mr-1" />الغرف</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.bedrooms || "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.bathroomsMin || 0} - {pref?.bathroomsMax || "∞"}</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Bath className="w-3 h-3 mr-1" />الحمامات</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.bathrooms || "-"}</td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 text-right">{pref?.areaMin || 0} - {pref?.areaMax || "∞"} م²</td>
+                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Ruler className="w-3 h-3 mr-1" />المساحة</Badge></td>
+                              <td className="py-2 px-3 text-left">{prop?.area ? prop.area + " م²" : "-"}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Actions */}
+                  <div className="flex gap-3 justify-center pt-2">
+                    <Button 
+                      onClick={() => handleSendMatchNotification(match.id)}
+                      disabled={sendingMatchNotification === match.id}
+                      data-testid="button-dialog-send-notification"
+                    >
+                      {sendingMatchNotification === match.id ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                      )}
+                      إرسال إشعار واتساب
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowMatchDetailsDialog(false)}
+                      data-testid="button-close-match-details"
+                    >
+                      إغلاق
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }
