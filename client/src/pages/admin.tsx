@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 import {
   Sidebar,
   SidebarContent,
@@ -243,6 +245,16 @@ export default function AdminDashboard() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showMatchDetailsDialog, setShowMatchDetailsDialog] = useState(false);
   const [sendingMatchNotification, setSendingMatchNotification] = useState<string | null>(null);
+  const [showMatchFilters, setShowMatchFilters] = useState(false);
+  const [matchFilters, setMatchFilters] = useState({
+    minScore: 0,
+    maxScore: 100,
+    status: "all" as "all" | "saved" | "contacted",
+    propertyType: "all",
+    city: "all",
+    minPrice: 0,
+    maxPrice: 10000000,
+  });
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
@@ -423,6 +435,40 @@ export default function AdminDashboard() {
     setSelectedMatchId(matchId);
     setShowMatchDetailsDialog(true);
   };
+
+  // تطبيق تصفية المطابقات
+  const filteredMatches = matches.filter(match => {
+    const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+    const prop = properties.find(p => p.id === match.propertyId);
+    
+    if (!pref || !prop) return false;
+    
+    // تصفية حسب نسبة التطابق
+    if (match.matchScore < matchFilters.minScore || match.matchScore > matchFilters.maxScore) {
+      return false;
+    }
+    
+    // تصفية حسب الحالة
+    if (matchFilters.status === "saved" && !match.isSaved) return false;
+    if (matchFilters.status === "contacted" && !match.isContacted) return false;
+    
+    // تصفية حسب نوع العقار
+    if (matchFilters.propertyType !== "all" && prop.propertyType !== matchFilters.propertyType) {
+      return false;
+    }
+    
+    // تصفية حسب المدينة
+    if (matchFilters.city !== "all" && prop.city !== matchFilters.city) {
+      return false;
+    }
+    
+    // تصفية حسب السعر
+    if (prop.price < matchFilters.minPrice || prop.price > matchFilters.maxPrice) {
+      return false;
+    }
+    
+    return true;
+  });
 
   // الحصول على بيانات المطابقة المحددة
   const getSelectedMatchData = () => {
@@ -1150,17 +1196,78 @@ export default function AdminDashboard() {
                           خوارزمية النقاط الموزونة: موقع (40) + سعر (30) + مواصفات (30) = 100 نقطة
                         </CardDescription>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <Filter className="h-4 w-4 ml-2" />
-                        تصفية النتائج
-                      </Button>
+                      <Popover open={showMatchFilters} onOpenChange={setShowMatchFilters}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" data-testid="button-filter-matches">
+                            <Filter className="h-4 w-4 ml-2" />
+                            تصفية النتائج
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80" align="start" dir="rtl">
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">نسبة التطابق: {matchFilters.minScore}% - {matchFilters.maxScore}%</label>
+                              <Slider value={[matchFilters.minScore, matchFilters.maxScore]} onValueChange={(val) => setMatchFilters({...matchFilters, minScore: val[0], maxScore: val[1]})} min={0} max={100} step={1} data-testid="slider-score-filter" />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">الحالة</label>
+                              <Select value={matchFilters.status} onValueChange={(val) => setMatchFilters({...matchFilters, status: val as any})} data-testid="select-status-filter">
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">الكل</SelectItem>
+                                  <SelectItem value="saved">محفوظ</SelectItem>
+                                  <SelectItem value="contacted">تم التواصل</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">نوع العقار</label>
+                              <Select value={matchFilters.propertyType} onValueChange={(val) => setMatchFilters({...matchFilters, propertyType: val})} data-testid="select-property-filter">
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">الكل</SelectItem>
+                                  <SelectItem value="apartment">شقة</SelectItem>
+                                  <SelectItem value="villa">فيلا</SelectItem>
+                                  <SelectItem value="land">أرض</SelectItem>
+                                  <SelectItem value="building">عمارة</SelectItem>
+                                  <SelectItem value="duplex">دوبلكس</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">المدينة</label>
+                              <Select value={matchFilters.city} onValueChange={(val) => setMatchFilters({...matchFilters, city: val})} data-testid="select-city-filter">
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="all">الكل</SelectItem>
+                                  <SelectItem value="جدة">جدة</SelectItem>
+                                  <SelectItem value="الرياض">الرياض</SelectItem>
+                                  <SelectItem value="الدمام">الدمام</SelectItem>
+                                  <SelectItem value="مكة">مكة</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">السعر: {formatCurrency(matchFilters.minPrice)} - {formatCurrency(matchFilters.maxPrice)}</label>
+                              <Slider value={[matchFilters.minPrice, matchFilters.maxPrice]} onValueChange={(val) => setMatchFilters({...matchFilters, minPrice: val[0], maxPrice: val[1]})} min={0} max={10000000} step={50000} data-testid="slider-price-filter" />
+                            </div>
+                            <Button className="w-full" onClick={() => setShowMatchFilters(false)} data-testid="button-apply-filters">تطبيق</Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </CardHeader>
                   <CardContent className="px-0">
-                  {matches.length > 0 ? (
+                  {filteredMatches.length > 0 ? (
                     <ScrollArea className="h-[calc(100vh-250px)] pr-4">
                       <div className="grid gap-6 pb-10">
-                        {matches.map((match) => {
+                        {filteredMatches.map((match) => {
                           // استخراج البيانات المرتبطة بالمطابقة
                           const pref = preferences.find(p => p.id === match.buyerPreferenceId);
                           const prop = properties.find(p => p.id === match.propertyId);
@@ -1420,9 +1527,9 @@ export default function AdminDashboard() {
                       <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-4">
                         <Handshake className="w-10 h-10 text-primary/40" />
                       </div>
-                      <h3 className="text-xl font-semibold text-slate-800">لا توجد مطابقات حالياً</h3>
+                      <h3 className="text-xl font-semibold text-slate-800">{matches.length === 0 ? "لا توجد مطابقات حالياً" : "لا توجد نتائج تطابق الشروط"}</h3>
                       <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                        النظام يقوم بالبحث عن مطابقات جديدة تلقائياً عند إضافة عقارات أو رغبات جديدة.
+                        {matches.length === 0 ? "النظام يقوم بالبحث عن مطابقات جديدة تلقائياً عند إضافة عقارات أو رغبات جديدة." : "حاول تعديل مرشحات البحث للحصول على نتائج أفضل."}
                       </p>
                     </div>
                   )}
