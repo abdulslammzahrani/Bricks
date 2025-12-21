@@ -13,11 +13,15 @@ import InvestorPage from "@/pages/investor";
 import PropertyPage from "@/pages/property";
 import StaticPageView from "@/pages/static-page";
 import Dashboard from "@/pages/dashboard";
+import LoginPage from "@/pages/login";
+import SetupPasswordPage from "@/pages/setup-password";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/setup-password" component={SetupPasswordPage} />
       <Route path="/buyer-form" component={BuyerFormPage} />
       <Route path="/seller-form" component={SellerFormPage} />
       <Route path="/investor" component={InvestorPage} />
