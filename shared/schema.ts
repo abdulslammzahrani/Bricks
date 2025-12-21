@@ -637,3 +637,37 @@ export const brokerAnalytics = pgTable("broker_analytics", {
 export const insertBrokerAnalyticsSchema = createInsertSchema(brokerAnalytics).omit({ id: true, createdAt: true });
 export type InsertBrokerAnalytics = z.infer<typeof insertBrokerAnalyticsSchema>;
 export type BrokerAnalytics = typeof brokerAnalytics.$inferSelect;
+
+// ==================== WEBAUTHN CREDENTIALS ====================
+
+// WebAuthn credentials for biometric authentication (Face ID, Touch ID, Fingerprint, Windows Hello)
+export const webauthnCredentials = pgTable("webauthn_credentials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  credentialId: text("credential_id").notNull().unique(), // Base64 encoded credential ID
+  publicKey: text("public_key").notNull(), // Base64 encoded public key
+  counter: integer("counter").notNull().default(0), // Signature counter for replay attack prevention
+  deviceType: text("device_type"), // platform (biometric) or cross-platform (security key)
+  transports: text("transports").array().default(sql`'{}'::text[]`), // usb, ble, nfc, internal
+  deviceName: text("device_name"), // User-friendly device name (e.g., "iPhone 15", "MacBook Pro")
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWebauthnCredentialSchema = createInsertSchema(webauthnCredentials).omit({ id: true, createdAt: true });
+export type InsertWebauthnCredential = z.infer<typeof insertWebauthnCredentialSchema>;
+export type WebauthnCredential = typeof webauthnCredentials.$inferSelect;
+
+// WebAuthn challenges - temporary storage for authentication challenges
+export const webauthnChallenges = pgTable("webauthn_challenges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  challenge: text("challenge").notNull().unique(), // Base64 encoded challenge
+  userId: varchar("user_id").references(() => users.id), // Optional: for authentication, null for registration discovery
+  type: text("type").notNull(), // "registration" or "authentication"
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWebauthnChallengeSchema = createInsertSchema(webauthnChallenges).omit({ id: true, createdAt: true });
+export type InsertWebauthnChallenge = z.infer<typeof insertWebauthnChallengeSchema>;
+export type WebauthnChallenge = typeof webauthnChallenges.$inferSelect;
