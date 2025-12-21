@@ -1,10 +1,12 @@
-import { useState, memo, useMemo } from "react";
+import { useState, memo, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 import { 
   MapPin, User, Home, Building2, 
@@ -98,10 +100,6 @@ interface ListingData {
   smartTags: string[]; notes: string; 
 }
 
-interface AdvancedListingFormProps {
-  onSubmit: (data: ListingData) => void;
-}
-
 const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { label: string, options: string[], selected: string, onSelect: (val: string) => void, unit?: string }) => (
   <div className="mb-4">
     <label className="block text-xs font-bold mb-2 text-gray-700">{label}</label>
@@ -124,13 +122,18 @@ const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { 
   </div>
 );
 
-const AdvancedListingForm = memo(function AdvancedListingForm({ onSubmit }: AdvancedListingFormProps) {
+const AdvancedListingForm = memo(function AdvancedListingForm() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [activeCard, setActiveCard] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAutoRegistered, setIsAutoRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [userPhone, setUserPhone] = useState("");
+  const [countdown, setCountdown] = useState(3);
 
   const [listingData, setListingData] = useState<ListingData>({
     name: "", phone: "", email: "", propertyCategory: "",
@@ -162,6 +165,18 @@ const AdvancedListingForm = memo(function AdvancedListingForm({ onSubmit }: Adva
   const [phoneError, setPhoneError] = useState("");
 
   const firstName = listingData.name ? listingData.name.split(" ")[0] : "";
+
+  // Countdown timer for new users
+  useEffect(() => {
+    if (isComplete && isNewUser && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (isComplete && isNewUser && countdown === 0) {
+      navigate(`/setup-password?phone=${encodeURIComponent(userPhone)}`);
+    }
+  }, [isComplete, isNewUser, countdown, navigate, userPhone]);
 
   // Cards
   const cards = useMemo(() => [
@@ -204,7 +219,47 @@ const AdvancedListingForm = memo(function AdvancedListingForm({ onSubmit }: Adva
   const advance = () => { setIsAnimating(true); setTimeout(() => { setActiveCard(p => p + 1); setIsAnimating(false); }, 200); };
   const goBack = (idx: number) => { if (idx < activeCard && !isAnimating) { setIsAnimating(true); setTimeout(() => { setActiveCard(idx); setIsAnimating(false); }, 200); }};
   const handleSelection = (field: keyof ListingData, value: any) => setListingData(p => ({ ...p, [field]: value }));
-  const handleSubmit = () => onSubmit(listingData);
+  
+  const handleSubmit = async () => {
+    setIsRegistering(true);
+    try {
+      const response = await apiRequest("POST", "/api/sellers/register", {
+        name: listingData.name,
+        email: listingData.email || `${listingData.phone}@temp.tatabuq.sa`,
+        phone: listingData.phone,
+        propertyType: listingData.propertyType || "villa",
+        city: listingData.cities[0] || "",
+        district: listingData.districts[0] || "",
+        price: parseInt(listingData.targetPrice.replace(/[^\d]/g, "")) || 0,
+        area: listingData.minArea || null,
+        rooms: listingData.rooms || null,
+        description: listingData.notes || null,
+        status: listingData.propertyCondition === "new" ? "ready" : listingData.propertyCondition === "under_construction" ? "under_construction" : "ready",
+        images: [],
+      });
+      const result = await response.json();
+      
+      setIsComplete(true);
+      if (result.isNewUser) {
+        setIsNewUser(true);
+        setUserPhone(result.phone || listingData.phone);
+      }
+      toast({
+        title: "تم نشر عقارك بنجاح!",
+        description: result.isNewUser 
+          ? "سيتم تحويلك لإعداد حسابك..."
+          : "سنبدأ بالبحث عن مشترين مناسبين لعقارك",
+      });
+    } catch (error) {
+      toast({
+        title: "حدث خطأ",
+        description: "يرجى المحاولة مرة أخرى",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegistering(false);
+    }
+  };
 
   const canProceed = () => {
     if (activeCard === 0) return listingData.name && isPhoneValid && listingData.propertyCategory;
@@ -471,7 +526,24 @@ const AdvancedListingForm = memo(function AdvancedListingForm({ onSubmit }: Adva
                 {activeCard === 4 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="grid grid-cols-4 gap-2">{propertyTypes.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => handleSelection('propertyType', type.value)} className={`p-2 rounded-lg border flex flex-col items-center gap-1 transition-transform active:scale-95 ${listingData.propertyType === type.value ? "border-primary bg-primary/5 scale-105" : "border-border"}`}><Icon className="h-5 w-5" /><span className="text-[10px] font-bold text-center">{type.label}</span></button>)})}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
                 {activeCard === 5 && renderCard5Content()}
                 {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">السعر المطلوب</label><div className="grid grid-cols-2 gap-1.5">{getPriceRanges().map(b => <button key={b.value} onClick={() => setListingData(f => ({ ...f, targetPrice: b.value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${listingData.targetPrice === b.value ? "bg-primary text-white" : "border-border"}`}>{b.label}</button>)}</div></div><div><label className="text-xs font-medium mb-1.5 block">خيارات الدفع المقبولة</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentPreference', 'cash')} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش فقط</button><button onClick={() => handleSelection('paymentPreference', 'finance', false)} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>أقبل التمويل</button></div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
-                {activeCard === 7 && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">مميزات العقار</label><div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">{(SPECIFIC_TAGS[listingData.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (<button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${listingData.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>{listingData.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span></button>))}</div><Textarea value={listingData.notes} onChange={e => setListingData(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSubmit} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">نشر العقار</Button></div>}
+                {activeCard === 7 && !isComplete && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">مميزات العقار</label><div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">{(SPECIFIC_TAGS[listingData.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (<button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${listingData.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>{listingData.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span></button>))}</div><Textarea value={listingData.notes} onChange={e => setListingData(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSubmit} disabled={isRegistering} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">{isRegistering ? "جاري النشر..." : "نشر العقار"}</Button></div>}
+                {isComplete && (
+                  <div className="space-y-4 text-center py-8">
+                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
+                      <Check className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold" data-testid="text-seller-completion-title">تم نشر عقارك بنجاح!</h3>
+                    {isNewUser ? (
+                      <p className="text-muted-foreground" data-testid="text-seller-countdown">
+                        جاري تحويلك لصفحة الشخصية خلال {countdown} ثانية...
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground" data-testid="text-seller-completion-message">
+                        سنبدأ بالبحث عن مشترين مناسبين لعقارك وسنرسل لك العروض
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
