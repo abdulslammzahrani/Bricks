@@ -266,7 +266,7 @@ export default function LoginPage() {
 
           <div className="space-y-3 text-center pt-4 border-t">
             <Button
-              variant="link"
+              variant="ghost"
               onClick={() => setLocation("/forgot-password")}
               className="text-muted-foreground"
               data-testid="button-forgot-password"
@@ -277,9 +277,9 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-2">
               <span className="text-sm text-muted-foreground">ليس لديك حساب؟</span>
               <Button
-                variant="link"
+                variant="ghost"
                 onClick={() => setLocation("/register")}
-                className="p-0 h-auto"
+                className="p-0 h-auto text-primary"
                 data-testid="button-go-to-register"
               >
                 إنشاء حساب جديد
