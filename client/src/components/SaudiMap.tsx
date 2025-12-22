@@ -13,25 +13,22 @@ interface SaudiMapProps {
   className?: string;
 }
 
-// 🌍 مركز المملكة (الزووم العام)
 const KINGDOM_CENTER = { lat: 24.5000, lng: 44.5000 }; 
 const KINGDOM_ZOOM = 5; 
 
-// 🏙️ إعدادات المدن
 const CITY_CONFIG: Record<string, { lat: number; lng: number; spread: number }> = {
   "الرياض": { lat: 24.7136, lng: 46.6753, spread: 0.12 },
   "جدة": { lat: 21.5800, lng: 39.1800, spread: 0.10 }, 
   "مكة المكرمة": { lat: 21.4225, lng: 39.8262, spread: 0.08 },
   "المدينة المنورة": { lat: 24.4672, lng: 39.6100, spread: 0.08 },
   "الدمام": { lat: 26.3900, lng: 50.0800, spread: 0.10 },   
-  "الخبر": { lat: 26.2800, lng: 50.1800, spread: 0.07 },    
+  "الخبر": { lat: 26.2800, lng: 50.1800, spread: 0.07 },     
   "أبها": { lat: 18.2205, lng: 42.5055, spread: 0.06 },
   "تبوك": { lat: 28.3972, lng: 36.5489, spread: 0.09 },
 };
 
 const CITIES_ORDER = ["الرياض", "جدة", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر", "أبها", "تبوك"];
 
-// 🧭 قطاعات المسح الذكي
 const SECTORS = [
   { name: "الوسط", dLat: 0, dLng: 0 },
   { name: "شمال", dLat: 0.08, dLng: 0 },  
@@ -46,13 +43,14 @@ const DATA_CATEGORIES = {
   investment: { id: "investment", label: "فرصة", color: "amber", texts: ["أرض خام", "مخطط", "تجاري"] }
 };
 
+// ✅ تعديل قاعدة بيانات المستخدمين لتشمل الرجال فقط
 const USERS_DB = [
-  { name: "محمد", gender: 'm', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Ahmed&facialHair=beardMedium&skinColor=edb98a&backgroundColor=b6e3f4" },
-  { name: "سلطان", gender: 'm', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Omar&facialHair=beardLight&skinColor=f5d0c5&backgroundColor=b6e3f4" },
-  { name: "فهد", gender: 'm', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Saud&facialHair=beardMajestic&skinColor=edb98a&backgroundColor=b6e3f4" },
-  { name: "خالد", gender: 'm', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Khaled&facialHair=beardMedium&skinColor=edb98a&backgroundColor=b6e3f4" },
-  { name: "سارة", gender: 'f', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Aisha&top=hijab&clothingColor=3c4f5c&skinColor=f5d0c5&backgroundColor=ffdfbf" },
-  { name: "هند", gender: 'f', avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Huda&top=hijab&clothingColor=262e33&skinColor=ffdbb4&backgroundColor=ffdfbf" },
+  { name: "محمد", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Ahmed&facialHair=beardMedium&skinColor=edb98a&backgroundColor=b6e3f4" },
+  { name: "سلطان", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Omar&facialHair=beardLight&skinColor=f5d0c5&backgroundColor=b6e3f4" },
+  { name: "فهد", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Saud&facialHair=beardMajestic&skinColor=edb98a&backgroundColor=b6e3f4" },
+  { name: "خالد", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Khaled&facialHair=beardMedium&skinColor=edb98a&backgroundColor=b6e3f4" },
+  { name: "عبدالله", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Abdullah&facialHair=beardLight&skinColor=f5d0c5&backgroundColor=b6e3f4" },
+  { name: "منصور", avatar: "https://api.dicebear.com/9.x/avataaars/png?seed=Mansour&facialHair=beardMedium&skinColor=edb98a&backgroundColor=b6e3f4" },
 ];
 
 export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
@@ -78,7 +76,6 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
   });
 
   const points = useMemo(() => {
-    // 🛑 عدم توليد نقاط أثناء الانتقال
     if (isTransitioning || displayLabel === "المملكة العربية السعودية" || !currentFocusPoint) return [];
 
     const config = CITY_CONFIG[currentCityForPoints];
@@ -87,12 +84,11 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
     const center = currentFocusPoint; 
     const generated = [];
 
-    // ✅ التعديل هنا: توليد عدد عشوائي بين 35 و 75
-    const minPoints = 35;
-    const maxPoints = 75;
+    // ✅ عدد النقاط بين 15 و 20
+    const minPoints = 15;
+    const maxPoints = 20;
     const totalPoints = Math.floor(Math.random() * (maxPoints - minPoints + 1)) + minPoints;
 
-    // توزيع النسب (تقريباً: 70% طلبات، 20% عروض، 10% فرص)
     const offersCount = Math.floor(totalPoints * 0.20);
     const investmentCount = Math.floor(totalPoints * 0.10);
     const requestsCount = totalPoints - offersCount - investmentCount;
@@ -103,27 +99,23 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
         ...Array(investmentCount).fill('investment')
     ];
 
-    // خلط المصفوفة لعشوائية الظهور
     const shuffledCategories = categoryPool.sort(() => Math.random() - 0.5);
 
     shuffledCategories.forEach((catKey) => {
-      const spreadFactor = config.spread * 0.8; 
+      const spreadFactor = config.spread * 0.9; 
       const latOffset = (Math.random() - 0.5) * spreadFactor;
       const lngOffset = (Math.random() - 0.5) * spreadFactor; 
 
       const ptLat = center.lat + latOffset;
       const ptLng = center.lng + lngOffset;
 
-      const isMale = Math.random() < 0.8;
-      const targetGender = isMale ? 'm' : 'f';
-      const validUsers = USERS_DB.filter(u => u.gender === targetGender);
-      const user = pickRandom(validUsers);
+      // ✅ تم تعديل المنطق لاختيار الرجال فقط من المصفوفة المحدثة
+      const user = pickRandom(USERS_DB);
       const category = DATA_CATEGORIES[catKey as keyof typeof DATA_CATEGORIES];
 
       generated.push({
         lat: ptLat, lng: ptLng, ...user, category: category,
         request: pickRandom(category.texts), 
-        // تأخير عشوائي لظهور النقاط "Popcorn effect"
         delay: Math.random() * 2000 
       });
     });
@@ -131,101 +123,64 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
     return generated;
   }, [currentFocusPoint, isTransitioning, displayLabel, currentCityForPoints]);
 
-
-  // 1. السيناريو السينمائي
   useEffect(() => {
     if (!isMapReady) return;
-
     isMountedRef.current = true;
     const runCinematicSequence = async () => {
       if (!mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
-
       await wait(1000); 
 
       while (isMountedRef.current) {
         const currentCityName = CITIES_ORDER[cityIndexRef.current];
         const cityConfig = CITY_CONFIG[currentCityName];
-
         setCurrentCityForPoints(currentCityName);
         setDisplayLabel(currentCityName);
-
-        // بدء الانتقال - مسح النقاط فوراً (Cut Effect)
         setIsTransitioning(true);
         setCurrentFocusPoint(null); 
-
-        // 1. الذهاب للمدينة
         map.flyTo([cityConfig.lat, cityConfig.lng], 11, { duration: 3, easeLinearity: 0.2 });
         await wait(3500); 
         if (!isMountedRef.current) break;
-
-        // توقف الحركة - ظهور النقاط
         setIsTransitioning(false); 
 
-        // 2. التنقل بين الجهات
         for (const sector of SECTORS) {
             if (!isMountedRef.current) break;
-
             setDisplayLabel(`${currentCityName} - ${sector.name}`);
-
             const newLat = cityConfig.lat + sector.dLat;
             const newLng = cityConfig.lng + sector.dLng;
             const newCenter = { lat: newLat, lng: newLng };
-
-            // 🛑 بدء الانتقال للجهة التالية - مسح النقاط فوراً
             setIsTransitioning(true);
             setCurrentFocusPoint(null);
-
-            // تحريك الكاميرا
-            map.flyTo([newLat, newLng], 11, { 
-                animate: true, 
-                duration: 2.5, 
-                easeLinearity: 0.1 
-            });
-
-            await wait(2500); // انتظار انتهاء الحركة
-
+            map.flyTo([newLat, newLng], 11, { animate: true, duration: 2.5, easeLinearity: 0.1 });
+            await wait(2500); 
             if (!isMountedRef.current) break;
-
-            // 🛑 التوقف - إظهار النقاط الجديدة
             setIsTransitioning(false);
             setCurrentFocusPoint(newCenter);
-
-            await wait(4500); // وقت كافٍ لاستعراض الـ 35-75 نقطة
+            await wait(4500); 
         }
 
         if (!isMountedRef.current) break;
-
-        // العودة للزوم العام
         setIsTransitioning(true);
         setCurrentFocusPoint(null); 
         setDisplayLabel("المملكة العربية السعودية");
-
         map.flyTo([KINGDOM_CENTER.lat, KINGDOM_CENTER.lng], KINGDOM_ZOOM, { duration: 3, easeLinearity: 0.2 });
         await wait(3200);
-        await wait(500); 
-
         if (!isMountedRef.current) break;
         cityIndexRef.current = (cityIndexRef.current + 1) % CITIES_ORDER.length;
       }
     };
-
     runCinematicSequence();
-
     return () => {
       isMountedRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [isMapReady]);
 
-  // 2. تهيئة الخريطة
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
-
     const southWest = L.latLng(10.0, 30.0); 
     const northEast = L.latLng(35.0, 60.0); 
     const bounds = L.latLngBounds(southWest, northEast);
-
     const map = L.map(mapRef.current, {
       center: [KINGDOM_CENTER.lat, KINGDOM_CENTER.lng],
       zoom: KINGDOM_ZOOM,
@@ -243,42 +198,27 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
       fadeAnimation: true,
       zoomAnimation: true,
     });
-
     const tileLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       subdomains: 'abcd', maxZoom: 20, minZoom: 5, bounds: bounds, unloadInvisibleTiles: false, updateWhenZooming: false, keepBuffer: 200, reuseTiles: true
     });
-
     tileLayer.on("load", () => setIsMapReady(true));
     tileLayer.addTo(map);
-
     markersLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
     return () => { map.remove(); mapInstanceRef.current = null; };
   }, []);
 
-  // 3. رسم وحذف النقاط (تأثير القطع Cut Effect)
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current) return;
     const layer = markersLayerRef.current;
-
-    // تنظيف أي مؤقتات سابقة فوراً
     requestTimersRef.current.forEach(clearTimeout);
     requestTimersRef.current = [];
-
-    // 🛑 إذا كانت الكاميرا تتحرك، احذف جميع النقاط فوراً (بدون تلاشي)
-    if (isTransitioning) {
-        layer.clearLayers();
-        return;
-    }
-
-    // إذا توقفنا ولدينا مركز جديد، ابدأ الرسم
+    if (isTransitioning) { layer.clearLayers(); return; }
     if (!currentFocusPoint) return;
 
     points.forEach((pt) => {
       const timeoutId = setTimeout(() => {
-        // تأكد مرة أخرى أننا لا نتحرك قبل الرسم
         if (!mapInstanceRef.current || isTransitioning) return;
-
         const color = pt.category.color;
         const textColor = `text-${color}-600`;
         const bgColor = `bg-${color}-500`;
@@ -300,7 +240,6 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
                 <div class="text-gray-500 font-medium text-center text-[9px] border-t border-gray-100 pt-0.5 mt-0.5 leading-none font-sans">${pt.request}</div>
                 <div class="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-white border-r border-b border-gray-100 transform rotate-45 -mt-1"></div>
               </div>
-
               <div class="relative z-10 animate-pop-in">
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] h-[180%] pointer-events-none">
                   <div class="absolute inset-0 rounded-full border-[1.5px] ${rippleColor} opacity-0 animate-ripple"></div>
@@ -324,27 +263,14 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
   return (
     <>
       <style>{`
-        /* ✅ ثبات الرسم ومنع الاهتزاز */
-        .leaflet-marker-icon, 
-        .leaflet-marker-shadow, 
-        .radar-marker {
-            transition: none !important;
-            will-change: auto !important; 
-        }
-
-        .marker-inner-content {
-            will-change: opacity;
-        }
-
+        .leaflet-marker-icon, .radar-marker { transition: none !important; will-change: auto !important; }
+        .marker-inner-content { will-change: opacity; }
         .leaflet-pane { will-change: transform; }
         .leaflet-container { background-color: #d4dadc !important; }
-
         @keyframes ripple { 0% { transform: scale(0.8); opacity: 0.6; border-width: 1.5px; } 100% { transform: scale(1.8); opacity: 0; border-width: 0px; } }
         .animate-ripple { animation: ripple 2.5s infinite ease-out; }
-
         @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-
         @keyframes messageCycle { 
             0% { opacity: 0; transform: translateY(8px) scale(0.9); } 
             10% { opacity: 1; transform: translateY(0) scale(1); } 
@@ -353,7 +279,6 @@ export function SaudiMap({ markers, className = "" }: SaudiMapProps) {
         }
         .animate-message-cycle { animation: messageCycle 5s ease-in-out forwards; }
       `}</style>
-
       <div className={`relative w-full h-full rounded-lg overflow-hidden bg-slate-100 ${className}`} style={{ minHeight: "400px" }}>
          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-1.5 pointer-events-none w-full px-4">
           <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm border border-gray-200/50 flex items-center gap-2 transform scale-90 origin-top">

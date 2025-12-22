@@ -2,11 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { 
-  insertUserSchema, 
-  insertBuyerPreferenceSchema, 
-  insertPropertySchema, 
-  insertContactRequestSchema, 
+import {
+  insertUserSchema,
+  insertBuyerPreferenceSchema,
+  insertPropertySchema,
+  insertContactRequestSchema,
   insertSendLogSchema,
   audienceSegments,
   userSegments,
@@ -27,7 +27,10 @@ import {
 } from "./webauthn";
 
 // WhatsApp API Integration Point - Replace with actual implementation
-async function sendWhatsAppMessage(phone: string, message: string): Promise<{ success: boolean; response?: string; error?: string }> {
+async function sendWhatsAppMessage(
+  phone: string,
+  message: string,
+): Promise<{ success: boolean; response?: string; error?: string }> {
   // TODO: Integrate with WhatsApp Business API
   // For now, simulate success for testing
   console.log(`[WhatsApp] Sending to ${phone}:`, message);
@@ -35,27 +38,116 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<{ su
 }
 
 // Format property for WhatsApp message
-function formatPropertyMessage(property: { city: string; district: string; propertyType: string; price: number; id: string }): string {
+function formatPropertyMessage(property: {
+  city: string;
+  district: string;
+  propertyType: string;
+  price: number;
+  id: string;
+}): string {
   const typeNames: Record<string, string> = {
     apartment: "شقة",
     villa: "فيلا",
     land: "أرض",
     building: "عمارة",
   };
-  const formattedPrice = property.price >= 1000000 
-    ? `${(property.price / 1000000).toFixed(1)} مليون` 
-    : `${(property.price / 1000).toFixed(0)} ألف`;
-  
+  const formattedPrice =
+    property.price >= 1000000
+      ? `${(property.price / 1000000).toFixed(1)} مليون`
+      : `${(property.price / 1000).toFixed(0)} ألف`;
+
   return `- ${typeNames[property.propertyType] || property.propertyType} في ${property.district}، ${property.city}\n  السعر: ${formattedPrice} ريال`;
 }
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
+  // ============================================================
+  // 🚀 أضف هذا الجزء فقط لربط الصفحة الرئيسية بالنظام الأصلي
+  // ============================================================
 
+  // تسجيل البائع + العقار (للهيرو سكشين)
+  app.post("/api/sellers/register", async (req, res) => {
+    try {
+      const data = req.body;
+      // نستخدم الـ Storage الأصلي الموجود في ملفك
+      let user = await storage.getUserByPhone(data.phone);
+      if (!user) {
+        const passwordHash = await bcrypt.hash("password123", 10);
+        user = await storage.createUser({
+          username: data.phone,
+          password: passwordHash,
+          name: data.name || "بائع جديد",
+          phone: data.phone,
+          email: data.email || `${data.phone}@temp.com`,
+          role: "seller",
+          passwordHash,
+        });
+      }
+
+      const property = await storage.createProperty({
+        sellerId: user.id,
+        propertyType: data.propertyType || "apartment",
+        city: data.city || "الرياض",
+        district: data.district || "غير محدد",
+        price: Number(data.price) || 0,
+        area: Number(data.area) || 0,
+        rooms: Number(data.rooms) || 0,
+        status: "active",
+        isActive: true,
+        images: [],
+      });
+
+      req.session.userId = user.id;
+      req.session.save();
+      return res.status(201).json({ success: true, user, property });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // تسجيل المشتري + الرغبة (للهيرو سكشين)
+  app.post("/api/buyers/register", async (req, res) => {
+    try {
+      const data = req.body;
+      let user = await storage.getUserByPhone(data.phone);
+      if (!user) {
+        const passwordHash = await bcrypt.hash("password123", 10);
+        user = await storage.createUser({
+          username: data.phone,
+          password: passwordHash,
+          name: data.name || "مشتري جديد",
+          phone: data.phone,
+          email: data.email || `${data.phone}@temp.com`,
+          role: "buyer",
+          passwordHash,
+        });
+      }
+
+      const preference = await storage.createBuyerPreference({
+        userId: user.id,
+        city: data.city || "الرياض",
+        districts: Array.isArray(data.districts) ? data.districts : [],
+        propertyType: data.propertyType || "apartment",
+        budgetMin: Number(data.budgetMin) || 0,
+        budgetMax: Number(data.budgetMax) || 10000000,
+        isActive: true,
+      });
+
+      req.session.userId = user.id;
+      req.session.save();
+      return res.status(201).json({ success: true, user, preference });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============================================================
+  // 🔚 نهاية الجزء المضاف - الآن أكمل باقي الـ 2000 سطر كما هي
+  // ============================================================
   // ============ STATS ROUTES ============
-  
+
   // Get synchronized daily stats (same for all users)
   app.get("/api/stats/daily", (req, res) => {
     try {
@@ -89,7 +181,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "rawPath is required" });
       }
       const objectStorageService = new ObjectStorageService();
-      const objectPath = objectStorageService.normalizeObjectEntityPath(rawPath);
+      const objectPath =
+        objectStorageService.normalizeObjectEntityPath(rawPath);
       res.json({ objectPath });
     } catch (error: any) {
       console.error("Error normalizing path:", error);
@@ -101,7 +194,9 @@ export async function registerRoutes(
   app.get("/objects/:objectPath(*)", async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      const objectFile = await objectStorageService.getObjectEntityFile(
+        req.path,
+      );
       objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);
@@ -118,7 +213,7 @@ export async function registerRoutes(
   app.post("/api/intake/analyze", async (req, res) => {
     try {
       const { text, context } = req.body;
-      
+
       if (!text || typeof text !== "string" || text.trim().length < 2) {
         return res.status(400).json({ error: "يرجى كتابة رسالة" });
       }
@@ -136,21 +231,21 @@ export async function registerRoutes(
     try {
       // Get raw audio data from request body
       const chunks: Buffer[] = [];
-      
+
       req.on("data", (chunk: Buffer) => {
         chunks.push(chunk);
       });
-      
+
       req.on("end", async () => {
         const audioBuffer = Buffer.concat(chunks);
-        
+
         if (audioBuffer.length === 0) {
           return res.status(400).json({ error: "لم يتم استلام الصوت" });
         }
-        
+
         const mimeType = req.headers["content-type"] || "audio/webm";
         const result = await transcribeAudio(audioBuffer, mimeType);
-        
+
         if (result.success) {
           res.json({ success: true, text: result.text });
         } else {
@@ -169,14 +264,16 @@ export async function registerRoutes(
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { phone, password } = req.body;
-      
+
       if (!phone || !password) {
-        return res.status(400).json({ error: "رقم الجوال وكلمة المرور مطلوبان" });
+        return res
+          .status(400)
+          .json({ error: "رقم الجوال وكلمة المرور مطلوبان" });
       }
 
       // Find user by phone
       const user = await storage.getUserByPhone(phone);
-      
+
       if (!user) {
         return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
       }
@@ -200,7 +297,7 @@ export async function registerRoutes(
       req.session.userRole = user.role;
 
       // Return user with requiresPasswordReset flag
-      res.json({ 
+      res.json({
         user: {
           id: user.id,
           name: user.name,
@@ -208,7 +305,7 @@ export async function registerRoutes(
           email: user.email,
           role: user.role,
           requiresPasswordReset: user.requiresPasswordReset ?? true,
-        }
+        },
       });
     } catch (error: any) {
       console.error("Login error:", error);
@@ -227,7 +324,7 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ error: "المستخدم غير موجود" });
       }
-      res.json({ 
+      res.json({
         user: {
           id: user.id,
           name: user.name,
@@ -235,7 +332,7 @@ export async function registerRoutes(
           email: user.email,
           role: user.role,
           requiresPasswordReset: user.requiresPasswordReset ?? true,
-        }
+        },
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -262,7 +359,7 @@ export async function registerRoutes(
     try {
       const sessionUserId = req.session.userId;
       const { newPassword } = req.body;
-      
+
       if (!sessionUserId) {
         return res.status(401).json({ error: "غير مسجل الدخول" });
       }
@@ -272,7 +369,9 @@ export async function registerRoutes(
       }
 
       if (newPassword.length < 6) {
-        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+        return res
+          .status(400)
+          .json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       }
 
       const user = await storage.getUser(sessionUserId);
@@ -282,7 +381,7 @@ export async function registerRoutes(
 
       // Hash new password
       const passwordHash = await bcrypt.hash(newPassword, 10);
-      
+
       // Update user with new password and clear reset flag
       await storage.updateUser(sessionUserId, {
         passwordHash,
@@ -302,17 +401,21 @@ export async function registerRoutes(
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
       }
 
       // Find user by email
       const user = await storage.getUserByEmail(email);
-      
+
       if (!user) {
         // Don't reveal if email exists for security
-        return res.json({ success: true, message: "إذا كان البريد الإلكتروني مسجلاً، ستصلك رسالة استعادة كلمة المرور" });
+        return res.json({
+          success: true,
+          message:
+            "إذا كان البريد الإلكتروني مسجلاً، ستصلك رسالة استعادة كلمة المرور",
+        });
       }
 
       // Generate secure reset token
@@ -331,7 +434,10 @@ export async function registerRoutes(
       const { sendPasswordResetEmail } = await import("./email");
       await sendPasswordResetEmail(user.email, token, user.name);
 
-      res.json({ success: true, message: "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني" });
+      res.json({
+        success: true,
+        message: "تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني",
+      });
     } catch (error: any) {
       console.error("Forgot password error:", error);
       res.status(500).json({ error: "حدث خطأ أثناء إرسال رابط الاستعادة" });
@@ -342,19 +448,22 @@ export async function registerRoutes(
   app.get("/api/auth/verify-reset-token", async (req, res) => {
     try {
       const { token } = req.query;
-      
+
       if (!token || typeof token !== "string") {
         return res.status(400).json({ valid: false, error: "رمز غير صالح" });
       }
 
       const resetToken = await storage.getPasswordResetToken(token);
-      
+
       if (!resetToken) {
         return res.json({ valid: false, error: "رمز الاستعادة غير موجود" });
       }
 
       if (resetToken.usedAt) {
-        return res.json({ valid: false, error: "تم استخدام هذا الرابط مسبقاً" });
+        return res.json({
+          valid: false,
+          error: "تم استخدام هذا الرابط مسبقاً",
+        });
       }
 
       if (new Date() > resetToken.expiresAt) {
@@ -372,17 +481,21 @@ export async function registerRoutes(
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { token, newPassword } = req.body;
-      
+
       if (!token || !newPassword) {
-        return res.status(400).json({ error: "الرمز وكلمة المرور الجديدة مطلوبان" });
+        return res
+          .status(400)
+          .json({ error: "الرمز وكلمة المرور الجديدة مطلوبان" });
       }
 
       if (newPassword.length < 6) {
-        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+        return res
+          .status(400)
+          .json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       }
 
       const resetToken = await storage.getPasswordResetToken(token);
-      
+
       if (!resetToken) {
         return res.status(400).json({ error: "رمز الاستعادة غير موجود" });
       }
@@ -397,7 +510,7 @@ export async function registerRoutes(
 
       // Hash new password
       const passwordHash = await bcrypt.hash(newPassword, 10);
-      
+
       // Update user password
       await storage.updateUser(resetToken.userId, {
         passwordHash,
@@ -420,13 +533,15 @@ export async function registerRoutes(
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { name, phone, email, password } = req.body;
-      
+
       if (!name || !phone || !email || !password) {
         return res.status(400).json({ error: "جميع الحقول مطلوبة" });
       }
 
       if (password.length < 6) {
-        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+        return res
+          .status(400)
+          .json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       }
 
       // Check if user already exists
@@ -466,15 +581,15 @@ export async function registerRoutes(
         console.error("Failed to send welcome email:", e);
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         user: {
           id: user.id,
           name: user.name,
           phone: user.phone,
           email: user.email,
           role: user.role,
-        }
+        },
       });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -497,7 +612,10 @@ export async function registerRoutes(
         return res.status(404).json({ error: "المستخدم غير موجود" });
       }
 
-      const options = await generateRegistrationOptionsForUser(userId, user.name);
+      const options = await generateRegistrationOptionsForUser(
+        userId,
+        user.name,
+      );
       res.json(options);
     } catch (error: any) {
       console.error("WebAuthn register options error:", error);
@@ -582,13 +700,15 @@ export async function registerRoutes(
       }
 
       const credentials = await storage.getWebauthnCredentialsByUser(userId);
-      res.json(credentials.map((c) => ({
-        id: c.id,
-        deviceName: c.deviceName,
-        deviceType: c.deviceType,
-        lastUsedAt: c.lastUsedAt,
-        createdAt: c.createdAt,
-      })));
+      res.json(
+        credentials.map((c) => ({
+          id: c.id,
+          deviceName: c.deviceName,
+          deviceType: c.deviceType,
+          lastUsedAt: c.lastUsedAt,
+          createdAt: c.createdAt,
+        })),
+      );
     } catch (error: any) {
       console.error("Get credentials error:", error);
       res.status(500).json({ error: error.message });
@@ -643,7 +763,18 @@ export async function registerRoutes(
   // Auto-register buyer with password (phone = temp password)
   app.post("/api/auth/auto-register", async (req, res) => {
     try {
-      const { name, phone, email, city, districts, propertyType, budgetMin, budgetMax, paymentMethod, transactionType } = req.body;
+      const {
+        name,
+        phone,
+        email,
+        city,
+        districts,
+        propertyType,
+        budgetMin,
+        budgetMax,
+        paymentMethod,
+        transactionType,
+      } = req.body;
 
       // Validate required fields
       if (!name || !phone || !city || !propertyType) {
@@ -652,14 +783,14 @@ export async function registerRoutes(
 
       // Check if user exists by phone
       let user = await storage.getUserByPhone(phone);
-      
+
       if (!user) {
         // Hash phone as temporary password
         const passwordHash = await bcrypt.hash(phone, 10);
-        
+
         // Generate email if not provided
         const userEmail = email || `${phone}@tatabuk.sa`;
-        
+
         user = await storage.createUser({
           email: userEmail,
           phone: phone.trim(),
@@ -692,7 +823,7 @@ export async function registerRoutes(
       req.session.userRole = user.role;
 
       // Return user (no credentials exposed)
-      res.json({ 
+      res.json({
         success: true,
         user: {
           id: user.id,
@@ -715,7 +846,20 @@ export async function registerRoutes(
   // Register buyer wish (creates user + preference)
   app.post("/api/buyers/register", async (req, res) => {
     try {
-      const { name, email, phone, city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose } = req.body;
+      const {
+        name,
+        email,
+        phone,
+        city,
+        districts,
+        propertyType,
+        rooms,
+        area,
+        budgetMin,
+        budgetMax,
+        paymentMethod,
+        purpose,
+      } = req.body;
 
       // Validate required fields
       if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -748,8 +892,12 @@ export async function registerRoutes(
       }
 
       // Parse budget values safely
-      const parsedBudgetMin = budgetMin ? parseInt(String(budgetMin), 10) : null;
-      const parsedBudgetMax = budgetMax ? parseInt(String(budgetMax), 10) : null;
+      const parsedBudgetMin = budgetMin
+        ? parseInt(String(budgetMin), 10)
+        : null;
+      const parsedBudgetMax = budgetMax
+        ? parseInt(String(budgetMax), 10)
+        : null;
 
       // Create preference
       const preference = await storage.createBuyerPreference({
@@ -769,7 +917,13 @@ export async function registerRoutes(
       // Find matches for this preference
       await storage.findMatchesForPreference(preference.id);
 
-      res.json({ success: true, user, preference, isNewUser, phone: phone.trim() });
+      res.json({
+        success: true,
+        user,
+        preference,
+        isNewUser,
+        phone: phone.trim(),
+      });
     } catch (error: any) {
       console.error("Error registering buyer:", error);
       res.status(500).json({ error: error.message });
@@ -779,7 +933,9 @@ export async function registerRoutes(
   // Get buyer's preferences
   app.get("/api/buyers/:userId/preferences", async (req, res) => {
     try {
-      const preferences = await storage.getBuyerPreferencesByUser(req.params.userId);
+      const preferences = await storage.getBuyerPreferencesByUser(
+        req.params.userId,
+      );
       res.json(preferences);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -789,9 +945,11 @@ export async function registerRoutes(
   // Get matches for a preference (with ML-enhanced scoring)
   app.get("/api/buyers/preferences/:prefId/matches", async (req, res) => {
     try {
-      const matches = await storage.getMatchesByBuyerPreference(req.params.prefId);
+      const matches = await storage.getMatchesByBuyerPreference(
+        req.params.prefId,
+      );
       const { userId, sessionId } = req.query;
-      
+
       // Get learned weights if user/session provided
       let learnedWeights = null;
       if (userId || sessionId) {
@@ -799,53 +957,68 @@ export async function registerRoutes(
           const { getLearnedWeights } = await import("./learning-engine");
           learnedWeights = await getLearnedWeights(
             userId as string | undefined,
-            sessionId as string | undefined
+            sessionId as string | undefined,
           );
         } catch (err) {
           console.warn("Could not load learned weights:", err);
         }
       }
-      
+
       // Enrich with property details and apply ML adjustments
       const enrichedMatches = await Promise.all(
         matches.map(async (match) => {
-          const property = match.propertyId ? await storage.getProperty(match.propertyId) : null;
-          
+          const property = match.propertyId
+            ? await storage.getProperty(match.propertyId)
+            : null;
+
           // Apply learned weights boost if available
           let adjustedScore = match.matchScore;
           let isPreferred = false;
-          
-          if (learnedWeights && learnedWeights.confidenceScore >= 0.2 && property) {
+
+          if (
+            learnedWeights &&
+            learnedWeights.confidenceScore >= 0.2 &&
+            property
+          ) {
             // District preference bonus
-            if (learnedWeights.preferredDistricts?.includes(property.district)) {
+            if (
+              learnedWeights.preferredDistricts?.includes(property.district)
+            ) {
               adjustedScore = Math.min(100, adjustedScore + 5);
               isPreferred = true;
             }
-            // Property type preference bonus  
-            if (learnedWeights.preferredPropertyTypes?.includes(property.propertyType)) {
+            // Property type preference bonus
+            if (
+              learnedWeights.preferredPropertyTypes?.includes(
+                property.propertyType,
+              )
+            ) {
               adjustedScore = Math.min(100, adjustedScore + 3);
               isPreferred = true;
             }
             // Price range preference bonus
             if (learnedWeights.priceRangeMin && learnedWeights.priceRangeMax) {
-              if (property.price >= learnedWeights.priceRangeMin && property.price <= learnedWeights.priceRangeMax) {
+              if (
+                property.price >= learnedWeights.priceRangeMin &&
+                property.price <= learnedWeights.priceRangeMax
+              ) {
                 adjustedScore = Math.min(100, adjustedScore + 3);
               }
             }
           }
-          
-          return { 
-            ...match, 
-            property, 
+
+          return {
+            ...match,
+            property,
             matchScore: adjustedScore,
-            isPreferred, 
+            isPreferred,
           };
-        })
+        }),
       );
-      
+
       // Sort by adjusted score
       enrichedMatches.sort((a, b) => b.matchScore - a.matchScore);
-      
+
       res.json(enrichedMatches);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -868,8 +1041,20 @@ export async function registerRoutes(
   // Create new preference
   app.post("/api/preferences", async (req, res) => {
     try {
-      const { userId, city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose, isActive } = req.body;
-      
+      const {
+        userId,
+        city,
+        districts,
+        propertyType,
+        rooms,
+        area,
+        budgetMin,
+        budgetMax,
+        paymentMethod,
+        purpose,
+        isActive,
+      } = req.body;
+
       if (!userId || !city || !propertyType) {
         return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
       }
@@ -900,7 +1085,18 @@ export async function registerRoutes(
   app.patch("/api/preferences/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const { city, districts, propertyType, rooms, area, budgetMin, budgetMax, paymentMethod, purpose, isActive } = req.body;
+      const {
+        city,
+        districts,
+        propertyType,
+        rooms,
+        area,
+        budgetMin,
+        budgetMax,
+        paymentMethod,
+        purpose,
+        isActive,
+      } = req.body;
 
       const preference = await storage.updateBuyerPreference(id, {
         city,
@@ -943,7 +1139,24 @@ export async function registerRoutes(
   // Register seller and add property
   app.post("/api/sellers/register", async (req, res) => {
     try {
-      const { name, email, phone, accountType, entityName, propertyType, city, district, price, area, rooms, description, status, images, latitude, longitude } = req.body;
+      const {
+        name,
+        email,
+        phone,
+        accountType,
+        entityName,
+        propertyType,
+        city,
+        district,
+        price,
+        area,
+        rooms,
+        description,
+        status,
+        images,
+        latitude,
+        longitude,
+      } = req.body;
 
       // Validate required fields
       if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -1009,7 +1222,13 @@ export async function registerRoutes(
       // Find matches for this property
       await storage.findMatchesForProperty(property.id);
 
-      res.json({ success: true, user, property, isNewUser, phone: phone.trim() });
+      res.json({
+        success: true,
+        user,
+        property,
+        isNewUser,
+        phone: phone.trim(),
+      });
     } catch (error: any) {
       console.error("Error registering seller:", error);
       res.status(500).json({ error: error.message });
@@ -1021,7 +1240,16 @@ export async function registerRoutes(
   // Register investor
   app.post("/api/investors/register", async (req, res) => {
     try {
-      const { name, email, phone, cities, investmentTypes, budgetMin, budgetMax, returnPreference } = req.body;
+      const {
+        name,
+        email,
+        phone,
+        cities,
+        investmentTypes,
+        budgetMin,
+        budgetMax,
+        returnPreference,
+      } = req.body;
 
       // Validate required fields
       if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -1049,18 +1277,18 @@ export async function registerRoutes(
         isNewUser = true;
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         user,
         investmentPreferences: {
           cities,
           investmentTypes,
           budgetMin,
           budgetMax,
-          returnPreference
+          returnPreference,
         },
         isNewUser,
-        phone: phone.trim()
+        phone: phone.trim(),
       });
     } catch (error: any) {
       console.error("Error registering investor:", error);
@@ -1071,7 +1299,9 @@ export async function registerRoutes(
   // Get seller's properties
   app.get("/api/sellers/:sellerId/properties", async (req, res) => {
     try {
-      const properties = await storage.getPropertiesBySeller(req.params.sellerId);
+      const properties = await storage.getPropertiesBySeller(
+        req.params.sellerId,
+      );
       res.json(properties);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1108,7 +1338,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Property not found" });
       }
       await storage.incrementPropertyViews(req.params.id);
-      
+
       // Include seller info with verification details
       let seller = null;
       if (property.sellerId) {
@@ -1132,7 +1362,7 @@ export async function registerRoutes(
           };
         }
       }
-      
+
       res.json({ ...property, seller });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1152,8 +1382,22 @@ export async function registerRoutes(
   // Create property
   app.post("/api/properties", async (req, res) => {
     try {
-      const { sellerId, propertyType, city, district, price, area, rooms, description, status, images, isActive, latitude, longitude } = req.body;
-      
+      const {
+        sellerId,
+        propertyType,
+        city,
+        district,
+        price,
+        area,
+        rooms,
+        description,
+        status,
+        images,
+        isActive,
+        latitude,
+        longitude,
+      } = req.body;
+
       if (!sellerId || !propertyType || !city || !district || !price) {
         return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
       }
@@ -1215,30 +1459,43 @@ export async function registerRoutes(
       if (!userId || typeof userId !== "string") {
         return res.status(400).json({ error: "userId is required" });
       }
-      
+
       const convs = await storage.getConversationsByUser(userId);
-      
+
       // Enrich with property and participant info
-      const enrichedConvs = await Promise.all(convs.map(async (conv) => {
-        const property = await storage.getProperty(conv.propertyId);
-        const buyer = await storage.getUser(conv.buyerId);
-        const seller = await storage.getUser(conv.sellerId);
-        
-        return {
-          ...conv,
-          property: property ? {
-            id: property.id,
-            propertyType: property.propertyType,
-            city: property.city,
-            district: property.district,
-            price: property.price,
-            images: property.images,
-          } : null,
-          buyer: buyer ? { id: buyer.id, name: buyer.name, phone: buyer.phone } : null,
-          seller: seller ? { id: seller.id, name: seller.name, phone: seller.phone, entityName: seller.entityName } : null,
-        };
-      }));
-      
+      const enrichedConvs = await Promise.all(
+        convs.map(async (conv) => {
+          const property = await storage.getProperty(conv.propertyId);
+          const buyer = await storage.getUser(conv.buyerId);
+          const seller = await storage.getUser(conv.sellerId);
+
+          return {
+            ...conv,
+            property: property
+              ? {
+                  id: property.id,
+                  propertyType: property.propertyType,
+                  city: property.city,
+                  district: property.district,
+                  price: property.price,
+                  images: property.images,
+                }
+              : null,
+            buyer: buyer
+              ? { id: buyer.id, name: buyer.name, phone: buyer.phone }
+              : null,
+            seller: seller
+              ? {
+                  id: seller.id,
+                  name: seller.name,
+                  phone: seller.phone,
+                  entityName: seller.entityName,
+                }
+              : null,
+          };
+        }),
+      );
+
       res.json(enrichedConvs);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1252,25 +1509,36 @@ export async function registerRoutes(
       if (!conv) {
         return res.status(404).json({ error: "المحادثة غير موجودة" });
       }
-      
+
       const messages = await storage.getMessagesByConversation(conv.id);
       const property = await storage.getProperty(conv.propertyId);
       const buyer = await storage.getUser(conv.buyerId);
       const seller = await storage.getUser(conv.sellerId);
-      
+
       res.json({
         ...conv,
         messages,
-        property: property ? {
-          id: property.id,
-          propertyType: property.propertyType,
-          city: property.city,
-          district: property.district,
-          price: property.price,
-          images: property.images,
-        } : null,
-        buyer: buyer ? { id: buyer.id, name: buyer.name, phone: buyer.phone } : null,
-        seller: seller ? { id: seller.id, name: seller.name, phone: seller.phone, entityName: seller.entityName } : null,
+        property: property
+          ? {
+              id: property.id,
+              propertyType: property.propertyType,
+              city: property.city,
+              district: property.district,
+              price: property.price,
+              images: property.images,
+            }
+          : null,
+        buyer: buyer
+          ? { id: buyer.id, name: buyer.name, phone: buyer.phone }
+          : null,
+        seller: seller
+          ? {
+              id: seller.id,
+              name: seller.name,
+              phone: seller.phone,
+              entityName: seller.entityName,
+            }
+          : null,
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1281,14 +1549,20 @@ export async function registerRoutes(
   app.post("/api/conversations", async (req, res) => {
     try {
       const { buyerId, sellerId, propertyId } = req.body;
-      
+
       if (!buyerId || !sellerId || !propertyId) {
-        return res.status(400).json({ error: "buyerId, sellerId, and propertyId are required" });
+        return res
+          .status(400)
+          .json({ error: "buyerId, sellerId, and propertyId are required" });
       }
-      
+
       // Check if conversation already exists
-      let conv = await storage.getConversationByParticipants(buyerId, sellerId, propertyId);
-      
+      let conv = await storage.getConversationByParticipants(
+        buyerId,
+        sellerId,
+        propertyId,
+      );
+
       if (!conv) {
         conv = await storage.createConversation({
           buyerId,
@@ -1299,7 +1573,7 @@ export async function registerRoutes(
           isActive: true,
         });
       }
-      
+
       res.json(conv);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1313,7 +1587,7 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(400).json({ error: "userId is required" });
       }
-      
+
       await storage.markConversationAsRead(req.params.id, userId);
       res.json({ success: true });
     } catch (error: any) {
@@ -1326,12 +1600,17 @@ export async function registerRoutes(
   // Send a message
   app.post("/api/messages", async (req, res) => {
     try {
-      const { conversationId, senderId, content, messageType, attachments } = req.body;
-      
+      const { conversationId, senderId, content, messageType, attachments } =
+        req.body;
+
       if (!conversationId || !senderId || !content) {
-        return res.status(400).json({ error: "conversationId, senderId, and content are required" });
+        return res
+          .status(400)
+          .json({
+            error: "conversationId, senderId, and content are required",
+          });
       }
-      
+
       const message = await storage.createMessage({
         conversationId,
         senderId,
@@ -1340,7 +1619,7 @@ export async function registerRoutes(
         attachments: attachments || [],
         isRead: false,
       });
-      
+
       res.json(message);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1350,7 +1629,9 @@ export async function registerRoutes(
   // Get messages for a conversation (polling endpoint)
   app.get("/api/messages/:conversationId", async (req, res) => {
     try {
-      const messages = await storage.getMessagesByConversation(req.params.conversationId);
+      const messages = await storage.getMessagesByConversation(
+        req.params.conversationId,
+      );
       res.json(messages);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1461,18 +1742,20 @@ export async function registerRoutes(
     try {
       const preferences = await storage.getAllBuyerPreferencesForAdmin();
       const users = await storage.getUsers("buyer");
-      
+
       // Join preferences with user data
-      const clients = await Promise.all(preferences.map(async (pref) => {
-        const user = users.find(u => u.id === pref.userId);
-        return {
-          ...pref,
-          userName: user?.name || "غير معروف",
-          userPhone: user?.phone || "",
-          userEmail: user?.email || "",
-        };
-      }));
-      
+      const clients = await Promise.all(
+        preferences.map(async (pref) => {
+          const user = users.find((u) => u.id === pref.userId);
+          return {
+            ...pref,
+            userName: user?.name || "غير معروف",
+            userPhone: user?.phone || "",
+            userEmail: user?.email || "",
+          };
+        }),
+      );
+
       res.json(clients);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1483,29 +1766,40 @@ export async function registerRoutes(
   app.get("/api/admin/send-logs", async (req, res) => {
     try {
       const logs = await storage.getSendLogs();
-      
+
       // Enrich with user and property data
-      const enrichedLogs = await Promise.all(logs.map(async (log) => {
-        const user = log.userId ? await storage.getUser(log.userId) : null;
-        const preference = log.preferenceId ? await storage.getBuyerPreference(log.preferenceId) : null;
-        
-        // Get property details (use admin method to include inactive properties)
-        const propertyDetails = await Promise.all(
-          (log.propertyIds || []).map(async (id) => {
-            const prop = await storage.getPropertyForAdmin(id);
-            return prop ? { id, city: prop.city, district: prop.district, price: prop.price } : null;
-          })
-        );
-        
-        return {
-          ...log,
-          userName: user?.name || "غير معروف",
-          userPhone: user?.phone || "",
-          preferenceCity: preference?.city || "",
-          propertyDetails: propertyDetails.filter(Boolean),
-        };
-      }));
-      
+      const enrichedLogs = await Promise.all(
+        logs.map(async (log) => {
+          const user = log.userId ? await storage.getUser(log.userId) : null;
+          const preference = log.preferenceId
+            ? await storage.getBuyerPreference(log.preferenceId)
+            : null;
+
+          // Get property details (use admin method to include inactive properties)
+          const propertyDetails = await Promise.all(
+            (log.propertyIds || []).map(async (id) => {
+              const prop = await storage.getPropertyForAdmin(id);
+              return prop
+                ? {
+                    id,
+                    city: prop.city,
+                    district: prop.district,
+                    price: prop.price,
+                  }
+                : null;
+            }),
+          );
+
+          return {
+            ...log,
+            userName: user?.name || "غير معروف",
+            userPhone: user?.phone || "",
+            preferenceCity: preference?.city || "",
+            propertyDetails: propertyDetails.filter(Boolean),
+          };
+        }),
+      );
+
       res.json(enrichedLogs);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1517,43 +1811,46 @@ export async function registerRoutes(
     try {
       const { preferenceId } = req.params;
       const preference = await storage.getBuyerPreference(preferenceId);
-      
+
       if (!preference) {
         return res.status(404).json({ error: "الرغبة غير موجودة" });
       }
 
       // Get all available properties
       const allProperties = await storage.getAllProperties();
-      
+
       // Get previously sent property IDs
-      const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preferenceId);
-      
+      const sentPropertyIds =
+        await storage.getPropertyIdsSentToPreference(preferenceId);
+
       // Filter matching properties
-      const matchingProperties = allProperties.filter(prop => {
+      const matchingProperties = allProperties.filter((prop) => {
         // Must be same city
         if (prop.city !== preference.city) return false;
-        
+
         // District must be in preferred list (if specified)
         if (preference.districts && preference.districts.length > 0) {
           if (!preference.districts.includes(prop.district)) return false;
         }
-        
+
         // Property type must match
         if (prop.propertyType !== preference.propertyType) return false;
-        
+
         // Price must be within budget
-        if (preference.budgetMin && prop.price < preference.budgetMin) return false;
-        if (preference.budgetMax && prop.price > preference.budgetMax) return false;
-        
+        if (preference.budgetMin && prop.price < preference.budgetMin)
+          return false;
+        if (preference.budgetMax && prop.price > preference.budgetMax)
+          return false;
+
         // Must not have been sent before
         if (sentPropertyIds.includes(prop.id)) return false;
-        
+
         // Must be active
         if (!prop.isActive) return false;
-        
+
         return true;
       });
-      
+
       res.json({
         preference,
         matchingProperties,
@@ -1570,40 +1867,49 @@ export async function registerRoutes(
     try {
       const { preferenceId } = req.params;
       const { maxProperties = 5 } = req.body;
-      
+
       const preference = await storage.getBuyerPreference(preferenceId);
       if (!preference) {
         return res.status(404).json({ error: "الرغبة غير موجودة" });
       }
-      
-      const user = preference.userId ? await storage.getUser(preference.userId) : null;
+
+      const user = preference.userId
+        ? await storage.getUser(preference.userId)
+        : null;
       if (!user) {
         return res.status(404).json({ error: "المستخدم غير موجود" });
       }
 
       // Get matching properties
       const allProperties = await storage.getAllProperties();
-      const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preferenceId);
-      
-      const matchingProperties = allProperties.filter(prop => {
-        if (prop.city !== preference.city) return false;
-        if (preference.districts && preference.districts.length > 0) {
-          if (!preference.districts.includes(prop.district)) return false;
-        }
-        if (prop.propertyType !== preference.propertyType) return false;
-        if (preference.budgetMin && prop.price < preference.budgetMin) return false;
-        if (preference.budgetMax && prop.price > preference.budgetMax) return false;
-        if (sentPropertyIds.includes(prop.id)) return false;
-        if (!prop.isActive) return false;
-        return true;
-      }).slice(0, maxProperties);
+      const sentPropertyIds =
+        await storage.getPropertyIdsSentToPreference(preferenceId);
+
+      const matchingProperties = allProperties
+        .filter((prop) => {
+          if (prop.city !== preference.city) return false;
+          if (preference.districts && preference.districts.length > 0) {
+            if (!preference.districts.includes(prop.district)) return false;
+          }
+          if (prop.propertyType !== preference.propertyType) return false;
+          if (preference.budgetMin && prop.price < preference.budgetMin)
+            return false;
+          if (preference.budgetMax && prop.price > preference.budgetMax)
+            return false;
+          if (sentPropertyIds.includes(prop.id)) return false;
+          if (!prop.isActive) return false;
+          return true;
+        })
+        .slice(0, maxProperties);
 
       // Prepare message
       let message: string;
       let messageType: "matches" | "no_matches";
-      
+
       if (matchingProperties.length > 0) {
-        const propertyList = matchingProperties.map(p => formatPropertyMessage(p)).join("\n\n");
+        const propertyList = matchingProperties
+          .map((p) => formatPropertyMessage(p))
+          .join("\n\n");
         message = `مرحباً ${user.name}،\n\nوجدنا لك ${matchingProperties.length} عقارات تناسب تفضيلاتك:\n\n${propertyList}\n\nتواصل معنا للمزيد من التفاصيل.\nتطابق - منصة العقارات الذكية`;
         messageType = "matches";
       } else {
@@ -1618,7 +1924,7 @@ export async function registerRoutes(
       const sendLog = await storage.createSendLog({
         preferenceId,
         userId: user.id,
-        propertyIds: matchingProperties.map(p => p.id),
+        propertyIds: matchingProperties.map((p) => p.id),
         messageType,
         status: whatsappResult.success ? "sent" : "failed",
         whatsappResponse: whatsappResult.response || whatsappResult.error,
@@ -1628,8 +1934,8 @@ export async function registerRoutes(
         success: whatsappResult.success,
         sendLog,
         propertiesSent: matchingProperties.length,
-        message: whatsappResult.success 
-          ? `تم إرسال ${matchingProperties.length} عقارات إلى ${user.name}` 
+        message: whatsappResult.success
+          ? `تم إرسال ${matchingProperties.length} عقارات إلى ${user.name}`
           : "فشل في الإرسال",
       });
     } catch (error: any) {
@@ -1642,44 +1948,59 @@ export async function registerRoutes(
   app.post("/api/admin/send-all", async (req, res) => {
     try {
       const { maxPropertiesPerClient = 5 } = req.body;
-      
+
       const preferences = await storage.getAllBuyerPreferences();
-      const activePreferences = preferences.filter(p => p.isActive);
-      
+      const activePreferences = preferences.filter((p) => p.isActive);
+
       const results = {
         total: activePreferences.length,
         successful: 0,
         failed: 0,
         noMatches: 0,
-        details: [] as Array<{ preferenceId: string; userName: string; status: string; propertiesSent: number }>,
+        details: [] as Array<{
+          preferenceId: string;
+          userName: string;
+          status: string;
+          propertiesSent: number;
+        }>,
       };
 
       for (const preference of activePreferences) {
         try {
-          const user = preference.userId ? await storage.getUser(preference.userId) : null;
+          const user = preference.userId
+            ? await storage.getUser(preference.userId)
+            : null;
           if (!user) continue;
 
           const allProperties = await storage.getAllProperties();
-          const sentPropertyIds = await storage.getPropertyIdsSentToPreference(preference.id);
-          
-          const matchingProperties = allProperties.filter(prop => {
-            if (prop.city !== preference.city) return false;
-            if (preference.districts && preference.districts.length > 0) {
-              if (!preference.districts.includes(prop.district)) return false;
-            }
-            if (prop.propertyType !== preference.propertyType) return false;
-            if (preference.budgetMin && prop.price < preference.budgetMin) return false;
-            if (preference.budgetMax && prop.price > preference.budgetMax) return false;
-            if (sentPropertyIds.includes(prop.id)) return false;
-            if (!prop.isActive) return false;
-            return true;
-          }).slice(0, maxPropertiesPerClient);
+          const sentPropertyIds = await storage.getPropertyIdsSentToPreference(
+            preference.id,
+          );
+
+          const matchingProperties = allProperties
+            .filter((prop) => {
+              if (prop.city !== preference.city) return false;
+              if (preference.districts && preference.districts.length > 0) {
+                if (!preference.districts.includes(prop.district)) return false;
+              }
+              if (prop.propertyType !== preference.propertyType) return false;
+              if (preference.budgetMin && prop.price < preference.budgetMin)
+                return false;
+              if (preference.budgetMax && prop.price > preference.budgetMax)
+                return false;
+              if (sentPropertyIds.includes(prop.id)) return false;
+              if (!prop.isActive) return false;
+              return true;
+            })
+            .slice(0, maxPropertiesPerClient);
 
           let message: string;
           let messageType: "matches" | "no_matches";
-          
+
           if (matchingProperties.length > 0) {
-            const propertyList = matchingProperties.map(p => formatPropertyMessage(p)).join("\n\n");
+            const propertyList = matchingProperties
+              .map((p) => formatPropertyMessage(p))
+              .join("\n\n");
             message = `مرحباً ${user.name}،\n\nوجدنا لك ${matchingProperties.length} عقارات تناسب تفضيلاتك:\n\n${propertyList}\n\nتواصل معنا للمزيد من التفاصيل.\nتطابق - منصة العقارات الذكية`;
             messageType = "matches";
           } else {
@@ -1693,7 +2014,7 @@ export async function registerRoutes(
           await storage.createSendLog({
             preferenceId: preference.id,
             userId: user.id,
-            propertyIds: matchingProperties.map(p => p.id),
+            propertyIds: matchingProperties.map((p) => p.id),
             messageType,
             status: whatsappResult.success ? "sent" : "failed",
             whatsappResponse: whatsappResult.response || whatsappResult.error,
@@ -1725,44 +2046,50 @@ export async function registerRoutes(
   });
 
   // Toggle client active status
-  app.patch("/api/admin/clients/:preferenceId/toggle-status", async (req, res) => {
-    try {
-      const { preferenceId } = req.params;
-      const preference = await storage.getBuyerPreference(preferenceId);
-      
-      if (!preference) {
-        return res.status(404).json({ error: "الرغبة غير موجودة" });
+  app.patch(
+    "/api/admin/clients/:preferenceId/toggle-status",
+    async (req, res) => {
+      try {
+        const { preferenceId } = req.params;
+        const preference = await storage.getBuyerPreference(preferenceId);
+
+        if (!preference) {
+          return res.status(404).json({ error: "الرغبة غير موجودة" });
+        }
+
+        const updated = await storage.updateBuyerPreference(preferenceId, {
+          isActive: !preference.isActive,
+        });
+
+        res.json(updated);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
       }
-
-      const updated = await storage.updateBuyerPreference(preferenceId, {
-        isActive: !preference.isActive,
-      });
-
-      res.json(updated);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+    },
+  );
 
   // Toggle property availability
-  app.patch("/api/admin/properties/:propertyId/toggle-availability", async (req, res) => {
-    try {
-      const { propertyId } = req.params;
-      const property = await storage.getProperty(propertyId);
-      
-      if (!property) {
-        return res.status(404).json({ error: "العقار غير موجود" });
+  app.patch(
+    "/api/admin/properties/:propertyId/toggle-availability",
+    async (req, res) => {
+      try {
+        const { propertyId } = req.params;
+        const property = await storage.getProperty(propertyId);
+
+        if (!property) {
+          return res.status(404).json({ error: "العقار غير موجود" });
+        }
+
+        const updated = await storage.updateProperty(propertyId, {
+          isActive: !property.isActive,
+        });
+
+        res.json(updated);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
       }
-
-      const updated = await storage.updateProperty(propertyId, {
-        isActive: !property.isActive,
-      });
-
-      res.json(updated);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+    },
+  );
 
   // ============ MARKETING ROUTES ============
 
@@ -1780,7 +2107,7 @@ export async function registerRoutes(
   app.get("/api/marketing/enabled", async (req, res) => {
     try {
       const settings = await storage.getEnabledMarketingSettings();
-      const sanitizedSettings = settings.map(s => ({
+      const sanitizedSettings = settings.map((s) => ({
         platform: s.platform,
         pixelId: s.pixelId,
         isEnabled: s.isEnabled,
@@ -1808,13 +2135,28 @@ export async function registerRoutes(
   app.put("/api/admin/marketing/:platform", async (req, res) => {
     try {
       const { platform } = req.params;
-      const validPlatforms = ["snapchat", "tiktok", "facebook", "google", "mailchimp"];
-      
+      const validPlatforms = [
+        "snapchat",
+        "tiktok",
+        "facebook",
+        "google",
+        "mailchimp",
+      ];
+
       if (!validPlatforms.includes(platform)) {
         return res.status(400).json({ error: "منصة غير مدعومة" });
       }
 
-      const { isEnabled, pixelId, accessToken, apiKey, audienceId, conversionApiToken, testEventCode, dataCenter } = req.body;
+      const {
+        isEnabled,
+        pixelId,
+        accessToken,
+        apiKey,
+        audienceId,
+        conversionApiToken,
+        testEventCode,
+        dataCenter,
+      } = req.body;
 
       const setting = await storage.upsertMarketingSetting({
         platform,
@@ -1848,9 +2190,11 @@ export async function registerRoutes(
   app.post("/api/marketing/events", async (req, res) => {
     try {
       const { platform, eventName, eventData, userId, sessionId } = req.body;
-      
+
       if (!platform || !eventName) {
-        return res.status(400).json({ error: "Platform and eventName are required" });
+        return res
+          .status(400)
+          .json({ error: "Platform and eventName are required" });
       }
 
       const event = await storage.createMarketingEvent({
@@ -1873,14 +2217,14 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 100;
       const platform = req.query.platform as string;
-      
+
       let events;
       if (platform) {
         events = await storage.getMarketingEventsByPlatform(platform);
       } else {
         events = await storage.getMarketingEvents(limit);
       }
-      
+
       res.json(events);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1894,11 +2238,11 @@ export async function registerRoutes(
     try {
       const { slug } = req.params;
       const page = await storage.getStaticPage(slug);
-      
+
       if (!page || !page.isPublished) {
         return res.status(404).json({ error: "Page not found" });
       }
-      
+
       res.json(page);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1919,18 +2263,20 @@ export async function registerRoutes(
   app.post("/api/admin/pages", async (req, res) => {
     try {
       const { slug, titleAr, contentAr, isPublished } = req.body;
-      
+
       if (!slug || !titleAr || !contentAr) {
-        return res.status(400).json({ error: "slug, titleAr, and contentAr are required" });
+        return res
+          .status(400)
+          .json({ error: "slug, titleAr, and contentAr are required" });
       }
-      
+
       const page = await storage.upsertStaticPage({
         slug,
         titleAr,
         contentAr,
         isPublished: isPublished !== false,
       });
-      
+
       res.json(page);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1938,13 +2284,20 @@ export async function registerRoutes(
   });
 
   // ============ MACHINE LEARNING ROUTES ============
-  
+
   // Validation schema for ML interactions
   const mlInteractionSchema = z.object({
     userId: z.string().uuid().optional().nullable(),
     sessionId: z.string().min(10).max(100).optional().nullable(),
     propertyId: z.string().uuid(),
-    interactionType: z.enum(["view", "save", "skip", "contact", "share", "unsave"]),
+    interactionType: z.enum([
+      "view",
+      "save",
+      "skip",
+      "contact",
+      "share",
+      "unsave",
+    ]),
     duration: z.number().int().min(0).max(3600).optional(),
     deviceType: z.enum(["mobile", "desktop", "tablet"]).optional(),
   });
@@ -1953,23 +2306,32 @@ export async function registerRoutes(
   app.post("/api/ml/interaction", async (req, res) => {
     try {
       const { recordInteraction } = await import("./learning-engine");
-      
+
       // Validate input
       const validationResult = mlInteractionSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          error: "Invalid input", 
-          details: validationResult.error.errors 
+        return res.status(400).json({
+          error: "Invalid input",
+          details: validationResult.error.errors,
         });
       }
-      
-      const { userId, sessionId, propertyId, interactionType, duration, deviceType } = validationResult.data;
-      
+
+      const {
+        userId,
+        sessionId,
+        propertyId,
+        interactionType,
+        duration,
+        deviceType,
+      } = validationResult.data;
+
       // Must have either userId or sessionId for tracking
       if (!userId && !sessionId) {
-        return res.status(400).json({ error: "Either userId or sessionId is required" });
+        return res
+          .status(400)
+          .json({ error: "Either userId or sessionId is required" });
       }
-      
+
       await recordInteraction({
         userId: userId || undefined,
         sessionId: sessionId || undefined,
@@ -1978,7 +2340,7 @@ export async function registerRoutes(
         duration,
         deviceType,
       });
-      
+
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error recording interaction:", error);
@@ -1991,12 +2353,12 @@ export async function registerRoutes(
     try {
       const { getLearnedWeights } = await import("./learning-engine");
       const { userId, sessionId } = req.query;
-      
+
       const weights = await getLearnedWeights(
         userId as string | undefined,
-        sessionId as string | undefined
+        sessionId as string | undefined,
       );
-      
+
       res.json(weights);
     } catch (error: any) {
       console.error("Error getting learned weights:", error);
@@ -2009,12 +2371,12 @@ export async function registerRoutes(
     try {
       const { getLearningStats } = await import("./learning-engine");
       const { userId, sessionId } = req.query;
-      
+
       const stats = await getLearningStats(
         userId as string | undefined,
-        sessionId as string | undefined
+        sessionId as string | undefined,
       );
-      
+
       res.json(stats);
     } catch (error: any) {
       console.error("Error getting learning stats:", error);
@@ -2027,7 +2389,10 @@ export async function registerRoutes(
   // Get all audience segments
   app.get("/api/segments", async (req, res) => {
     try {
-      const segments = await db.select().from(audienceSegments).where(eq(audienceSegments.isActive, true));
+      const segments = await db
+        .select()
+        .from(audienceSegments)
+        .where(eq(audienceSegments.isActive, true));
       res.json(segments);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2041,7 +2406,13 @@ export async function registerRoutes(
         name: z.string().min(1),
         nameAr: z.string().min(1),
         description: z.string().optional(),
-        purchasingPowerTier: z.enum(["luxury", "premium", "mid_range", "budget", "economy"]),
+        purchasingPowerTier: z.enum([
+          "luxury",
+          "premium",
+          "mid_range",
+          "budget",
+          "economy",
+        ]),
         minBudget: z.number().optional(),
         maxBudget: z.number().optional(),
         propertyTypes: z.array(z.string()).optional(),
@@ -2053,13 +2424,18 @@ export async function registerRoutes(
         color: z.string().optional(),
         priority: z.number().default(0),
       });
-      
+
       const result = segmentSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ error: "بيانات غير صالحة", details: result.error.errors });
+        return res
+          .status(400)
+          .json({ error: "بيانات غير صالحة", details: result.error.errors });
       }
-      
-      const [segment] = await db.insert(audienceSegments).values(result.data).returning();
+
+      const [segment] = await db
+        .insert(audienceSegments)
+        .values(result.data)
+        .returning();
       res.json(segment);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2070,14 +2446,17 @@ export async function registerRoutes(
   app.get("/api/segments/:segmentId", async (req, res) => {
     try {
       const { getUsersInSegment } = await import("./audience-segmentation");
-      
-      const [segment] = await db.select().from(audienceSegments).where(eq(audienceSegments.id, req.params.segmentId));
+
+      const [segment] = await db
+        .select()
+        .from(audienceSegments)
+        .where(eq(audienceSegments.id, req.params.segmentId));
       if (!segment) {
         return res.status(404).json({ error: "الشريحة غير موجودة" });
       }
-      
+
       const users = await getUsersInSegment(req.params.segmentId);
-      
+
       res.json({ segment, users, userCount: users.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2087,9 +2466,11 @@ export async function registerRoutes(
   // Initialize default segments
   app.post("/api/segments/initialize", async (req, res) => {
     try {
-      const { initializeDefaultSegments } = await import("./audience-segmentation");
+      const { initializeDefaultSegments } = await import(
+        "./audience-segmentation"
+      );
       await initializeDefaultSegments();
-      
+
       const segments = await db.select().from(audienceSegments);
       res.json({ success: true, segments });
     } catch (error: any) {
@@ -2122,7 +2503,9 @@ export async function registerRoutes(
   // Get user's purchasing power analysis
   app.get("/api/segments/purchasing-power/:userId", async (req, res) => {
     try {
-      const { calculatePurchasingPower } = await import("./audience-segmentation");
+      const { calculatePurchasingPower } = await import(
+        "./audience-segmentation"
+      );
       const result = await calculatePurchasingPower(req.params.userId);
       res.json(result);
     } catch (error: any) {
@@ -2157,7 +2540,10 @@ export async function registerRoutes(
   // Get all campaigns
   app.get("/api/campaigns", async (req, res) => {
     try {
-      const campaigns = await db.select().from(adCampaigns).orderBy(desc(adCampaigns.createdAt));
+      const campaigns = await db
+        .select()
+        .from(adCampaigns)
+        .orderBy(desc(adCampaigns.createdAt));
       res.json(campaigns);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2178,24 +2564,34 @@ export async function registerRoutes(
         messageTemplate: z.string().optional(),
         emailSubject: z.string().optional(),
         emailTemplate: z.string().optional(),
-        channels: z.array(z.enum(["whatsapp", "email", "sms", "push"])).default(["whatsapp"]),
+        channels: z
+          .array(z.enum(["whatsapp", "email", "sms", "push"]))
+          .default(["whatsapp"]),
         startDate: z.string().optional(),
         endDate: z.string().optional(),
-        frequency: z.enum(["once", "daily", "weekly", "monthly"]).default("once"),
+        frequency: z
+          .enum(["once", "daily", "weekly", "monthly"])
+          .default("once"),
         createdBy: z.string().optional(),
       });
-      
+
       const result = campaignSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ error: "بيانات غير صالحة", details: result.error.errors });
+        return res
+          .status(400)
+          .json({ error: "بيانات غير صالحة", details: result.error.errors });
       }
-      
+
       const data = {
         ...result.data,
-        startDate: result.data.startDate ? new Date(result.data.startDate) : undefined,
-        endDate: result.data.endDate ? new Date(result.data.endDate) : undefined,
+        startDate: result.data.startDate
+          ? new Date(result.data.startDate)
+          : undefined,
+        endDate: result.data.endDate
+          ? new Date(result.data.endDate)
+          : undefined,
       };
-      
+
       const [campaign] = await db.insert(adCampaigns).values(data).returning();
       res.json(campaign);
     } catch (error: any) {
@@ -2206,15 +2602,22 @@ export async function registerRoutes(
   // Get campaign details with targeted users
   app.get("/api/campaigns/:campaignId", async (req, res) => {
     try {
-      const { getTargetedUsersForCampaign } = await import("./audience-segmentation");
-      
-      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      const { getTargetedUsersForCampaign } = await import(
+        "./audience-segmentation"
+      );
+
+      const [campaign] = await db
+        .select()
+        .from(adCampaigns)
+        .where(eq(adCampaigns.id, req.params.campaignId));
       if (!campaign) {
         return res.status(404).json({ error: "الحملة غير موجودة" });
       }
-      
-      const targetedUsers = await getTargetedUsersForCampaign(req.params.campaignId);
-      
+
+      const targetedUsers = await getTargetedUsersForCampaign(
+        req.params.campaignId,
+      );
+
       res.json({ campaign, targetedUsers, targetCount: targetedUsers.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2225,17 +2628,24 @@ export async function registerRoutes(
   app.patch("/api/campaigns/:campaignId/status", async (req, res) => {
     try {
       const { status } = req.body;
-      const validStatuses = ["draft", "scheduled", "active", "paused", "completed"];
-      
+      const validStatuses = [
+        "draft",
+        "scheduled",
+        "active",
+        "paused",
+        "completed",
+      ];
+
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: "حالة غير صالحة" });
       }
-      
-      const [updated] = await db.update(adCampaigns)
+
+      const [updated] = await db
+        .update(adCampaigns)
         .set({ status, updatedAt: new Date() })
         .where(eq(adCampaigns.id, req.params.campaignId))
         .returning();
-      
+
       res.json(updated);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2245,19 +2655,26 @@ export async function registerRoutes(
   // Send campaign (execute)
   app.post("/api/campaigns/:campaignId/send", async (req, res) => {
     try {
-      const { getTargetedUsersForCampaign } = await import("./audience-segmentation");
-      
-      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      const { getTargetedUsersForCampaign } = await import(
+        "./audience-segmentation"
+      );
+
+      const [campaign] = await db
+        .select()
+        .from(adCampaigns)
+        .where(eq(adCampaigns.id, req.params.campaignId));
       if (!campaign) {
         return res.status(404).json({ error: "الحملة غير موجودة" });
       }
-      
-      const targetedUsers = await getTargetedUsersForCampaign(req.params.campaignId);
+
+      const targetedUsers = await getTargetedUsersForCampaign(
+        req.params.campaignId,
+      );
       const channels = campaign.channels || ["whatsapp"];
-      
+
       let totalSent = 0;
       const errors: string[] = [];
-      
+
       for (const { userId, user, segmentMatch } of targetedUsers) {
         for (const channel of channels) {
           try {
@@ -2270,7 +2687,7 @@ export async function registerRoutes(
               messageContent: campaign.messageTemplate,
               status: "pending",
             });
-            
+
             // TODO: Integrate with actual notification service
             // For now, just mark as sent
             totalSent++;
@@ -2279,19 +2696,20 @@ export async function registerRoutes(
           }
         }
       }
-      
+
       // Update campaign metrics
-      await db.update(adCampaigns)
-        .set({ 
+      await db
+        .update(adCampaigns)
+        .set({
           status: "active",
           totalSent: campaign.totalSent + totalSent,
           updatedAt: new Date(),
         })
         .where(eq(adCampaigns.id, campaign.id));
-      
-      res.json({ 
-        success: true, 
-        totalSent, 
+
+      res.json({
+        success: true,
+        totalSent,
         targetCount: targetedUsers.length,
         errors: errors.length > 0 ? errors : undefined,
       });
@@ -2303,13 +2721,19 @@ export async function registerRoutes(
   // Get campaign analytics
   app.get("/api/campaigns/:campaignId/analytics", async (req, res) => {
     try {
-      const [campaign] = await db.select().from(adCampaigns).where(eq(adCampaigns.id, req.params.campaignId));
+      const [campaign] = await db
+        .select()
+        .from(adCampaigns)
+        .where(eq(adCampaigns.id, req.params.campaignId));
       if (!campaign) {
         return res.status(404).json({ error: "الحملة غير موجودة" });
       }
-      
-      const sends = await db.select().from(campaignSends).where(eq(campaignSends.campaignId, req.params.campaignId));
-      
+
+      const sends = await db
+        .select()
+        .from(campaignSends)
+        .where(eq(campaignSends.campaignId, req.params.campaignId));
+
       // Calculate channel breakdown
       const byChannel: Record<string, number> = {};
       const byStatus: Record<string, number> = {};
@@ -2317,21 +2741,37 @@ export async function registerRoutes(
         byChannel[send.channel] = (byChannel[send.channel] || 0) + 1;
         byStatus[send.status] = (byStatus[send.status] || 0) + 1;
       }
-      
+
       const analytics = {
         totalSent: campaign.totalSent,
         totalDelivered: campaign.totalDelivered,
         totalOpened: campaign.totalOpened,
         totalClicked: campaign.totalClicked,
         totalConverted: campaign.totalConverted,
-        deliveryRate: campaign.totalSent > 0 ? (campaign.totalDelivered / campaign.totalSent * 100).toFixed(1) : 0,
-        openRate: campaign.totalDelivered > 0 ? (campaign.totalOpened / campaign.totalDelivered * 100).toFixed(1) : 0,
-        clickRate: campaign.totalOpened > 0 ? (campaign.totalClicked / campaign.totalOpened * 100).toFixed(1) : 0,
-        conversionRate: campaign.totalClicked > 0 ? (campaign.totalConverted / campaign.totalClicked * 100).toFixed(1) : 0,
+        deliveryRate:
+          campaign.totalSent > 0
+            ? ((campaign.totalDelivered / campaign.totalSent) * 100).toFixed(1)
+            : 0,
+        openRate:
+          campaign.totalDelivered > 0
+            ? ((campaign.totalOpened / campaign.totalDelivered) * 100).toFixed(
+                1,
+              )
+            : 0,
+        clickRate:
+          campaign.totalOpened > 0
+            ? ((campaign.totalClicked / campaign.totalOpened) * 100).toFixed(1)
+            : 0,
+        conversionRate:
+          campaign.totalClicked > 0
+            ? ((campaign.totalConverted / campaign.totalClicked) * 100).toFixed(
+                1,
+              )
+            : 0,
         byChannel,
         byStatus,
       };
-      
+
       res.json(analytics);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2341,17 +2781,23 @@ export async function registerRoutes(
   // Get segment statistics summary
   app.get("/api/segments/stats/summary", async (req, res) => {
     try {
-      const segments = await db.select().from(audienceSegments).where(eq(audienceSegments.isActive, true));
-      const userSegmentCounts = await db.select({
-        segmentId: userSegments.segmentId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(userSegments)
-      .groupBy(userSegments.segmentId);
-      
-      const countMap = new Map(userSegmentCounts.map(u => [u.segmentId, u.count]));
-      
-      const summary = segments.map(segment => ({
+      const segments = await db
+        .select()
+        .from(audienceSegments)
+        .where(eq(audienceSegments.isActive, true));
+      const userSegmentCounts = await db
+        .select({
+          segmentId: userSegments.segmentId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(userSegments)
+        .groupBy(userSegments.segmentId);
+
+      const countMap = new Map(
+        userSegmentCounts.map((u) => [u.segmentId, u.count]),
+      );
+
+      const summary = segments.map((segment) => ({
         id: segment.id,
         name: segment.name,
         nameAr: segment.nameAr,
@@ -2359,9 +2805,12 @@ export async function registerRoutes(
         color: segment.color,
         userCount: countMap.get(segment.id) || 0,
       }));
-      
-      const totalUsers = Array.from(countMap.values()).reduce((a, b) => a + b, 0);
-      
+
+      const totalUsers = Array.from(countMap.values()).reduce(
+        (a, b) => a + b,
+        0,
+      );
+
       res.json({ segments: summary, totalSegmentedUsers: totalUsers });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2369,7 +2818,7 @@ export async function registerRoutes(
   });
 
   // ==================== BROKER SUBSCRIPTION & ADS SYSTEM ====================
-  
+
   // Helper to check broker authentication
   const requireBrokerAuth = (req: any, res: any, userId: string): boolean => {
     const sessionUser = req.session?.user;
@@ -2389,7 +2838,9 @@ export async function registerRoutes(
     try {
       if (!requireBrokerAuth(req, res, req.params.userId)) return;
       const { brokerAdsEngine } = await import("./broker-ads-engine");
-      const subscription = await brokerAdsEngine.getBrokerSubscription(req.params.userId);
+      const subscription = await brokerAdsEngine.getBrokerSubscription(
+        req.params.userId,
+      );
       res.json(subscription);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2401,7 +2852,9 @@ export async function registerRoutes(
     try {
       if (!requireBrokerAuth(req, res, req.params.userId)) return;
       const { brokerAdsEngine } = await import("./broker-ads-engine");
-      const stats = await brokerAdsEngine.getBrokerDashboardStats(req.params.userId);
+      const stats = await brokerAdsEngine.getBrokerDashboardStats(
+        req.params.userId,
+      );
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -2425,7 +2878,9 @@ export async function registerRoutes(
     try {
       const sessionUser = (req as any).session?.user;
       if (!sessionUser) {
-        return res.status(401).json({ error: "يجب تسجيل الدخول لإرسال طلب التواصل" });
+        return res
+          .status(401)
+          .json({ error: "يجب تسجيل الدخول لإرسال طلب التواصل" });
       }
       const { brokerAdsEngine } = await import("./broker-ads-engine");
       const lead = await brokerAdsEngine.createLead({
@@ -2443,7 +2898,8 @@ export async function registerRoutes(
     try {
       if (!requireBrokerAuth(req, res, req.params.sellerId)) return;
       const { propertyLeads } = await import("@shared/schema");
-      const leads = await db.select()
+      const leads = await db
+        .select()
         .from(propertyLeads)
         .where(eq(propertyLeads.sellerId, req.params.sellerId))
         .orderBy(desc(propertyLeads.createdAt));
@@ -2473,8 +2929,12 @@ export async function registerRoutes(
         offset: parseInt(req.query.offset as string) || 0,
         city: req.query.city as string,
         propertyType: req.query.propertyType as string,
-        minPrice: req.query.minPrice ? parseInt(req.query.minPrice as string) : undefined,
-        maxPrice: req.query.maxPrice ? parseInt(req.query.maxPrice as string) : undefined,
+        minPrice: req.query.minPrice
+          ? parseInt(req.query.minPrice as string)
+          : undefined,
+        maxPrice: req.query.maxPrice
+          ? parseInt(req.query.maxPrice as string)
+          : undefined,
         buyerId: req.query.buyerId as string,
       };
       const properties = await brokerAdsEngine.getRankedProperties(options);
@@ -2522,7 +2982,8 @@ export async function registerRoutes(
     try {
       if (!requireBrokerAuth(req, res, req.params.userId)) return;
       const { propertyBoosts } = await import("@shared/schema");
-      const boosts = await db.select()
+      const boosts = await db
+        .select()
         .from(propertyBoosts)
         .where(eq(propertyBoosts.userId, req.params.userId))
         .orderBy(desc(propertyBoosts.createdAt));
@@ -2539,15 +3000,20 @@ export async function registerRoutes(
   });
 
   // Recalculate property ranking score
-  app.post("/api/properties/:propertyId/recalculate-ranking", async (req, res) => {
-    try {
-      const { brokerAdsEngine } = await import("./broker-ads-engine");
-      const score = await brokerAdsEngine.calculatePropertyRankingScore(req.params.propertyId);
-      res.json({ score });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  app.post(
+    "/api/properties/:propertyId/recalculate-ranking",
+    async (req, res) => {
+      try {
+        const { brokerAdsEngine } = await import("./broker-ads-engine");
+        const score = await brokerAdsEngine.calculatePropertyRankingScore(
+          req.params.propertyId,
+        );
+        res.json({ score });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    },
+  );
 
   return httpServer;
 }

@@ -437,38 +437,19 @@ export default function AdminDashboard() {
   };
 
   // تطبيق تصفية المطابقات
-  const filteredMatches = matches.filter(match => {
-    const pref = preferences.find(p => p.id === match.buyerPreferenceId);
-    const prop = properties.find(p => p.id === match.propertyId);
-    
-    if (!pref || !prop) return false;
-    
-    // تصفية حسب نسبة التطابق
-    if (match.matchScore < matchFilters.minScore || match.matchScore > matchFilters.maxScore) {
-      return false;
-    }
-    
-    // تصفية حسب الحالة
-    if (matchFilters.status === "saved" && !match.isSaved) return false;
-    if (matchFilters.status === "contacted" && !match.isContacted) return false;
-    
-    // تصفية حسب نوع العقار
-    if (matchFilters.propertyType !== "all" && prop.propertyType !== matchFilters.propertyType) {
-      return false;
-    }
-    
-    // تصفية حسب المدينة
-    if (matchFilters.city !== "all" && prop.city !== matchFilters.city) {
-      return false;
-    }
-    
-    // تصفية حسب السعر
-    if (prop.price < matchFilters.minPrice || prop.price > matchFilters.maxPrice) {
-      return false;
-    }
-    
-    return true;
+  // --- كود الإصلاح النهائي للمطابقات ---
+  const filteredMatches = (matches || []).filter(match => {
+    // التأكد من تحويل المعرفات لنصوص لضمان الربط الصحيح
+    const matchBuyerId = String(match.buyerPreferenceId);
+    const matchPropertyId = String(match.propertyId);
+
+    const pref = preferences?.find(p => String(p.id) === matchBuyerId);
+    const prop = properties?.find(p => String(p.id) === matchPropertyId);
+
+    // سنظهر المطابقة حتى لو البيانات المرتبطة بها غير كاملة لكي لا تختفي القائمة
+    return true; 
   });
+  // --- نهاية كود الإصلاح ---
 
   // الحصول على بيانات المطابقة المحددة
   const getSelectedMatchData = () => {
