@@ -1,0 +1,464 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model ad_campaigns {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  name                  String
+  description           String?
+  target_segments       String[]         @default([])
+  target_cities         String[]         @default([])
+  target_property_types String[]         @default([])
+  min_purchasing_power  Int?
+  max_purchasing_power  Int?
+  message_template      String?
+  email_subject         String?
+  email_template        String?
+  channels              String[]         @default([])
+  start_date            DateTime?        @db.Timestamp(6)
+  end_date              DateTime?        @db.Timestamp(6)
+  frequency             String?          @default("once")
+  status                String           @default("draft")
+  total_sent            Int              @default(0)
+  total_delivered       Int              @default(0)
+  total_opened          Int              @default(0)
+  total_clicked         Int              @default(0)
+  total_converted       Int              @default(0)
+  created_by            String?          @db.VarChar
+  created_at            DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?        @default(now()) @db.Timestamp(6)
+  users                 users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ad_campaigns_created_by_users_id_fk")
+  campaign_sends        campaign_sends[]
+}
+
+model audience_segments {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  name                  String
+  name_ar               String
+  description           String?
+  purchasing_power_tier String
+  min_budget            Int?
+  max_budget            Int?
+  property_types        String[]         @default([])
+  transaction_types     String[]         @default([])
+  cities                String[]         @default([])
+  purposes              String[]         @default([])
+  engagement_level      String?
+  conversion_potential  String?
+  color                 String?          @default("#3B82F6")
+  priority              Int              @default(0)
+  is_active             Boolean          @default(true)
+  created_at            DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?        @default(now()) @db.Timestamp(6)
+  campaign_sends        campaign_sends[]
+  user_segments         user_segments[]
+}
+
+model broker_analytics {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id           String    @db.VarChar
+  date              DateTime  @db.Timestamp(6)
+  total_impressions Int       @default(0)
+  unique_viewers    Int       @default(0)
+  total_clicks      Int       @default(0)
+  total_saves       Int       @default(0)
+  total_shares      Int       @default(0)
+  new_leads         Int       @default(0)
+  qualified_leads   Int       @default(0)
+  converted_leads   Int       @default(0)
+  revenue_generated Int       @default(0)
+  active_listings   Int       @default(0)
+  featured_listings Int       @default(0)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  users             users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "broker_analytics_user_id_users_id_fk")
+}
+
+model broker_subscriptions {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id               String    @db.VarChar
+  plan                  String    @default("free")
+  start_date            DateTime? @default(now()) @db.Timestamp(6)
+  end_date              DateTime? @db.Timestamp(6)
+  properties_used       Int       @default(0)
+  leads_used_this_month Int       @default(0)
+  featured_used         Int       @default(0)
+  billing_cycle         String?   @default("monthly")
+  last_billing_date     DateTime? @db.Timestamp(6)
+  next_billing_date     DateTime? @db.Timestamp(6)
+  status                String    @default("active")
+  auto_renew            Boolean   @default(true)
+  created_at            DateTime? @default(now()) @db.Timestamp(6)
+  updated_at            DateTime? @default(now()) @db.Timestamp(6)
+  users                 users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "broker_subscriptions_user_id_users_id_fk")
+}
+
+model buyer_preferences {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id           String?     @db.VarChar
+  city              String
+  districts         String[]    @default([])
+  property_type     String
+  rooms             String?
+  area              String?
+  budget_min        Int?
+  budget_max        Int?
+  payment_method    String?
+  purpose           String?
+  is_active         Boolean     @default(true)
+  transaction_type  String      @default("buy")
+  purchase_timeline String?
+  client_type       String      @default("direct")
+  users             users?      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "buyer_preferences_user_id_users_id_fk")
+  matches           matches[]
+  send_logs         send_logs[]
+}
+
+model campaign_sends {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  campaign_id       String?            @db.VarChar
+  user_id           String?            @db.VarChar
+  segment_id        String?            @db.VarChar
+  channel           String
+  message_content   String?
+  status            String             @default("pending")
+  sent_at           DateTime?          @db.Timestamp(6)
+  delivered_at      DateTime?          @db.Timestamp(6)
+  opened_at         DateTime?          @db.Timestamp(6)
+  clicked_at        DateTime?          @db.Timestamp(6)
+  converted_at      DateTime?          @db.Timestamp(6)
+  error_message     String?
+  retry_count       Int                @default(0)
+  created_at        DateTime?          @default(now()) @db.Timestamp(6)
+  ad_campaigns      ad_campaigns?      @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "campaign_sends_campaign_id_ad_campaigns_id_fk")
+  audience_segments audience_segments? @relation(fields: [segment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "campaign_sends_segment_id_audience_segments_id_fk")
+  users             users?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "campaign_sends_user_id_users_id_fk")
+}
+
+model contact_requests {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  match_id    String?     @db.VarChar
+  buyer_id    String?     @db.VarChar
+  property_id String?     @db.VarChar
+  message     String?
+  status      String      @default("pending")
+  users       users?      @relation(fields: [buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "contact_requests_buyer_id_users_id_fk")
+  matches     matches?    @relation(fields: [match_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "contact_requests_match_id_matches_id_fk")
+  properties  properties? @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "contact_requests_property_id_properties_id_fk")
+}
+
+model conversations {
+  id                                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  buyer_id                             String     @db.VarChar
+  seller_id                            String     @db.VarChar
+  property_id                          String     @db.VarChar
+  last_message_at                      DateTime?  @default(now()) @db.Timestamp(6)
+  buyer_unread_count                   Int        @default(0)
+  seller_unread_count                  Int        @default(0)
+  is_active                            Boolean    @default(true)
+  created_at                           DateTime?  @default(now()) @db.Timestamp(6)
+  users_conversations_buyer_idTousers  users      @relation("conversations_buyer_idTousers", fields: [buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "conversations_buyer_id_users_id_fk")
+  properties                           properties @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "conversations_property_id_properties_id_fk")
+  users_conversations_seller_idTousers users      @relation("conversations_seller_idTousers", fields: [seller_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "conversations_seller_id_users_id_fk")
+  messages                             messages[]
+}
+
+model marketing_events {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  platform   String
+  event_name String
+  event_data Json?
+  user_id    String?   @db.VarChar
+  session_id String?
+  status     String    @default("sent")
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "marketing_events_user_id_users_id_fk")
+}
+
+model marketing_settings {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  platform             String    @unique(map: "marketing_settings_platform_unique")
+  is_enabled           Boolean   @default(false)
+  pixel_id             String?
+  access_token         String?
+  api_key              String?
+  audience_id          String?
+  conversion_api_token String?
+  test_event_code      String?
+  data_center          String?
+  updated_at           DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model matches {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  buyer_preference_id String?            @db.VarChar
+  property_id         String?            @db.VarChar
+  match_score         Int                @default(0)
+  is_saved            Boolean            @default(false)
+  is_contacted        Boolean            @default(false)
+  contact_requests    contact_requests[]
+  buyer_preferences   buyer_preferences? @relation(fields: [buyer_preference_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "matches_buyer_preference_id_buyer_preferences_id_fk")
+  properties          properties?        @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "matches_property_id_properties_id_fk")
+}
+
+model messages {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  conversation_id String        @db.VarChar
+  sender_id       String        @db.VarChar
+  content         String
+  message_type    String        @default("text")
+  attachments     String[]      @default([])
+  is_read         Boolean       @default(false)
+  sent_at         DateTime?     @default(now()) @db.Timestamp(6)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "messages_conversation_id_conversations_id_fk")
+  users           users         @relation(fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "messages_sender_id_users_id_fk")
+}
+
+model ml_model_metrics {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  model_version String
+  metric_type   String
+  metric_value  Float
+  sample_size   Int
+  calculated_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model properties {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  seller_id               String?                  @db.VarChar
+  property_type           String
+  city                    String
+  district                String
+  price                   Int
+  area                    String?
+  rooms                   String?
+  description             String?
+  status                  String                   @default("ready")
+  images                  String[]                 @default([])
+  is_active               Boolean                  @default(true)
+  views_count             Int                      @default(0)
+  latitude                Float?
+  longitude               Float?
+  bathrooms               String?
+  furnishing              String?                  @default("unfurnished")
+  year_built              String?
+  amenities               String[]                 @default([])
+  created_at              DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                @default(now()) @db.Timestamp(6)
+  contact_requests        contact_requests[]
+  conversations           conversations[]
+  matches                 matches[]
+  users                   users?                   @relation(fields: [seller_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "properties_seller_id_users_id_fk")
+  property_boosts         property_boosts[]
+  property_impressions    property_impressions[]
+  property_leads          property_leads[]
+  property_ranking_scores property_ranking_scores?
+  user_interactions       user_interactions[]
+}
+
+model property_boosts {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  property_id       String     @db.VarChar
+  user_id           String     @db.VarChar
+  boost_type        String     @default("featured")
+  start_date        DateTime?  @default(now()) @db.Timestamp(6)
+  end_date          DateTime   @db.Timestamp(6)
+  price             Int
+  target_cities     String[]   @default([])
+  target_budget_min Int?
+  target_budget_max Int?
+  impressions       Int        @default(0)
+  clicks            Int        @default(0)
+  leads             Int        @default(0)
+  status            String     @default("active")
+  payment_status    String     @default("pending")
+  payment_id        String?
+  created_at        DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?  @default(now()) @db.Timestamp(6)
+  properties        properties @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_boosts_property_id_properties_id_fk")
+  users             users      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_boosts_user_id_users_id_fk")
+}
+
+model property_impressions {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  property_id  String     @db.VarChar
+  viewer_id    String?    @db.VarChar
+  view_type    String     @default("list")
+  duration     Int?
+  source       String?    @default("organic")
+  referrer     String?
+  device_type  String?
+  action_taken String?
+  created_at   DateTime?  @default(now()) @db.Timestamp(6)
+  properties   properties @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_impressions_property_id_properties_id_fk")
+  users        users?     @relation(fields: [viewer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_impressions_viewer_id_users_id_fk")
+}
+
+model property_leads {
+  id                                    String     @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  property_id                           String     @db.VarChar
+  buyer_id                              String     @db.VarChar
+  seller_id                             String     @db.VarChar
+  source                                String     @default("view")
+  quality_score                         Int        @default(50)
+  status                                String     @default("new")
+  buyer_message                         String?
+  buyer_phone                           String?
+  buyer_email                           String?
+  last_contact_at                       DateTime?  @db.Timestamp(6)
+  next_follow_up_at                     DateTime?  @db.Timestamp(6)
+  notes                                 String?
+  converted_at                          DateTime?  @db.Timestamp(6)
+  conversion_value                      Int?
+  created_at                            DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at                            DateTime?  @default(now()) @db.Timestamp(6)
+  users_property_leads_buyer_idTousers  users      @relation("property_leads_buyer_idTousers", fields: [buyer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_leads_buyer_id_users_id_fk")
+  properties                            properties @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_leads_property_id_properties_id_fk")
+  users_property_leads_seller_idTousers users      @relation("property_leads_seller_idTousers", fields: [seller_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_leads_seller_id_users_id_fk")
+}
+
+model property_ranking_scores {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  property_id        String     @unique(map: "property_ranking_scores_property_id_unique") @db.VarChar
+  subscription_score Float      @default(0) @db.Real
+  quality_score      Float      @default(0) @db.Real
+  engagement_score   Float      @default(0) @db.Real
+  recency_score      Float      @default(0) @db.Real
+  verification_score Float      @default(0) @db.Real
+  boost_multiplier   Float      @default(1) @db.Real
+  featured_bonus     Float      @default(0) @db.Real
+  total_score        Float      @default(0) @db.Real
+  last_calculated_at DateTime?  @default(now()) @db.Timestamp(6)
+  created_at         DateTime?  @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?  @default(now()) @db.Timestamp(6)
+  properties         properties @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "property_ranking_scores_property_id_properties_id_fk")
+}
+
+model send_logs {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  preference_id     String?            @db.VarChar
+  user_id           String?            @db.VarChar
+  property_ids      String[]           @default([])
+  message_type      String             @default("matches")
+  status            String             @default("pending")
+  sent_at           DateTime?          @default(now()) @db.Timestamp(6)
+  whatsapp_response String?
+  buyer_preferences buyer_preferences? @relation(fields: [preference_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "send_logs_preference_id_buyer_preferences_id_fk")
+  users             users?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "send_logs_user_id_users_id_fk")
+}
+
+model static_pages {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  slug         String    @unique(map: "static_pages_slug_unique")
+  title_ar     String
+  content_ar   String
+  is_published Boolean   @default(true)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model user_interactions {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id             String?     @db.VarChar
+  session_id          String?
+  property_id         String?     @db.VarChar
+  interaction_type    String
+  duration            Int?
+  property_city       String?
+  property_district   String?
+  property_type       String?
+  property_price      Int?
+  property_area       Int?
+  user_budget_max     Int?
+  user_preferred_city String?
+  user_preferred_type String?
+  device_type         String?
+  created_at          DateTime?   @default(now()) @db.Timestamp(6)
+  properties          properties? @relation(fields: [property_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_interactions_property_id_properties_id_fk")
+  users               users?      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_interactions_user_id_users_id_fk")
+}
+
+model user_preference_weights {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id                  String?   @db.VarChar
+  session_id               String?
+  location_weight          Float     @default(1)
+  price_weight             Float     @default(1)
+  area_weight              Float     @default(1)
+  property_type_weight     Float     @default(1)
+  age_weight               Float     @default(1)
+  amenities_weight         Float     @default(1)
+  preferred_districts      String[]  @default([])
+  preferred_property_types String[]  @default([])
+  price_range_min          Int?
+  price_range_max          Int?
+  area_range_min           Int?
+  area_range_max           Int?
+  total_interactions       Int       @default(0)
+  last_learning_update     DateTime? @default(now()) @db.Timestamp(6)
+  confidence_score         Float     @default(0)
+  updated_at               DateTime? @default(now()) @db.Timestamp(6)
+  users                    users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_preference_weights_user_id_users_id_fk")
+}
+
+model user_segments {
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  user_id                String?            @db.VarChar
+  segment_id             String?            @db.VarChar
+  match_score            Int                @default(0)
+  purchasing_power_score Int                @default(0)
+  engagement_score       Int                @default(0)
+  intent_score           Int                @default(0)
+  classified_at          DateTime?          @default(now()) @db.Timestamp(6)
+  last_updated           DateTime?          @default(now()) @db.Timestamp(6)
+  classification_reason  String?
+  is_auto_classified     Boolean            @default(true)
+  audience_segments      audience_segments? @relation(fields: [segment_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_segments_segment_id_audience_segments_id_fk")
+  users                  users?             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_segments_user_id_users_id_fk")
+}
+
+model users {
+  id                                             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar
+  email                                          String                    @unique(map: "users_email_unique")
+  phone                                          String
+  name                                           String
+  role                                           String                    @default("buyer")
+  account_type                                   String?
+  entity_name                                    String?
+  is_verified                                    Boolean?                  @default(false)
+  verification_status                            String?                   @default("pending")
+  fal_license_number                             String?
+  ad_license_number                              String?
+  license_issue_date                             String?
+  license_expiry_date                            String?
+  commercial_reg_number                          String?
+  national_id                                    String?
+  city                                           String?
+  office_address                                 String?
+  whatsapp_number                                String?
+  website_url                                    String?
+  password_hash                                  String?
+  requires_password_reset                        Boolean?                  @default(true)
+  created_at                                     DateTime?                 @default(now()) @db.Timestamp(6)
+  ad_campaigns                                   ad_campaigns[]
+  broker_analytics                               broker_analytics[]
+  broker_subscriptions                           broker_subscriptions[]
+  buyer_preferences                              buyer_preferences[]
+  campaign_sends                                 campaign_sends[]
+  contact_requests                               contact_requests[]
+  conversations_conversations_buyer_idTousers    conversations[]           @relation("conversations_buyer_idTousers")
+  conversations_conversations_seller_idTousers   conversations[]           @relation("conversations_seller_idTousers")
+  marketing_events                               marketing_events[]
+  messages                                       messages[]
+  properties                                     properties[]
+  property_boosts                                property_boosts[]
+  property_impressions                           property_impressions[]
+  property_leads_property_leads_buyer_idTousers  property_leads[]          @relation("property_leads_buyer_idTousers")
+  property_leads_property_leads_seller_idTousers property_leads[]          @relation("property_leads_seller_idTousers")
+  send_logs                                      send_logs[]
+  user_interactions                              user_interactions[]
+  user_preference_weights                        user_preference_weights[]
+  user_segments                                  user_segments[]
+}
