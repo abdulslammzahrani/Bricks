@@ -1823,11 +1823,9 @@ export async function registerRoutes(
         req.body;
 
       if (!conversationId || !senderId || !content) {
-        return res
-          .status(400)
-          .json({
-            error: "conversationId, senderId, and content are required",
-          });
+        return res.status(400).json({
+          error: "conversationId, senderId, and content are required",
+        });
       }
 
       const message = await storage.createMessage({
