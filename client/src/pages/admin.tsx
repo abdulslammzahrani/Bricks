@@ -2833,7 +2833,8 @@ export default function AdminDashboard() {
                               }
                               
                               const bestMatchStatus = (bestMatch as any).status || "new";
-                              const bestBuyerVerified = (bestMatch as any).buyerVerified || false;
+                              // التأكيد يكون نشطاً إذا كانت جميع المطابقات لديها buyerVerified = true
+                              const bestBuyerVerified = sortedMatches.every(m => (m as any).buyerVerified === true);
                               
                               const getScoreColor = (score: number) => {
                                 // تدرج الألوان: أحمر → برتقالي → أخضر
