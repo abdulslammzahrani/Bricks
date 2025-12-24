@@ -137,5 +137,8 @@
   "bugs": {
     "url": "https://github.com/abdulslammzahrani/Bricks/issues"
   },
-  "homepage": "https://github.com/abdulslammzahrani/Bricks#readme"
+  "homepage": "https://github.com/abdulslammzahrani/Bricks#readme",
+  "tsx": {
+    "tsconfig": "tsconfig.json"
+  }
 }
