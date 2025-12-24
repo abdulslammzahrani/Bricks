@@ -985,6 +985,7 @@ export default function AdminDashboard() {
       return apiRequest("DELETE", `/api/admin/properties/${propertyId}`);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/properties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
