@@ -589,18 +589,29 @@ export default function AdminDashboard() {
   // --- كود الإصلاح النهائي للمطابقات ---
   // تحسين فلترة وترتيب المطابقات
   const filteredMatches = useMemo(() => {
+    // إذا لم تكن البيانات محملة بعد، نعرض جميع المطابقات
+    if (preferences.length === 0 || properties.length === 0 || users.length === 0) {
+      console.log("⚠️ Data not fully loaded yet, showing all matches");
+      return matches || [];
+    }
+
     let filtered = (matches || []).filter(match => {
       // فلترة حسب النقاط - تحويل النقاط إلى نسبة مئوية للفلترة
       const matchPercentage = Math.round((match.matchScore / 105) * 100);
-      if (matchPercentage < matchFilters.minScore || matchPercentage > matchFilters.maxScore) return false;
+      if (matchPercentage < matchFilters.minScore || matchPercentage > matchFilters.maxScore) {
+        return false;
+      }
 
       // فلترة حسب الحالة
       if (matchFilters.status !== "all") {
-        if (matchFilters.status === "saved" && !match.isSaved) return false;
-        else if (matchFilters.status !== "saved") {
+        if (matchFilters.status === "saved" && !match.isSaved) {
+          return false;
+        } else if (matchFilters.status !== "saved") {
           // استخدام status الجديد من قاعدة البيانات
           const matchStatus = (match as any).status || "new";
-          if (matchFilters.status !== matchStatus) return false;
+          if (matchFilters.status !== matchStatus) {
+            return false;
+          }
         }
       }
 
@@ -611,19 +622,41 @@ export default function AdminDashboard() {
       // إذا لم يكن هناك pref أو prop، نعرض المطابقة فقط إذا لم تكن هناك فلاتر نشطة
       if (!pref || !prop) {
         // إذا كانت هناك فلاتر نشطة (غير الافتراضية)، نخفي المطابقة
-        if (matchFilters.propertyType !== "all" || matchFilters.city !== "all" || matchFilters.minPrice > 0 || matchFilters.maxPrice < 10000000) {
+        const hasActiveFilters = 
+          matchFilters.propertyType !== "all" || 
+          matchFilters.city !== "all" || 
+          matchFilters.minPrice > 0 || 
+          matchFilters.maxPrice < 10000000;
+        
+        if (hasActiveFilters) {
           return false;
         }
         return true; // نعرض المطابقة إذا لم تكن هناك فلاتر نشطة
       }
 
-      if (matchFilters.propertyType !== "all" && prop.propertyType !== matchFilters.propertyType) return false;
-      if (matchFilters.city !== "all" && prop.city !== matchFilters.city) return false;
-      if (prop.price < matchFilters.minPrice || prop.price > matchFilters.maxPrice) return false;
+      // فلترة حسب نوع العقار
+      if (matchFilters.propertyType !== "all" && prop.propertyType !== matchFilters.propertyType) {
+        return false;
+      }
+
+      // فلترة حسب المدينة
+      if (matchFilters.city !== "all" && prop.city !== matchFilters.city) {
+        return false;
+      }
+
+      // فلترة حسب السعر - التأكد من أن السعر موجود وصالح
+      if (prop.price != null && typeof prop.price === 'number') {
+        if (prop.price < matchFilters.minPrice || prop.price > matchFilters.maxPrice) {
+          return false;
+        }
+      } else if (matchFilters.minPrice > 0 || matchFilters.maxPrice < 10000000) {
+        // إذا كان السعر غير موجود وكانت هناك فلاتر سعر نشطة، نخفي المطابقة
+        return false;
+      }
 
       // البحث النصي
-      if (matchSearchQuery) {
-        const query = matchSearchQuery.toLowerCase();
+      if (matchSearchQuery && matchSearchQuery.trim()) {
+        const query = matchSearchQuery.toLowerCase().trim();
         const buyer = users.find(u => u.id === pref.userId);
         const seller = users.find(u => u.id === prop.sellerId);
         const searchText = [
@@ -637,7 +670,9 @@ export default function AdminDashboard() {
           pref.districts?.join(" "),
         ].filter(Boolean).join(" ").toLowerCase();
         
-        if (!searchText.includes(query)) return false;
+        if (!searchText.includes(query)) {
+          return false;
+        }
       }
 
       return true;
@@ -666,7 +701,18 @@ export default function AdminDashboard() {
     console.log("🔍 Filtered matches result:", {
       filteredCount: filtered.length,
       totalMatches: matches.length,
+      preferencesCount: preferences.length,
+      propertiesCount: properties.length,
+      usersCount: users.length,
+      filters: matchFilters,
+      searchQuery: matchSearchQuery,
+      hasActiveFilters: matchFilters.propertyType !== "all" || matchFilters.city !== "all" || matchFilters.minPrice > 0 || matchFilters.maxPrice < 10000000 || matchFilters.status !== "all" || matchFilters.minScore > 0 || matchFilters.maxScore < 100,
     });
+    
+    // إذا كانت النتيجة فارغة رغم وجود مطابقات، نعرض تحذير
+    if (filtered.length === 0 && matches.length > 0) {
+      console.warn("⚠️ No matches after filtering. Check filters:", matchFilters);
+    }
     
     return filtered;
   }, [matches, preferences, properties, users, matchFilters, matchSearchQuery, matchSortBy]);
@@ -2369,6 +2415,36 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
+                  {!matchesLoading && !matchesError && matches.length > 0 && filteredMatches.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="font-semibold text-yellow-800 mb-2">لا توجد نتائج تطابق الفلاتر المحددة</p>
+                      <p className="text-sm text-yellow-700">
+                        يوجد {matches.length} مطابقة في قاعدة البيانات، لكن الفلاتر المحددة لا تطابق أي منها.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => {
+                          setMatchFilters({
+                            minScore: 0,
+                            maxScore: 100,
+                            status: "all",
+                            propertyType: "all",
+                            city: "all",
+                            minPrice: 0,
+                            maxPrice: 10000000,
+                          });
+                          setMatchSearchQuery("");
+                          setMatchSortBy("score");
+                          console.log("✅ Filters reset to defaults");
+                        }}
+                      >
+                        إعادة تعيين الفلاتر
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Table View */}
                   {filteredMatches.length > 0 ? (
                     matchViewMode === "list" ? (
@@ -2498,6 +2574,13 @@ export default function AdminDashboard() {
                           </TableHeader>
                           <TableBody>
                             {(() => {
+                              console.log("🔍 Processing matches for table:", {
+                                filteredMatchesCount: filteredMatches.length,
+                                preferencesCount: preferences.length,
+                                propertiesCount: properties.length,
+                                usersCount: users.length,
+                              });
+
                               // إزالة التكرارات بناءً على buyerPreferenceId + propertyId
                               const seenMatches = new Map<string, Match>();
                               const uniqueMatches = filteredMatches.filter(match => {
@@ -2509,6 +2592,8 @@ export default function AdminDashboard() {
                                 return true;
                               });
 
+                              console.log("🔍 Unique matches after deduplication:", uniqueMatches.length);
+
                               // تجميع المطابقات حسب buyerPreferenceId
                               const groupedByBuyer = new Map<string, Match[]>();
                               uniqueMatches.forEach(match => {
@@ -2519,8 +2604,12 @@ export default function AdminDashboard() {
                                 groupedByBuyer.get(key)!.push(match);
                               });
 
+                              console.log("🔍 Grouped by buyer:", groupedByBuyer.size);
+
                               // تحويل المجموعات إلى مصفوفة للعرض
-                              return Array.from(groupedByBuyer.entries());
+                              const groups = Array.from(groupedByBuyer.entries());
+                              console.log("🔍 Groups to display:", groups.length);
+                              return groups;
                             })().map(([buyerPreferenceId, buyerMatches]) => {
                               // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
                               const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
@@ -2528,13 +2617,22 @@ export default function AdminDashboard() {
                               const matchCount = sortedMatches.length;
 
                               const pref = preferences.find(p => p.id === buyerPreferenceId);
-                              if (!pref) return null;
+                              if (!pref) {
+                                console.warn("Preference not found for buyerPreferenceId:", buyerPreferenceId);
+                                return null;
+                              }
                               const buyer = users.find(u => u.id === pref.userId);
-                              if (!buyer) return null;
+                              if (!buyer) {
+                                console.warn("Buyer not found for userId:", pref.userId);
+                                return null;
+                              }
 
                               // أفضل مطابقة
                               const bestProp = properties.find(p => p.id === bestMatch.propertyId);
-                              if (!bestProp) return null;
+                              if (!bestProp) {
+                                console.warn("Property not found for propertyId:", bestMatch.propertyId);
+                                return null;
+                              }
                               
                               const bestMatchStatus = (bestMatch as any).status || "new";
                               const bestBuyerVerified = (bestMatch as any).buyerVerified || false;
