@@ -184,12 +184,26 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     try {
+      // حذف send_logs المرتبطة بالمستخدم
+      try {
+        await db.delete(sendLogs).where(eq(sendLogs.userId, id));
+      } catch (e) {
+        console.warn("Error deleting send logs:", e);
+      }
+      
       // حذف طلبات الاتصال المرتبطة
       await db.delete(contactRequests).where(eq(contactRequests.buyerId, id));
       
       // حذف المطابقات المرتبطة بالرغبات
       const userPreferences = await db.select().from(buyerPreferences).where(eq(buyerPreferences.userId, id));
       for (const pref of userPreferences) {
+        // حذف send_logs المرتبطة بالرغبة
+        try {
+          await db.delete(sendLogs).where(eq(sendLogs.preferenceId, pref.id));
+        } catch (e) {
+          console.warn("Error deleting send logs:", e);
+        }
+        
         // حذف طلبات الاتصال المرتبطة بالمطابقات
         const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, pref.id));
         for (const match of prefMatches) {
