@@ -71,19 +71,19 @@ export async function registerRoutes(
   app.post("/api/sellers/register", async (req, res) => {
     try {
       const data = req.body;
+      let isNewUser = false;
       // نستخدم الـ Storage الأصلي الموجود في ملفك
       let user = await storage.getUserByPhone(data.phone);
       if (!user) {
         const passwordHash = await bcrypt.hash("password123", 10);
         user = await storage.createUser({
-          username: data.phone,
-          password: passwordHash,
           name: data.name || "بائع جديد",
-          phone: data.phone,
-          email: data.email || `${data.phone}@temp.com`,
+          phone: data.phone.trim(),
+          email: data.email || `${data.phone.trim()}@temp.com`,
           role: "seller",
           passwordHash,
         });
+        isNewUser = true;
       }
 
       const property = await storage.createProperty({
@@ -92,17 +92,29 @@ export async function registerRoutes(
         city: data.city || "الرياض",
         district: data.district || "غير محدد",
         price: Number(data.price) || 0,
-        area: Number(data.area) || 0,
-        rooms: Number(data.rooms) || 0,
-        status: "active",
+        area: data.area ? String(data.area) : null,
+        rooms: data.rooms ? String(data.rooms) : null,
+        bathrooms: data.bathrooms ? String(data.bathrooms) : null,
+        description: data.description || null,
+        status: data.status || "ready",
         isActive: true,
-        images: [],
+        images: Array.isArray(data.images) ? data.images : [],
       });
+
+      // البحث عن المطابقات للعقار الجديد
+      await storage.findMatchesForProperty(property.id);
 
       req.session.userId = user.id;
       req.session.save();
-      return res.status(201).json({ success: true, user, property });
+      return res.status(201).json({ 
+        success: true, 
+        user, 
+        property,
+        isNewUser,
+        phone: data.phone.trim(),
+      });
     } catch (error: any) {
+      console.error("Error registering seller:", error);
       return res.status(500).json({ error: error.message });
     }
   });
@@ -111,34 +123,59 @@ export async function registerRoutes(
   app.post("/api/buyers/register", async (req, res) => {
     try {
       const data = req.body;
+      let isNewUser = false;
       let user = await storage.getUserByPhone(data.phone);
       if (!user) {
         const passwordHash = await bcrypt.hash("password123", 10);
         user = await storage.createUser({
-          username: data.phone,
-          password: passwordHash,
           name: data.name || "مشتري جديد",
-          phone: data.phone,
-          email: data.email || `${data.phone}@temp.com`,
+          phone: data.phone.trim(),
+          email: data.email || `${data.phone.trim()}@temp.com`,
           role: "buyer",
           passwordHash,
         });
+        isNewUser = true;
       }
+
+      // Parse budget values safely
+      const parsedBudgetMin = data.budgetMin
+        ? parseInt(String(data.budgetMin), 10)
+        : null;
+      const parsedBudgetMax = data.budgetMax
+        ? parseInt(String(data.budgetMax), 10)
+        : null;
 
       const preference = await storage.createBuyerPreference({
         userId: user.id,
         city: data.city || "الرياض",
         districts: Array.isArray(data.districts) ? data.districts : [],
         propertyType: data.propertyType || "apartment",
-        budgetMin: Number(data.budgetMin) || 0,
-        budgetMax: Number(data.budgetMax) || 10000000,
+        rooms: data.rooms || null,
+        area: data.area || null,
+        budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
+        budgetMax: isNaN(parsedBudgetMax!) ? null : parsedBudgetMax,
+        paymentMethod: data.paymentMethod || null,
+        purpose: data.purpose || null,
+        purchaseTimeline: data.purchaseTimeline || null,
+        transactionType: data.transactionType || "buy",
+        clientType: data.clientType || "direct",
         isActive: true,
       });
 
+      // البحث عن المطابقات للرغبة الجديدة
+      await storage.findMatchesForPreference(preference.id);
+
       req.session.userId = user.id;
       req.session.save();
-      return res.status(201).json({ success: true, user, preference });
+      return res.status(201).json({ 
+        success: true, 
+        user, 
+        preference,
+        isNewUser,
+        phone: data.phone.trim(),
+      });
     } catch (error: any) {
+      console.error("Error registering buyer:", error);
       return res.status(500).json({ error: error.message });
     }
   });
@@ -1372,9 +1409,47 @@ export async function registerRoutes(
   // Update property
   app.patch("/api/properties/:id", async (req, res) => {
     try {
-      const property = await storage.updateProperty(req.params.id, req.body);
+      const { id } = req.params;
+      const updateData = { ...req.body };
+      
+      // Check if property exists
+      const existingProperty = await storage.getProperty(id);
+      if (!existingProperty) {
+        return res.status(404).json({ error: "العقار غير موجود" });
+      }
+
+      // Check ownership (if user is logged in)
+      if (req.session.userId) {
+        if (existingProperty.sellerId !== req.session.userId) {
+          return res.status(403).json({ error: "ليس لديك صلاحية لتعديل هذا العقار" });
+        }
+      }
+
+      // Remove internal flag if present
+      const shouldRecalculateMatches = updateData._recalculateMatches;
+      delete updateData._recalculateMatches;
+
+      // Determine which fields affect matching
+      const matchingFields = ["city", "district", "price", "propertyType", "rooms", "area", "status", "amenities"];
+      const updatedFields = Object.keys(updateData);
+      const affectsMatching = shouldRecalculateMatches || updatedFields.some(field => matchingFields.includes(field));
+
+      // Update property
+      const property = await storage.updateProperty(id, updateData);
+      
+      // Recalculate matches if matching fields were updated
+      if (affectsMatching && property) {
+        try {
+          await storage.findMatchesForProperty(id);
+        } catch (matchError) {
+          console.error("Error recalculating matches:", matchError);
+          // Don't fail the update if match recalculation fails
+        }
+      }
+
       res.json(property);
     } catch (error: any) {
+      console.error("Error updating property:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1651,12 +1726,60 @@ export async function registerRoutes(
     }
   });
 
+  // Update user
+  app.patch("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.updateUser(id, req.body);
+      if (!user) {
+        return res.status(404).json({ error: "المستخدم غير موجود" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all buyer preferences
   app.get("/api/admin/preferences", async (req, res) => {
     try {
       const preferences = await storage.getAllBuyerPreferences();
       res.json(preferences);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update buyer preference
+  app.patch("/api/admin/preferences/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const preference = await storage.updateBuyerPreference(id, req.body);
+      if (!preference) {
+        return res.status(404).json({ error: "الرغبة غير موجودة" });
+      }
+      res.json(preference);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/properties/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedProperty = await storage.updateProperty(id, req.body);
+      if (!updatedProperty) {
+        return res.status(404).json({ error: "العقار غير موجود" });
+      }
+      // Recalculate matches if relevant fields changed
+      const matchAffectingFields = ["city", "district", "price", "propertyType", "rooms", "area", "status", "amenities"];
+      const shouldRecalculateMatches = matchAffectingFields.some(field => req.body.hasOwnProperty(field));
+      if (shouldRecalculateMatches) {
+        await storage.findMatchesForProperty(id);
+      }
+      res.json(updatedProperty);
+    } catch (error: any) {
+      console.error("Error updating property:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1692,6 +1815,66 @@ export async function registerRoutes(
     }
   });
 
+  // Market Analytics: Supply & Demand Index
+  app.get("/api/admin/analytics/supply-demand", async (req, res) => {
+    try {
+      const city = req.query.city as string | undefined;
+      const data = await storage.getSupplyDemandIndex(city);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Market Analytics: Price per Square Meter
+  app.get("/api/admin/analytics/price-per-sqm", async (req, res) => {
+    try {
+      const city = req.query.city as string | undefined;
+      const district = req.query.district as string | undefined;
+      const propertyType = req.query.propertyType as string | undefined;
+      const data = await storage.getPricePerSquareMeter(city, district, propertyType);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Market Analytics: District Popularity Score
+  app.get("/api/admin/analytics/district-popularity", async (req, res) => {
+    try {
+      const city = req.query.city as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const data = await storage.getDistrictPopularityScore(city, limit);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Market Analytics: Market Quality Index
+  app.get("/api/admin/analytics/market-quality", async (req, res) => {
+    try {
+      const city = req.query.city as string | undefined;
+      const data = await storage.getMarketQualityIndex(city);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Market Analytics: Price Trends
+  app.get("/api/admin/analytics/price-trends", async (req, res) => {
+    try {
+      const city = req.query.city as string | undefined;
+      const propertyType = req.query.propertyType as string | undefined;
+      const months = req.query.months ? parseInt(req.query.months as string, 10) : 6;
+      const data = await storage.getPriceTrends(city, propertyType, months);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Dashboard stats
   app.get("/api/admin/stats", async (req, res) => {
     try {
@@ -1720,6 +1903,153 @@ export async function registerRoutes(
     try {
       const matches = await storage.getAllMatches();
       res.json(matches);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update match status
+  app.patch("/api/admin/matches/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      const validStatuses = ["new", "contacted", "confirmed", "viewing", "agreed", "vacated"];
+      
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "حالة غير صالحة" });
+      }
+
+      const updated = await storage.updateMatchStatus(req.params.id, status);
+      if (!updated) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update match verification flags
+  app.patch("/api/admin/matches/:id/verify", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { verificationType, verified } = req.body;
+      
+      const validTypes = ["property", "buyer", "specs", "financial"];
+      if (!validTypes.includes(verificationType)) {
+        return res.status(400).json({ error: "نوع التأكيد غير صالح" });
+      }
+
+      if (typeof verified !== "boolean") {
+        return res.status(400).json({ error: "قيمة verified يجب أن تكون boolean" });
+      }
+
+      const updated = await storage.updateMatchVerification(id, verificationType, verified);
+      if (!updated) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating match verification:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/matches/:id/detailed-verifications", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { detailedVerifications } = req.body;
+
+      if (!detailedVerifications || typeof detailedVerifications !== "object") {
+        return res.status(400).json({ error: "التأكيدات التفصيلية غير صالحة" });
+      }
+
+      const updated = await storage.updateMatchDetailedVerifications(id, detailedVerifications);
+      if (!updated) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating detailed verifications:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Log call attempt for a match
+  app.post("/api/admin/matches/:id/log-call", async (req, res) => {
+    try {
+      const match = await storage.getMatch(req.params.id);
+      if (!match) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      // Update match status to contacted if not already
+      if (match.status === "new") {
+        await storage.updateMatchStatus(req.params.id, "contacted");
+      }
+
+      // Also update isContacted flag
+      await storage.updateMatch(req.params.id, { isContacted: true });
+
+      res.json({ success: true, message: "تم تسجيل محاولة الاتصال" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate share link for a match
+  app.get("/api/admin/matches/:id/share-link", async (req, res) => {
+    try {
+      const match = await storage.getMatch(req.params.id);
+      if (!match) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      // Generate shareable link (in production, this would be a proper share link)
+      const shareLink = `${req.protocol}://${req.get("host")}/property/${match.propertyId}?match=${match.id}`;
+      
+      res.json({ shareLink, matchId: match.id });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Bulk actions on matches
+  app.post("/api/admin/matches/bulk-action", async (req, res) => {
+    try {
+      const { matchIds, action, payload } = req.body;
+      
+      if (!Array.isArray(matchIds) || matchIds.length === 0) {
+        return res.status(400).json({ error: "يجب تحديد مطابقات" });
+      }
+
+      const results = {
+        success: [] as string[],
+        failed: [] as string[],
+      };
+
+      for (const matchId of matchIds) {
+        try {
+          if (action === "update-status" && payload?.status) {
+            await storage.updateMatchStatus(matchId, payload.status);
+            results.success.push(matchId);
+          } else if (action === "save") {
+            await storage.updateMatch(matchId, { isSaved: true });
+            results.success.push(matchId);
+          } else if (action === "unsave") {
+            await storage.updateMatch(matchId, { isSaved: false });
+            results.success.push(matchId);
+          } else {
+            results.failed.push(matchId);
+          }
+        } catch (error) {
+          results.failed.push(matchId);
+        }
+      }
+
+      res.json(results);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

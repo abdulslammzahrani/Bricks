@@ -73,7 +73,33 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
 
   // ✅ ربط المشتري وتحديث الداشبورد
   const buyerMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", "/api/buyers/register", data),
+    mutationFn: (filters: any) => {
+      // تحويل بيانات AdvancedSearchForm إلى التنسيق المتوقع من API
+      const parsedBudgetMin = filters.minPrice 
+        ? parseInt(String(filters.minPrice).replace(/[^\d]/g, ""), 10)
+        : null;
+      const parsedBudgetMax = filters.maxPrice 
+        ? parseInt(String(filters.maxPrice).replace(/[^\d]/g, ""), 10)
+        : null;
+
+      return apiRequest("POST", "/api/buyers/register", {
+        name: filters.name || "",
+        phone: filters.phone || "",
+        email: filters.email || `${filters.phone}@temp.com`,
+        city: filters.cities && filters.cities.length > 0 ? filters.cities[0] : "",
+        districts: filters.districts || [],
+        propertyType: filters.propertyType || "apartment",
+        rooms: filters.rooms || null,
+        area: filters.minArea || null,
+        budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
+        budgetMax: isNaN(parsedBudgetMax!) ? null : parsedBudgetMax,
+        paymentMethod: filters.paymentMethod || null,
+        purpose: filters.purpose || null,
+        purchaseTimeline: filters.purchaseTimeline || null,
+        transactionType: filters.transactionType === "rent" ? "rent" : "buy",
+        clientType: filters.clientType || "direct",
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });

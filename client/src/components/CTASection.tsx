@@ -13,7 +13,7 @@ export default function CTASection() {
           سواء كنت تبحث عن عقار أو تريد بيع عقارك، نحن هنا لمساعدتك في الوصول لهدفك بسرعة وسهولة
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/buyer-form">
+          <Link href="/#hero">
             <Button size="lg" variant="secondary" className="w-full sm:w-auto gap-2" data-testid="cta-button-buyer">
               <Home className="h-5 w-5" />
               سجل رغبتك لشراء عقار

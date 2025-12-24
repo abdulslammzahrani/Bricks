@@ -91,9 +91,19 @@ export const matches = pgTable("matches", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   buyerPreferenceId: varchar("buyer_preference_id").references(() => buyerPreferences.id),
   propertyId: varchar("property_id").references(() => properties.id),
-  matchScore: integer("match_score").notNull().default(0), // 0-100 score
+  matchScore: integer("match_score").notNull().default(0), // 0-105 score
   isSaved: boolean("is_saved").notNull().default(false),
   isContacted: boolean("is_contacted").notNull().default(false),
+  status: text("status").notNull().default("new"), // new, contacted, confirmed, viewing, agreed, vacated
+  // Verification flags (أيقونات القوة)
+  propertyVerified: boolean("property_verified").notNull().default(false), // تأكيد حالة العقار وصحته
+  buyerVerified: boolean("buyer_verified").notNull().default(false), // تأكيد رغبة المشتري وجديته
+  specsVerified: boolean("specs_verified").notNull().default(false), // تأكيد مطابقة المواصفات الفنية
+  financialVerified: boolean("financial_verified").notNull().default(false), // تأكيد الملاءة المالية والقدرة على الشراء
+  // Detailed verifications (التأكيدات التفصيلية)
+  detailedVerifications: jsonb("detailed_verifications"), // { city: boolean, district: boolean, propertyType: boolean, price: boolean, rooms: boolean, bathrooms: boolean, area: boolean }
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertMatchSchema = createInsertSchema(matches).omit({ id: true });

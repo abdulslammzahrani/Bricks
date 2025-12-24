@@ -10,6 +10,7 @@ import AdminDashboard from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import InvestorPage from "@/pages/investor";
 import PropertyPage from "@/pages/property";
+import PropertyEditPage from "@/pages/property-edit";
 import StaticPageView from "@/pages/static-page";
 import Dashboard from "@/pages/dashboard";
 import LoginPage from "@/pages/login";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/property/:id" component={PropertyPage} />
+      <Route path="/property/:id/edit" component={PropertyEditPage} />
       <Route path="/faq" component={StaticPageView} />
       <Route path="/privacy" component={StaticPageView} />
       <Route path="/terms" component={StaticPageView} />

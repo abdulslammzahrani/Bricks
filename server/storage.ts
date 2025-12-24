@@ -52,6 +52,17 @@ export interface IStorage {
   getMatchesByProperty(propId: string): Promise<Match[]>;
   createMatch(match: InsertMatch): Promise<Match>;
   updateMatch(id: string, match: Partial<InsertMatch>): Promise<Match | undefined>;
+  updateMatchStatus(id: string, status: string): Promise<Match | undefined>;
+  updateMatchVerification(id: string, verificationType: "property" | "buyer" | "specs" | "financial", verified: boolean): Promise<Match | undefined>;
+  updateMatchDetailedVerifications(id: string, detailedVerifications: {
+    city: boolean;
+    district: boolean;
+    propertyType: boolean;
+    price: boolean;
+    rooms: boolean;
+    bathrooms: boolean;
+    area: boolean;
+  }): Promise<Match | undefined>;
   findMatchesForProperty(propertyId: string): Promise<void>;
   findMatchesForPreference(preferenceId: string): Promise<void>;
 
@@ -68,6 +79,13 @@ export interface IStorage {
   getTopDistricts(city: string, limit?: number): Promise<{ district: string; count: number }[]>;
   getAverageBudgetByCity(): Promise<{ city: string; avgBudget: number }[]>;
   getDemandByPropertyType(): Promise<{ propertyType: string; count: number }[]>;
+  
+  // Market Analytics
+  getSupplyDemandIndex(city?: string): Promise<{ city: string; supply: number; demand: number; ratio: number; marketType: "buyer" | "balanced" | "seller" }[]>;
+  getPricePerSquareMeter(city?: string, district?: string, propertyType?: string): Promise<{ city: string; district?: string; propertyType?: string; avgPrice: number; avgArea: number; pricePerSqm: number; count: number }[]>;
+  getDistrictPopularityScore(city?: string, limit?: number): Promise<{ city: string; district: string; demandCount: number; matchCount: number; contactCount: number; popularityScore: number }[]>;
+  getMarketQualityIndex(city?: string): Promise<{ city: string; avgMatchScore: number; conversionRate: number; engagementRate: number; qualityScore: number; qualityLevel: "excellent" | "good" | "average" | "poor" }[]>;
+  getPriceTrends(city?: string, propertyType?: string, months?: number): Promise<{ period: string; avgPrice: number; count: number; changePercent?: number }[]>;
 
   // Send Logs
   createSendLog(log: InsertSendLog): Promise<SendLog>;
@@ -261,6 +279,41 @@ export class DatabaseStorage implements IStorage {
     return result || undefined;
   }
 
+  async updateMatchStatus(id: string, status: string): Promise<Match | undefined> {
+    const [result] = await db.update(matches)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(matches.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async updateMatchVerification(id: string, verificationType: "property" | "buyer" | "specs" | "financial", verified: boolean): Promise<Match | undefined> {
+    const updateField = verificationType === "property" ? "propertyVerified" :
+                        verificationType === "buyer" ? "buyerVerified" :
+                        verificationType === "specs" ? "specsVerified" : "financialVerified";
+    const [result] = await db.update(matches)
+      .set({ [updateField]: verified, updatedAt: new Date() })
+      .where(eq(matches.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async updateMatchDetailedVerifications(id: string, detailedVerifications: {
+    city: boolean;
+    district: boolean;
+    propertyType: boolean;
+    price: boolean;
+    rooms: boolean;
+    bathrooms: boolean;
+    area: boolean;
+  }): Promise<Match | undefined> {
+    const [result] = await db.update(matches)
+      .set({ detailedVerifications: detailedVerifications as any, updatedAt: new Date() })
+      .where(eq(matches.id, id))
+      .returning();
+    return result || undefined;
+  }
+
   // Matching algorithm - find matches for a new property
   async findMatchesForProperty(propertyId: string): Promise<void> {
     const property = await this.getProperty(propertyId);
@@ -285,6 +338,7 @@ export class DatabaseStorage implements IStorage {
             matchScore: score,
             isSaved: false,
             isContacted: false,
+            status: "new",
           });
         }
       }
@@ -315,6 +369,7 @@ export class DatabaseStorage implements IStorage {
             matchScore: score,
             isSaved: false,
             isContacted: false,
+            status: "new",
           });
         }
       }
@@ -420,18 +475,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * خوارزمية المطابقة الذكية v2.0
-   * نظام النقاط الموزونة من 100 نقطة (بالضبط):
-   * - الموقع الجغرافي (40 نقطة): مطابقة الحي = 40، حي مجاور = 25، نفس المدينة فقط = 15
+   * خوارزمية المطابقة الذكية v3.1 - محسّنة وعملية
+   * نظام النقاط الموزونة: 100 نقطة أساسية + 5 نقاط بونص = 105 نقطة كحد أقصى
+   * 
+   * النقاط الأساسية (100 نقطة):
+   * - الموقع الجغرافي (35 نقطة): مطابقة الحي = 35، حي مجاور = 22، نفس المدينة فقط = 12
    * - التوافق السعري (30 نقطة): ضمن الميزانية = 30، أعلى بـ 5% = 20، أعلى بـ 15% = 10
-   * - المواصفات الفنية (30 نقطة): نوع العقار = 15، الغرف/المساحة = 15
+   * - المواصفات الفنية (25 نقطة): نوع العقار = 12، الغرف/المساحة = 13 (معالجة ذكية للنصوص)
+   * - التفاصيل الإضافية (10 نقطة): transactionType+status = 3، purpose = 2، paymentMethod = 2، amenities+description = 3
+   * 
+   * البونص (5 نقاط):
+   * - حديث الإعلان (2 نقطة): < 7 أيام = 2، < 30 يوم = 1، < 90 يوم = 0.5
+   * - الشعبية (2 نقطة): ≥ 100 مشاهدة = 2، ≥ 50 = 1.5، ≥ 20 = 1، أي مشاهدة = 0.5
+   * - الحالة النشطة (1 نقطة): isActive = true
+   * 
+   * تحسينات عملية:
+   * - معالجة ذكية للنصوص (rooms: "4+", area: "300-400")
+   * - مطابقة المرافق من array + البحث في description
+   * - ربط transactionType مع status العقار
+   * - عوامل ديناميكية حسب الشعبية وحداثة الإعلان
    */
   private calculateMatchScore(property: Property, preference: BuyerPreference): number {
     let locationScore = 0;
     let priceScore = 0;
     let specsScore = 0;
+    let detailsScore = 0;
     
-    // ===== 1. الموقع الجغرافي (40 نقطة كحد أقصى) =====
+    // ===== 1. الموقع الجغرافي (35 نقطة كحد أقصى) =====
     // التحقق من المدينة (إلزامي)
     if (property.city !== preference.city) {
       return 0; // لا توجد مطابقة إذا كانت المدينة مختلفة
@@ -440,16 +510,16 @@ export class DatabaseStorage implements IStorage {
     // مطابقة الحي
     if (preference.districts && preference.districts.length > 0) {
       if (preference.districts.includes(property.district)) {
-        locationScore = 40; // مطابقة الحي تماماً
+        locationScore = 35; // مطابقة الحي تماماً
       } else if (this.isAdjacentDistrict(preference.city, property.district, preference.districts)) {
-        locationScore = 25; // حي مجاور
+        locationScore = 22; // حي مجاور
       } else {
         // نفس المدينة لكن حي بعيد = نقاط جزئية فقط
-        locationScore = 15;
+        locationScore = 12;
       }
     } else {
       // لم يحدد أحياء معينة = نقاط جزئية
-      locationScore = 20;
+      locationScore = 18;
     }
 
     // ===== 2. التوافق السعري (30 نقطة كحد أقصى) =====
@@ -474,13 +544,13 @@ export class DatabaseStorage implements IStorage {
       priceScore = 15;
     }
 
-    // ===== 3. المواصفات الفنية (30 نقطة كحد أقصى) =====
+    // ===== 3. المواصفات الفنية (25 نقطة كحد أقصى) =====
     let propertyTypeScore = 0;
     let roomsAreaScore = 0;
     
-    // نوع العقار (15 نقطة كحد أقصى)
+    // نوع العقار (12 نقطة كحد أقصى)
     if (property.propertyType === preference.propertyType) {
-      propertyTypeScore = 15; // تطابق تام
+      propertyTypeScore = 12; // تطابق تام
     } else {
       const similarTypes: Record<string, string[]> = {
         villa: ["duplex", "townhouse"],
@@ -489,41 +559,66 @@ export class DatabaseStorage implements IStorage {
         studio: ["apartment"],
       };
       if (similarTypes[preference.propertyType]?.includes(property.propertyType)) {
-        propertyTypeScore = 8; // نوع مشابه
+        propertyTypeScore = 6; // نوع مشابه
       } else {
         propertyTypeScore = 0; // نوع مختلف تماماً
       }
     }
 
-    // الغرف والمساحة (15 نقطة كحد أقصى: 7.5 لكل منهما)
+    // الغرف والمساحة (13 نقطة كحد أقصى: 6.5 لكل منهما)
     let roomsScore = 0;
     let areaScore = 0;
     
     if (preference.rooms && property.rooms) {
-      const prefRooms = parseInt(preference.rooms) || 0;
-      const propRooms = parseInt(property.rooms) || 0;
+      // تحسين معالجة القيم النصية (مثل "4", "4+", "3-5")
+      const prefRoomsStr = String(preference.rooms).trim();
+      const propRoomsStr = String(property.rooms).trim();
       
-      if (propRooms === prefRooms) {
-        roomsScore = 7.5;
-      } else if (Math.abs(propRooms - prefRooms) === 1) {
-        roomsScore = 5;
-      } else if (Math.abs(propRooms - prefRooms) <= 2) {
-        roomsScore = 2.5;
+      // استخراج الأرقام من النص
+      const prefRoomsMatch = prefRoomsStr.match(/\d+/);
+      const propRoomsMatch = propRoomsStr.match(/\d+/);
+      
+      if (prefRoomsMatch && propRoomsMatch) {
+        const prefRooms = parseInt(prefRoomsMatch[0]) || 0;
+        const propRooms = parseInt(propRoomsMatch[0]) || 0;
+        
+        if (propRooms === prefRooms) {
+          roomsScore = 6.5;
+        } else if (Math.abs(propRooms - prefRooms) === 1) {
+          roomsScore = 4.5;
+        } else if (Math.abs(propRooms - prefRooms) <= 2) {
+          roomsScore = 2;
+        }
       }
     }
 
     if (preference.area && property.area) {
-      const prefArea = parseInt(preference.area) || 0;
-      const propArea = parseInt(property.area) || 0;
+      // تحسين معالجة المساحة (مثل "300", "300-400", "300+")
+      const prefAreaStr = String(preference.area).trim().replace(/[^\d-]/g, '');
+      const propAreaStr = String(property.area).trim().replace(/[^\d-]/g, '');
       
-      if (prefArea > 0) {
-        const ratio = propArea / prefArea;
-        if (ratio >= 0.9 && ratio <= 1.1) {
-          areaScore = 7.5; // ضمن 10%
-        } else if (ratio >= 0.8 && ratio <= 1.2) {
-          areaScore = 5; // ضمن 20%
-        } else if (ratio >= 0.7 && ratio <= 1.3) {
-          areaScore = 2.5; // ضمن 30%
+      // استخراج القيمة (أول رقم أو متوسط إذا كان نطاق)
+      const prefAreaMatch = prefAreaStr.match(/(\d+)(?:-(\d+))?/);
+      const propAreaMatch = propAreaStr.match(/(\d+)(?:-(\d+))?/);
+      
+      if (prefAreaMatch && propAreaMatch) {
+        const prefAreaMin = parseInt(prefAreaMatch[1]) || 0;
+        const prefAreaMax = prefAreaMatch[2] ? parseInt(prefAreaMatch[2]) : prefAreaMin;
+        const prefArea = (prefAreaMin + prefAreaMax) / 2; // متوسط النطاق
+        
+        const propAreaMin = parseInt(propAreaMatch[1]) || 0;
+        const propAreaMax = propAreaMatch[2] ? parseInt(propAreaMatch[2]) : propAreaMin;
+        const propArea = (propAreaMin + propAreaMax) / 2;
+        
+        if (prefArea > 0 && propArea > 0) {
+          const ratio = propArea / prefArea;
+          if (ratio >= 0.9 && ratio <= 1.1) {
+            areaScore = 6.5; // ضمن 10%
+          } else if (ratio >= 0.8 && ratio <= 1.2) {
+            areaScore = 4.5; // ضمن 20%
+          } else if (ratio >= 0.7 && ratio <= 1.3) {
+            areaScore = 2; // ضمن 30%
+          }
         }
       }
     }
@@ -531,13 +626,138 @@ export class DatabaseStorage implements IStorage {
     roomsAreaScore = roomsScore + areaScore;
     specsScore = propertyTypeScore + roomsAreaScore;
 
-    // الحد الأقصى 30 نقطة للمواصفات
-    specsScore = Math.min(30, specsScore);
+    // الحد الأقصى 25 نقطة للمواصفات
+    specsScore = Math.min(25, specsScore);
 
-    // المجموع النهائي (100 نقطة كحد أقصى)
-    const totalScore = Math.min(40, locationScore) + Math.min(30, priceScore) + Math.min(30, specsScore);
+    // ===== 4. التفاصيل الإضافية (10 نقطة كحد أقصى) =====
+    
+    // transactionType + status (3 نقاط): شراء/إيجار مع حالة العقار
+    if (preference.transactionType) {
+      if (preference.transactionType === "buy") {
+        // الشراء متاح لأي عقار (جاهز أو تحت الإنشاء)
+        detailsScore += 3;
+      } else if (preference.transactionType === "rent") {
+        // الإيجار يتطلب عقار جاهز فقط
+        if (property.status === "ready") {
+          detailsScore += 3;
+        } else {
+          detailsScore += 0; // عقار تحت الإنشاء لا يمكن إيجاره
+        }
+      }
+    } else {
+      detailsScore += 1.5; // لم يحدد - نقاط جزئية
+    }
 
-    return Math.min(100, Math.round(totalScore));
+    // purpose (2 نقطة): سكن/استثمار
+    if (preference.purpose) {
+      // جميع العقارات مناسبة للسكن والاستثمار
+      detailsScore += 2;
+    } else {
+      detailsScore += 1;
+    }
+
+    // paymentMethod (2 نقطة): كاش/تمويل
+    if (preference.paymentMethod) {
+      // جميع العقارات تقبل كلا الطريقتين
+      detailsScore += 2;
+    } else {
+      detailsScore += 1;
+    }
+
+    // amenities + description matching (3 نقاط): مطابقة ذكية للمرافق
+    let amenitiesMatchScore = 0;
+    
+    // 1. مطابقة المرافق الأساسية من array
+    if (property.amenities && property.amenities.length > 0) {
+      amenitiesMatchScore += 1; // أساسي: وجود مرافق
+      
+      // إعطاء نقاط إضافية حسب عدد المرافق
+      if (property.amenities.length >= 5) {
+        amenitiesMatchScore += 1.5; // مرافق ممتازة
+      } else if (property.amenities.length >= 3) {
+        amenitiesMatchScore += 1; // مرافق جيدة
+      }
+    }
+
+    // 2. البحث الذكي في description عن مرافق إضافية
+    if (property.description) {
+      const descLower = property.description.toLowerCase();
+      // البحث عن كلمات مفتاحية شائعة للمرافق
+      const amenityKeywords = [
+        "مسبح", "سباحة", "pool",
+        "مصعد", "elevator", "lift",
+        "موقف", "parking", "garage",
+        "حديقة", "garden", "yard",
+        "نادي", "gym", "fitness",
+        "أمن", "security", "حراسة",
+        "تكييف", "ac", "air conditioning",
+        "إنترنت", "wifi", "internet",
+        "مطبخ", "kitchen",
+        "غرفة خادمة", "maid room",
+        "بلكونة", "balcony", "terrace"
+      ];
+      
+      let foundKeywords = 0;
+      for (const keyword of amenityKeywords) {
+        if (descLower.includes(keyword.toLowerCase())) {
+          foundKeywords++;
+        }
+      }
+      
+      // إعطاء نقاط إضافية حسب عدد الكلمات المفتاحية الموجودة
+      if (foundKeywords >= 3) {
+        amenitiesMatchScore += 0.5; // وصف غني بالمرافق
+      }
+    }
+
+    detailsScore += Math.min(3, amenitiesMatchScore);
+
+    // الحد الأقصى 10 نقطة للتفاصيل
+    detailsScore = Math.min(10, detailsScore);
+
+    // المجموع الأساسي (100 نقطة كحد أقصى)
+    const baseScore = Math.min(35, locationScore) + Math.min(30, priceScore) + Math.min(25, specsScore) + Math.min(10, detailsScore);
+
+    // ===== 5. عوامل ديناميكية (بونص يصل إلى 5 نقاط) =====
+    let bonusScore = 0;
+
+    // recency bonus (2 نقطة): العقارات الحديثة أفضل
+    if (property.createdAt) {
+      const daysSinceCreation = Math.floor((Date.now() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceCreation <= 7) {
+        bonusScore += 2; // أقل من أسبوع
+      } else if (daysSinceCreation <= 30) {
+        bonusScore += 1; // أقل من شهر
+      } else if (daysSinceCreation <= 90) {
+        bonusScore += 0.5; // أقل من 3 أشهر
+      }
+    }
+
+    // popularity bonus (2 نقطة): العقارات الشائعة أفضل
+    if (property.viewsCount && property.viewsCount > 0) {
+      if (property.viewsCount >= 100) {
+        bonusScore += 2; // أكثر من 100 مشاهدة
+      } else if (property.viewsCount >= 50) {
+        bonusScore += 1.5; // أكثر من 50 مشاهدة
+      } else if (property.viewsCount >= 20) {
+        bonusScore += 1; // أكثر من 20 مشاهدة
+      } else {
+        bonusScore += 0.5; // أي مشاهدة
+      }
+    }
+
+    // active status bonus (1 نقطة): العقارات النشطة أفضل
+    if (property.isActive) {
+      bonusScore += 1;
+    }
+
+    // الحد الأقصى للبونص 5 نقاط
+    bonusScore = Math.min(5, bonusScore);
+
+    // المجموع النهائي (105 نقطة كحد أقصى: 100 أساسية + 5 بونص)
+    const totalScore = baseScore + bonusScore;
+
+    return Math.min(105, Math.round(totalScore));
   }
 
   // Contact Requests
@@ -586,15 +806,21 @@ export class DatabaseStorage implements IStorage {
   async getAverageBudgetByCity(): Promise<{ city: string; avgBudget: number }[]> {
     const result = await db.select({
       city: buyerPreferences.city,
-      avgBudget: sql<number>`avg((${buyerPreferences.budgetMin} + ${buyerPreferences.budgetMax}) / 2)`,
+      avgBudget: sql<number>`avg(CASE WHEN ${buyerPreferences.budgetMin} IS NOT NULL AND ${buyerPreferences.budgetMax} IS NOT NULL THEN (${buyerPreferences.budgetMin} + ${buyerPreferences.budgetMax}) / 2.0 WHEN ${buyerPreferences.budgetMax} IS NOT NULL THEN ${buyerPreferences.budgetMax} WHEN ${buyerPreferences.budgetMin} IS NOT NULL THEN ${buyerPreferences.budgetMin} ELSE NULL END)`,
     })
     .from(buyerPreferences)
+    .where(or(
+      sql`${buyerPreferences.budgetMin} IS NOT NULL`,
+      sql`${buyerPreferences.budgetMax} IS NOT NULL`
+    ))
     .groupBy(buyerPreferences.city);
 
-    return result.map(r => ({
-      city: r.city,
-      avgBudget: Math.round(Number(r.avgBudget) || 0),
-    }));
+    return result
+      .filter(r => r.avgBudget !== null)
+      .map(r => ({
+        city: r.city,
+        avgBudget: Math.round(Number(r.avgBudget) || 0),
+      }));
   }
 
   async getDemandByPropertyType(): Promise<{ propertyType: string; count: number }[]> {
@@ -609,6 +835,311 @@ export class DatabaseStorage implements IStorage {
       propertyType: r.propertyType,
       count: Number(r.count),
     }));
+  }
+
+  // ==================== Market Analytics ====================
+
+  /**
+   * مؤشر العرض والطلب (Supply & Demand Index)
+   * ratio < 0.8 = سوق المشتري (عرض قليل، طلب عالي)
+   * ratio 0.8-1.2 = سوق متوازن
+   * ratio > 1.2 = سوق البائع (عرض عالي، طلب قليل)
+   */
+  async getSupplyDemandIndex(city?: string): Promise<{ city: string; supply: number; demand: number; ratio: number; marketType: "buyer" | "balanced" | "seller" }[]> {
+    const supplyConditions = [eq(properties.isActive, true)];
+    const demandConditions: any[] = [];
+
+    if (city) {
+      supplyConditions.push(eq(properties.city, city));
+      demandConditions.push(eq(buyerPreferences.city, city));
+    }
+
+    // حساب العرض (العقارات النشطة)
+    const supplyQuery = db.select({
+      city: properties.city,
+      count: sql<number>`count(*)`,
+    })
+    .from(properties)
+    .where(and(...supplyConditions))
+    .groupBy(properties.city);
+
+    // حساب الطلب (الرغبات النشطة)
+    const demandQuery = db.select({
+      city: buyerPreferences.city,
+      count: sql<number>`count(*)`,
+    })
+    .from(buyerPreferences)
+    .where(and(...demandConditions.length > 0 ? demandConditions : [sql`1=1`]))
+    .groupBy(buyerPreferences.city);
+
+    const [supplyResults, demandResults] = await Promise.all([supplyQuery, demandQuery]);
+
+    const supplyMap = new Map(supplyResults.map(r => [r.city, Number(r.count)]));
+    const demandMap = new Map(demandResults.map(r => [r.city, Number(r.count)]));
+
+    // دمج النتائج
+    const cities = new Set([...Array.from(supplyMap.keys()), ...Array.from(demandMap.keys())]);
+
+    return Array.from(cities).map(cityName => {
+      const supply = supplyMap.get(cityName) || 0;
+      const demand = demandMap.get(cityName) || 0;
+      const ratio = demand > 0 ? supply / demand : 0;
+      
+      let marketType: "buyer" | "balanced" | "seller";
+      if (ratio < 0.8) marketType = "buyer";
+      else if (ratio <= 1.2) marketType = "balanced";
+      else marketType = "seller";
+
+      return { city: cityName, supply, demand, ratio, marketType };
+    }).sort((a, b) => b.demand - a.demand);
+  }
+
+  /**
+   * متوسط سعر المتر المربع حسب المنطقة
+   */
+  async getPricePerSquareMeter(city?: string, district?: string, propertyType?: string): Promise<{ city: string; district?: string; propertyType?: string; avgPrice: number; avgArea: number; pricePerSqm: number; count: number }[]> {
+    const conditions = [eq(properties.isActive, true)];
+    
+    if (city) conditions.push(eq(properties.city, city));
+    if (district) conditions.push(eq(properties.district, district));
+    if (propertyType) conditions.push(eq(properties.propertyType, propertyType));
+
+    const result = await db.select({
+      city: properties.city,
+      district: properties.district,
+      propertyType: properties.propertyType,
+      avgPrice: sql<number>`avg(${properties.price})`,
+      avgArea: sql<number>`avg(CASE WHEN ${properties.area} ~ '^[0-9]+$' THEN CAST(${properties.area} AS INTEGER) ELSE NULL END)`,
+      count: sql<number>`count(*)`,
+    })
+    .from(properties)
+    .where(and(...conditions))
+    .groupBy(properties.city, properties.district, properties.propertyType);
+
+    return result
+      .filter(r => r.avgArea !== null && Number(r.avgArea) > 0 && Number(r.avgPrice) > 0)
+      .map(r => {
+        const avgPrice = Number(r.avgPrice) || 0;
+        const avgArea = Number(r.avgArea) || 1;
+        const pricePerSqm = Math.round(avgPrice / avgArea);
+        
+        return {
+          city: r.city,
+          district: r.district || undefined,
+          propertyType: r.propertyType || undefined,
+          avgPrice: Math.round(avgPrice),
+          avgArea: Math.round(avgArea),
+          pricePerSqm,
+          count: Number(r.count),
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * مؤشر شعبية المناطق (District Popularity Score)
+   * النقاط = (عدد الرغبات × 2) + (عدد المطابقات × 3) + (عدد طلبات التواصل × 5)
+   */
+  async getDistrictPopularityScore(city?: string, limit: number = 20): Promise<{ city: string; district: string; demandCount: number; matchCount: number; contactCount: number; popularityScore: number }[]> {
+    // حساب الرغبات حسب الحي
+    const demandConditions: any[] = [];
+    if (city) demandConditions.push(eq(buyerPreferences.city, city));
+
+    const preferences = await db.select({
+      city: buyerPreferences.city,
+      districts: buyerPreferences.districts,
+    })
+    .from(buyerPreferences)
+    .where(demandConditions.length > 0 ? and(...demandConditions) : sql`1=1`);
+
+    const districtDemandMap = new Map<string, number>();
+    preferences.forEach(p => {
+      p.districts?.forEach((d: string) => {
+        const key = `${p.city}|${d}`;
+        districtDemandMap.set(key, (districtDemandMap.get(key) || 0) + 1);
+      });
+    });
+
+    // حساب المطابقات حسب الحي
+    const matchesData = await db.select({
+      property: properties,
+    })
+    .from(matches)
+    .leftJoin(properties, eq(matches.propertyId, properties.id))
+    .where(city ? eq(properties.city, city) : sql`1=1`);
+
+    const districtMatchMap = new Map<string, number>();
+    matchesData.forEach(m => {
+      if (m.property?.district && m.property?.city) {
+        const key = `${m.property.city}|${m.property.district}`;
+        districtMatchMap.set(key, (districtMatchMap.get(key) || 0) + 1);
+      }
+    });
+
+    // حساب طلبات التواصل حسب الحي
+    const contacts = await db.select({
+      property: properties,
+    })
+    .from(contactRequests)
+    .leftJoin(properties, eq(contactRequests.propertyId, properties.id))
+    .where(city ? eq(properties.city, city) : sql`1=1`);
+
+    const districtContactMap = new Map<string, number>();
+    contacts.forEach(c => {
+      if (c.property?.district && c.property?.city) {
+        const key = `${c.property.city}|${c.property.district}`;
+        districtContactMap.set(key, (districtContactMap.get(key) || 0) + 1);
+      }
+    });
+
+    // حساب النقاط
+    const districts = new Set([...Array.from(districtDemandMap.keys()), ...Array.from(districtMatchMap.keys()), ...Array.from(districtContactMap.keys())]);
+    
+    const results = Array.from(districts).map(key => {
+      const [cityName, district] = key.split("|");
+      const demandCount = districtDemandMap.get(key) || 0;
+      const matchCount = districtMatchMap.get(key) || 0;
+      const contactCount = districtContactMap.get(key) || 0;
+      const popularityScore = (demandCount * 2) + (matchCount * 3) + (contactCount * 5);
+
+      return {
+        city: cityName,
+        district,
+        demandCount,
+        matchCount,
+        contactCount,
+        popularityScore,
+      };
+    });
+
+    return results
+      .sort((a, b) => b.popularityScore - a.popularityScore)
+      .slice(0, limit);
+  }
+
+  /**
+   * مؤشر جودة السوق (Market Quality Index)
+   * النقاط = (متوسط نقاط المطابقة × 0.4) + (معدل التحويل × 0.3) + (معدل التفاعل × 0.3)
+   */
+  async getMarketQualityIndex(city?: string): Promise<{ city: string; avgMatchScore: number; conversionRate: number; engagementRate: number; qualityScore: number; qualityLevel: "excellent" | "good" | "average" | "poor" }[]> {
+    const matchConditions: any[] = [];
+    const contactConditions: any[] = [];
+
+    if (city) {
+      matchConditions.push(eq(properties.city, city));
+      contactConditions.push(eq(properties.city, city));
+    }
+
+    // متوسط نقاط المطابقة حسب المدينة
+    const matchScores = await db.select({
+      city: properties.city,
+      avgScore: sql<number>`avg(${matches.matchScore})`,
+      count: sql<number>`count(*)`,
+    })
+    .from(matches)
+    .leftJoin(properties, eq(matches.propertyId, properties.id))
+    .where(matchConditions.length > 0 ? and(...matchConditions) : sql`1=1`)
+    .groupBy(properties.city);
+
+    // معدل التحويل (طلبات التواصل / المطابقات)
+    const conversions = await db.select({
+      city: properties.city,
+      contactCount: sql<number>`count(DISTINCT ${contactRequests.id})`,
+      matchCount: sql<number>`count(DISTINCT ${matches.id})`,
+    })
+    .from(contactRequests)
+    .leftJoin(properties, eq(contactRequests.propertyId, properties.id))
+    .leftJoin(matches, eq(contactRequests.matchId, matches.id))
+    .where(contactConditions.length > 0 ? and(...contactConditions) : sql`1=1`)
+    .groupBy(properties.city);
+
+    // معدل التفاعل (المطابقات المحفوظة / إجمالي المطابقات)
+    const engagements = await db.select({
+      city: properties.city,
+      savedCount: sql<number>`count(*) FILTER (WHERE ${matches.isSaved} = true)`,
+      totalCount: sql<number>`count(*)`,
+    })
+    .from(matches)
+    .leftJoin(properties, eq(matches.propertyId, properties.id))
+    .where(matchConditions.length > 0 ? and(...matchConditions) : sql`1=1`)
+    .groupBy(properties.city);
+
+    const scoreMap = new Map(matchScores.map(m => [m.city, { avgScore: Number(m.avgScore) || 0, count: Number(m.count) }]));
+    const conversionMap = new Map(conversions.map(c => [c.city, { rate: c.matchCount > 0 ? (Number(c.contactCount) / Number(c.matchCount)) * 100 : 0 }]));
+    const engagementMap = new Map(engagements.map(e => [e.city, { rate: e.totalCount > 0 ? (Number(e.savedCount) / Number(e.totalCount)) * 100 : 0 }]));
+
+    const cities = new Set([...Array.from(scoreMap.keys()), ...Array.from(conversionMap.keys()), ...Array.from(engagementMap.keys())]);
+
+    return Array.from(cities)
+      .filter((cityName): cityName is string => cityName !== null && cityName !== undefined)
+      .map(cityName => {
+        const matchData = scoreMap.get(cityName) || { avgScore: 0, count: 0 };
+        const conversionData = conversionMap.get(cityName) || { rate: 0 };
+        const engagementData = engagementMap.get(cityName) || { rate: 0 };
+
+        const avgMatchScore = matchData.avgScore;
+        const conversionRate = conversionData.rate;
+        const engagementRate = engagementData.rate;
+
+        // حساب مؤشر الجودة (0-100)
+        const qualityScore = (avgMatchScore * 0.4) + (conversionRate * 0.3) + (engagementRate * 0.3);
+
+        let qualityLevel: "excellent" | "good" | "average" | "poor";
+        if (qualityScore >= 70) qualityLevel = "excellent";
+        else if (qualityScore >= 50) qualityLevel = "good";
+        else if (qualityScore >= 30) qualityLevel = "average";
+        else qualityLevel = "poor";
+
+        return {
+          city: cityName,
+          avgMatchScore: Math.round(avgMatchScore * 10) / 10,
+          conversionRate: Math.round(conversionRate * 10) / 10,
+          engagementRate: Math.round(engagementRate * 10) / 10,
+          qualityScore: Math.round(qualityScore * 10) / 10,
+          qualityLevel,
+        };
+      }).sort((a, b) => b.qualityScore - a.qualityScore);
+  }
+
+  /**
+   * اتجاهات الأسعار (Price Trends)
+   */
+  async getPriceTrends(city?: string, propertyType?: string, months: number = 6): Promise<{ period: string; avgPrice: number; count: number; changePercent?: number }[]> {
+    const conditions = [eq(properties.isActive, true)];
+    if (city) conditions.push(eq(properties.city, city));
+    if (propertyType) conditions.push(eq(properties.propertyType, propertyType));
+
+    // حساب تاريخ البداية
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    conditions.push(gte(properties.createdAt, startDate));
+
+    const result = await db.select({
+      period: sql<string>`to_char(${properties.createdAt}, 'YYYY-MM')`,
+      avgPrice: sql<number>`avg(${properties.price})`,
+      count: sql<number>`count(*)`,
+    })
+    .from(properties)
+    .where(and(...conditions))
+    .groupBy(sql`to_char(${properties.createdAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${properties.createdAt}, 'YYYY-MM')`);
+
+    const trends = result.map((r, index) => {
+      const prev = index > 0 ? result[index - 1] : null;
+      const changePercent = prev && prev.avgPrice > 0
+        ? ((Number(r.avgPrice) - Number(prev.avgPrice)) / Number(prev.avgPrice)) * 100
+        : undefined;
+
+      return {
+        period: r.period,
+        avgPrice: Math.round(Number(r.avgPrice)),
+        count: Number(r.count),
+        changePercent: changePercent !== undefined ? Math.round(changePercent * 10) / 10 : undefined,
+      };
+    });
+
+    return trends;
   }
 
   // Send Logs

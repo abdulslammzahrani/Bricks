@@ -41,6 +41,8 @@ import {
   ShieldCheck,
   BadgeCheck,
   ExternalLink,
+  Edit2,
+  QrCode,
 } from "lucide-react";
 import MemberLayout from "@/components/MemberLayout";
 
@@ -113,6 +115,7 @@ export default function PropertyPage() {
   const { toast } = useToast();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
+  const currentUserId = localStorage.getItem("currentUserId");
 
   const { data: property, isLoading, error } = useQuery<PropertyWithSeller>({
     queryKey: ["/api/properties", id],
@@ -215,6 +218,7 @@ export default function PropertyPage() {
   const images = property.images || [];
   const mainImage = images[selectedImageIndex] || images[0];
   const amenities = property.amenities || [];
+  const isOwner = property?.sellerId === currentUserId;
 
   return (
     <MemberLayout>
@@ -340,6 +344,18 @@ export default function PropertyPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isOwner && (
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => navigate(`/profile?tab=properties`)}
+                data-testid="button-edit-property"
+              >
+                <Edit2 className="h-4 w-4" />
+                تعديل العقار
+              </Button>
+            )}
             <Button variant="outline" size="icon" data-testid="button-share">
               <Share2 className="h-5 w-5" />
             </Button>
@@ -467,14 +483,20 @@ export default function PropertyPage() {
                   <h2 className="font-bold text-lg">المزايا والخدمات</h2>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {amenities.map((amenity, idx) => {
                       const amenityInfo = amenityIcons[amenity];
                       const Icon = amenityInfo?.icon || CheckCircle2;
                       return (
-                        <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50" data-testid={`amenity-${amenity}`}>
-                          <Icon className="h-5 w-5 text-primary flex-shrink-0" />
-                          <span className="text-sm">{amenityInfo?.label || amenity}</span>
+                        <div 
+                          key={idx} 
+                          className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all cursor-default" 
+                          data-testid={`amenity-${amenity}`}
+                        >
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Icon className="h-6 w-6 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium text-center">{amenityInfo?.label || amenity}</span>
                         </div>
                       );
                     })}
@@ -483,35 +505,43 @@ export default function PropertyPage() {
               </Card>
             )}
 
-            {/* Map Location */}
+            {/* Location and Nearby Places */}
             {property.latitude && property.longitude && (
               <Card>
                 <CardHeader className="pb-3">
                   <h2 className="font-bold text-lg flex items-center gap-2">
-                    <Map className="h-5 w-5" />
-                    الموقع على الخريطة
+                    <MapPin className="h-5 w-5" />
+                    الموقع والأماكن القريبة
                   </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    يتم جلب الموقع والتحقق منه بواسطة الهيئة العامة للعقار
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-64 rounded-lg bg-muted overflow-hidden relative">
-                    <iframe
-                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${property.latitude},${property.longitude}&zoom=15`}
-                      className="w-full h-full border-0"
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                    <a
-                      href={`https://www.google.com/maps?q=${property.latitude},${property.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="absolute bottom-3 left-3"
-                    >
-                      <Button size="sm" variant="secondary" className="gap-2">
-                        <MapPin className="h-4 w-4" />
-                        فتح في الخرائط
-                      </Button>
-                    </a>
+                  <div className="space-y-4">
+                    <div className="h-80 rounded-lg bg-muted overflow-hidden relative border">
+                      <iframe
+                        src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${property.latitude},${property.longitude}&zoom=15`}
+                        className="w-full h-full border-0"
+                        allowFullScreen
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                      <a
+                        href={`https://www.google.com/maps?q=${property.latitude},${property.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-4 left-4"
+                      >
+                        <Button size="sm" variant="secondary" className="gap-2 bg-white/90 hover:bg-white">
+                          <MapPin className="h-4 w-4" />
+                          انظر الموقع
+                        </Button>
+                      </a>
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center">
+                      وصف موقع العقار حسب الصلاة في {property.district} بمدينة {property.city}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -570,34 +600,58 @@ export default function PropertyPage() {
                   {(property.seller.falLicenseNumber || property.seller.adLicenseNumber) && (
                     <>
                       <Separator />
-                      <div className="space-y-2 text-sm">
-                        <p className="font-medium text-muted-foreground flex items-center gap-1">
-                          <ShieldCheck className="h-4 w-4 text-green-600" />
-                          معلومات ترخيص الإعلان
-                        </p>
-                        {property.seller.falLicenseNumber && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-muted-foreground">رقم رخصة فال</span>
-                            <span className="font-medium" data-testid="text-fal-license">{property.seller.falLicenseNumber}</span>
-                          </div>
-                        )}
-                        {property.seller.adLicenseNumber && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-muted-foreground">رقم ترخيص الإعلان</span>
-                            <span className="font-medium" data-testid="text-ad-license">{property.seller.adLicenseNumber}</span>
-                          </div>
-                        )}
-                        {property.seller.licenseExpiryDate && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-muted-foreground">صالح حتى</span>
-                            <span className="font-medium">{property.seller.licenseExpiryDate}</span>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-5 w-5 text-green-600" />
+                          <p className="font-bold text-base">معلومات ترخيص الإعلان</p>
+                        </div>
+                        <div className="space-y-3 bg-muted/30 rounded-lg p-4">
+                          {property.seller.falLicenseNumber && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm">رقم رخصة حال</span>
+                                <Badge variant="outline" className="text-xs">i</Badge>
+                              </div>
+                              <span className="font-bold text-sm" data-testid="text-fal-license">{property.seller.falLicenseNumber}</span>
+                            </div>
+                          )}
+                          {property.seller.adLicenseNumber && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm">رقم ترخيص الإعلان</span>
+                                <Badge variant="outline" className="text-xs">i</Badge>
+                              </div>
+                              <span className="font-bold text-sm" data-testid="text-ad-license">{property.seller.adLicenseNumber}</span>
+                            </div>
+                          )}
+                          {property.seller.licenseIssueDate && (
+                            <div className="flex justify-between items-center py-2 border-b">
+                              <span className="text-muted-foreground text-sm">تاريخ إصدار الترخيص</span>
+                              <span className="font-medium text-sm">{property.seller.licenseIssueDate}</span>
+                            </div>
+                          )}
+                          {property.seller.licenseExpiryDate && (
+                            <div className="flex justify-between items-center py-2">
+                              <span className="text-muted-foreground text-sm">تاريخ انتهاء الترخيص</span>
+                              <span className="font-medium text-sm">{property.seller.licenseExpiryDate}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="sm" className="w-full text-sm gap-2">
+                          عرض المزيد
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        {property.seller.commercialRegNumber && (
+                          <div className="flex justify-center pt-2">
+                            <div className="bg-white p-3 rounded-lg border">
+                              <QrCode className="h-16 w-16 text-muted-foreground" />
+                            </div>
                           </div>
                         )}
                         {property.seller.commercialRegNumber && (
-                          <div className="flex justify-between py-1">
-                            <span className="text-muted-foreground">السجل التجاري</span>
-                            <span className="font-medium">{property.seller.commercialRegNumber}</span>
-                          </div>
+                          <p className="text-xs text-center text-muted-foreground">
+                            انقر للذهاب إلى الرابط
+                          </p>
                         )}
                       </div>
                     </>

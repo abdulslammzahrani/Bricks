@@ -2,10 +2,19 @@ import OpenAI from "openai";
 
 // This is using Replit's AI Integrations service, which provides OpenAI-compatible API access
 // without requiring your own OpenAI API key. Charges are billed to your Replit credits.
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+function getOpenAIClient() {
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    return null;
+  }
+  
+  return new OpenAI({
+    baseURL: baseURL || undefined,
+    apiKey: apiKey,
+  });
+}
 
 export interface IntakeAnalysisResult {
   success: boolean;
@@ -146,6 +155,12 @@ export async function analyzeIntakeWithAI(text: string, context?: ConversationCo
     }
     
     const fullMessage = contextMessage + text;
+    
+    const openai = getOpenAIClient();
+    if (!openai) {
+      // Fallback to regex-based extraction if OpenAI is not configured
+      return fallbackExtraction(text);
+    }
     
     // Using GPT-4o for maximum accuracy and Arabic understanding
     const response = await openai.chat.completions.create({
@@ -351,6 +366,14 @@ function fallbackExtraction(text: string): IntakeAnalysisResult {
 // Voice transcription using OpenAI Whisper
 export async function transcribeAudio(audioBuffer: Buffer, mimeType: string): Promise<{ success: boolean; text?: string; error?: string }> {
   try {
+    const openai = getOpenAIClient();
+    if (!openai) {
+      return {
+        success: false,
+        error: "OpenAI API key not configured",
+      };
+    }
+    
     // Create a File object from the buffer
     const file = new File([audioBuffer], "audio.webm", { type: mimeType });
     

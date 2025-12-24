@@ -7,9 +7,10 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import type { Property, User } from "@shared/schema";
 
 import { 
-  MapPin, User, Home, Building2, 
+  MapPin, User as UserIcon, Home, Building2, 
   Sparkles, Search, Building, Warehouse, LandPlot,
   Check, Navigation, Wallet, Settings2, FileText,
   Hammer, Clock, CheckCircle2, MessageCircle, Edit2, Banknote, Ruler, Plus, 
@@ -122,7 +123,109 @@ const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { 
   </div>
 );
 
-const AdvancedListingForm = memo(function AdvancedListingForm() {
+// دالة لتحويل بيانات Property إلى ListingData
+function mapPropertyToListingData(property: Property, seller?: User): ListingData {
+  const isCommercial = property.propertyType?.includes("commercial") || 
+                       property.propertyType === "tower" || 
+                       property.propertyType === "complex" ||
+                       property.propertyType === "warehouse" ||
+                       property.propertyType === "factory" ||
+                       property.propertyType === "school" ||
+                       property.propertyType === "health_center" ||
+                       property.propertyType === "gas_station" ||
+                       property.propertyType === "showroom" ||
+                       property.propertyType === "office" ||
+                       property.propertyType === "industrial_land" ||
+                       property.propertyType === "farm";
+
+  return {
+    name: seller?.name || "",
+    phone: seller?.phone || "",
+    email: seller?.email || "",
+    propertyCategory: isCommercial ? "commercial" : "residential",
+    offerType: "sale", // افتراضي
+    propertyCondition: property.status === "ready" ? "new" : property.status === "under_construction" ? "under_construction" : "used",
+    cities: property.city ? [property.city] : [],
+    districts: property.district ? [property.district] : [],
+    propertyType: property.propertyType || "",
+    minArea: property.area?.toString() || "",
+    maxArea: "",
+    rooms: property.rooms?.toString() || "",
+    bathrooms: property.bathrooms?.toString() || "",
+    livingRooms: "",
+    hasMaidRoom: false,
+    facade: "",
+    streetWidth: "",
+    plotLocation: "",
+    annualIncome: "",
+    roi: "",
+    unitsCount: "",
+    propertyAge: "",
+    floorsCount: "",
+    elevatorsCount: "",
+    bua: "",
+    buildingClass: "",
+    parkingCapacity: "",
+    facadeWidth: "",
+    ceilingHeight: "",
+    hasMezzanine: false,
+    groundArea: "",
+    mezzanineArea: "",
+    powerCapacity: "",
+    floorNumber: "",
+    nla: "",
+    finishingStatus: "",
+    acType: "",
+    studentCapacity: "",
+    classroomsCount: "",
+    labsCount: "",
+    municipalityClass: "",
+    hasCivilDefense: "",
+    floorLoad: "",
+    pumpsCount: "",
+    tanksCapacity: "",
+    stationCategory: "",
+    shopsCount: "",
+    apartmentsCount: "",
+    buildingsCount: "",
+    occupancyRate: "",
+    zoning: "",
+    activityType: "",
+    buildingRatio: "",
+    wellsCount: "",
+    waterType: "",
+    treesCount: "",
+    farmFacade: "",
+    productionArea: "",
+    licenseType: "",
+    craneLoad: "",
+    clinicsCount: "",
+    waitingArea: "",
+    healthLicense: "",
+    targetPrice: property.price?.toString() || "",
+    paymentPreference: "",
+    bankName: "",
+    smartTags: Array.isArray(property.amenities) ? property.amenities : [],
+    notes: property.description || "",
+  };
+}
+
+interface AdvancedListingFormProps {
+  propertyId?: string;
+  initialData?: Property;
+  seller?: User;
+  onSave?: (propertyId: string) => void;
+  onCancel?: () => void;
+}
+
+const AdvancedListingForm = memo(function AdvancedListingForm({
+  propertyId,
+  initialData,
+  seller,
+  onSave,
+  onCancel,
+}: AdvancedListingFormProps = {} as AdvancedListingFormProps) {
+  const isEditMode = !!propertyId;
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [activeCard, setActiveCard] = useState(0);
@@ -133,32 +236,48 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
   const [isComplete, setIsComplete] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [userPhone, setUserPhone] = useState("");
-  const [countdown, setCountdown] = useState(3);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  const [listingData, setListingData] = useState<ListingData>({
-    name: "", phone: "", email: "", propertyCategory: "",
-    offerType: "", propertyCondition: "",
-    cities: [], districts: [], propertyType: "",
-    minArea: "", maxArea: "",
-    rooms: "", bathrooms: "", livingRooms: "", hasMaidRoom: false,
-    facade: "", streetWidth: "", plotLocation: "",
-    annualIncome: "", roi: "", unitsCount: "", propertyAge: "",
-    floorsCount: "", elevatorsCount: "", bua: "", buildingClass: "", parkingCapacity: "",
-    facadeWidth: "", ceilingHeight: "", hasMezzanine: false, groundArea: "", mezzanineArea: "", powerCapacity: "",
-    floorNumber: "", nla: "", finishingStatus: "", acType: "",
-    studentCapacity: "", classroomsCount: "", labsCount: "", municipalityClass: "",
-    hasCivilDefense: "", floorLoad: "",
-    pumpsCount: "", tanksCapacity: "", stationCategory: "",
-    shopsCount: "", apartmentsCount: "",
-    buildingsCount: "", occupancyRate: "",
-    zoning: "",
-    activityType: "", buildingRatio: "",
-    wellsCount: "", waterType: "", treesCount: "", farmFacade: "",
-    productionArea: "", licenseType: "", craneLoad: "",
-    clinicsCount: "", waitingArea: "", healthLicense: "",
-    targetPrice: "", paymentPreference: "", bankName: "",
-    smartTags: [], notes: "", 
+  const [listingData, setListingData] = useState<ListingData>(() => {
+    if (isEditMode && initialData) {
+      return mapPropertyToListingData(initialData, seller);
+    }
+    return {
+      name: "", phone: "", email: "", propertyCategory: "",
+      offerType: "", propertyCondition: "",
+      cities: [], districts: [], propertyType: "",
+      minArea: "", maxArea: "",
+      rooms: "", bathrooms: "", livingRooms: "", hasMaidRoom: false,
+      facade: "", streetWidth: "", plotLocation: "",
+      annualIncome: "", roi: "", unitsCount: "", propertyAge: "",
+      floorsCount: "", elevatorsCount: "", bua: "", buildingClass: "", parkingCapacity: "",
+      facadeWidth: "", ceilingHeight: "", hasMezzanine: false, groundArea: "", mezzanineArea: "", powerCapacity: "",
+      floorNumber: "", nla: "", finishingStatus: "", acType: "",
+      studentCapacity: "", classroomsCount: "", labsCount: "", municipalityClass: "",
+      hasCivilDefense: "", floorLoad: "",
+      pumpsCount: "", tanksCapacity: "", stationCategory: "",
+      shopsCount: "", apartmentsCount: "",
+      buildingsCount: "", occupancyRate: "",
+      zoning: "",
+      activityType: "", buildingRatio: "",
+      wellsCount: "", waterType: "", treesCount: "", farmFacade: "",
+      productionArea: "", licenseType: "", craneLoad: "",
+      clinicsCount: "", waitingArea: "", healthLicense: "",
+      targetPrice: "", paymentPreference: "", bankName: "",
+      smartTags: [], notes: "", 
+    };
   });
+
+  // تحميل البيانات عند تغيير initialData
+  useEffect(() => {
+    if (isEditMode && initialData) {
+      setIsLoadingData(true);
+      const mappedData = mapPropertyToListingData(initialData, seller);
+      setListingData(mappedData);
+      setIsAutoRegistered(true); // تخطي التسجيل التلقائي في وضع التعديل
+      setIsLoadingData(false);
+    }
+  }, [isEditMode, initialData, seller]);
 
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
@@ -166,25 +285,12 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
 
   const firstName = listingData.name ? listingData.name.split(" ")[0] : "";
 
-  // Countdown timer for redirect after completion
-  useEffect(() => {
-    if (isComplete && countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (isComplete && countdown === 0) {
-      if (isNewUser) {
-        navigate(`/setup-password?phone=${encodeURIComponent(userPhone)}`);
-      } else {
-        navigate("/login");
-      }
-    }
-  }, [isComplete, isNewUser, countdown, navigate, userPhone]);
+  // Countdown timer for redirect after completion (فقط في وضع الإنشاء)
+  // Removed auto-navigation - now handled in handleSubmit
 
   // Cards
   const cards = useMemo(() => [
-    { id: 0, icon: User, title: "ابدأ إضافة عقارك", color: "bg-emerald-500", lightColor: "bg-emerald-100" },
+    { id: 0, icon: UserIcon, title: "ابدأ إضافة عقارك", color: "bg-emerald-500", lightColor: "bg-emerald-100" },
     { id: 1, icon: Tag, title: `تفاصيل العرض`, color: "bg-amber-500", lightColor: "bg-amber-100" },
     { id: 2, icon: MapPin, title: "موقع العقار", color: "bg-blue-500", lightColor: "bg-blue-100" },
     { id: 3, icon: Navigation, title: "تحديد الحي", color: "bg-teal-500", lightColor: "bg-teal-100" },
@@ -218,8 +324,26 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
     });
   };
 
-  const autoRegisterUser = async () => { /* ... */ setIsAutoRegistered(true); setIsRegistering(false); };
-  const goNext = async () => { if (activeCard < totalCards - 1 && !isAnimating) { if (activeCard === 0 && !isAutoRegistered) await autoRegisterUser(); if (activeCard === 5) { setIsAnalyzing(true); setTimeout(() => { setIsAnalyzing(false); advance(); }, 1500); return; } advance(); } };
+  const autoRegisterUser = async () => { 
+    if (isEditMode) {
+      setIsAutoRegistered(true);
+      return;
+    }
+    // منطق التسجيل التلقائي الأصلي
+    setIsAutoRegistered(true); 
+    setIsRegistering(false); 
+  };
+  const goNext = async () => { 
+    if (activeCard < totalCards - 1 && !isAnimating) { 
+      if (activeCard === 0 && !isAutoRegistered && !isEditMode) await autoRegisterUser(); 
+      if (activeCard === 5) { 
+        setIsAnalyzing(true); 
+        setTimeout(() => { setIsAnalyzing(false); advance(); }, 1500); 
+        return; 
+      } 
+      advance(); 
+    } 
+  };
   const advance = () => { setIsAnimating(true); setTimeout(() => { setActiveCard(p => p + 1); setIsAnimating(false); }, 200); };
   const goBack = (idx: number) => { if (idx < activeCard && !isAnimating) { setIsAnimating(true); setTimeout(() => { setActiveCard(idx); setIsAnimating(false); }, 200); }};
   const handleSelection = (field: keyof ListingData, value: any) => setListingData(p => ({ ...p, [field]: value }));
@@ -227,37 +351,78 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
   const handleSubmit = async () => {
     setIsRegistering(true);
     try {
-      const response = await apiRequest("POST", "/api/sellers/register", {
-        name: listingData.name,
-        email: listingData.email || `${listingData.phone}@temp.tatabuq.sa`,
-        phone: listingData.phone,
-        propertyType: listingData.propertyType || "villa",
-        city: listingData.cities[0] || "",
-        district: listingData.districts[0] || "",
-        price: parseInt(listingData.targetPrice.replace(/[^\d]/g, "")) || 0,
-        area: listingData.minArea || null,
-        rooms: listingData.rooms || null,
-        description: listingData.notes || null,
-        status: listingData.propertyCondition === "new" ? "ready" : listingData.propertyCondition === "under_construction" ? "under_construction" : "ready",
-        images: [],
-      });
-      const result = await response.json();
-      
-      setIsComplete(true);
-      if (result.isNewUser) {
-        setIsNewUser(true);
-        setUserPhone(result.phone || listingData.phone);
+      if (isEditMode && propertyId) {
+        // وضع التعديل
+        const updateData: any = {
+          propertyType: listingData.propertyType || "villa",
+          city: listingData.cities[0] || "",
+          district: listingData.districts[0] || "",
+          price: parseInt(listingData.targetPrice.replace(/[^\d]/g, "")) || 0,
+          area: listingData.minArea || null,
+          rooms: listingData.rooms || null,
+          bathrooms: listingData.bathrooms || null,
+          description: listingData.notes || null,
+          status: listingData.propertyCondition === "new" ? "ready" : listingData.propertyCondition === "under_construction" ? "under_construction" : "ready",
+          amenities: listingData.smartTags || [],
+        };
+
+        await apiRequest("PATCH", `/api/properties/${propertyId}`, updateData);
+        
+        toast({
+          title: "تم تحديث العقار بنجاح!",
+          description: "تم حفظ التغييرات بنجاح",
+        });
+        
+        setIsComplete(true);
+        onSave?.(propertyId);
+      } else {
+        // وضع الإنشاء (الكود الأصلي)
+        const response = await apiRequest("POST", "/api/sellers/register", {
+          name: listingData.name,
+          email: listingData.email || `${listingData.phone}@temp.tatabuq.sa`,
+          phone: listingData.phone,
+          propertyType: listingData.propertyType || "villa",
+          city: listingData.cities[0] || "",
+          district: listingData.districts[0] || "",
+          price: parseInt(listingData.targetPrice.replace(/[^\d]/g, "")) || 0,
+          area: listingData.minArea || null,
+          rooms: listingData.rooms || null,
+          description: listingData.notes || null,
+          status: listingData.propertyCondition === "new" ? "ready" : listingData.propertyCondition === "under_construction" ? "under_construction" : "ready",
+          images: [],
+        });
+        const result = await response.json();
+        
+        setIsComplete(true);
+        if (result.isNewUser) {
+          setIsNewUser(true);
+          setUserPhone(result.phone || listingData.phone);
+        }
+        toast({
+          title: "تم نشر عقارك بنجاح!",
+          description: result.isNewUser 
+            ? "سيتم تحويلك لإكمال معلومات العقار..."
+            : "تم إضافة عقارك بنجاح. يمكنك إكمال المعلومات من صفحة الملف الشخصي",
+        });
+        
+        // Save user ID to localStorage for session
+        if (result.user?.id) {
+          localStorage.setItem("currentUserId", result.user.id);
+        }
+        
+        // Navigate to profile page after a short delay
+        setTimeout(() => {
+          if (result.property?.id) {
+            navigate(`/profile?tab=properties&property=${result.property.id}`);
+          } else {
+            navigate("/profile?tab=properties");
+          }
+        }, result.isNewUser ? 3000 : 1500);
       }
-      toast({
-        title: "تم نشر عقارك بنجاح!",
-        description: result.isNewUser 
-          ? "سيتم تحويلك لإعداد حسابك..."
-          : "سنبدأ بالبحث عن مشترين مناسبين لعقارك",
-      });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "حدث خطأ",
-        description: "يرجى المحاولة مرة أخرى",
+        description: error.message || "يرجى المحاولة مرة أخرى",
         variant: "destructive",
       });
     } finally {
@@ -530,29 +695,38 @@ const AdvancedListingForm = memo(function AdvancedListingForm() {
                 {activeCard === 4 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="grid grid-cols-4 gap-2">{propertyTypes.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => handleSelection('propertyType', type.value)} className={`p-2 rounded-lg border flex flex-col items-center gap-1 transition-transform active:scale-95 ${listingData.propertyType === type.value ? "border-primary bg-primary/5 scale-105" : "border-border"}`}><Icon className="h-5 w-5" /><span className="text-[10px] font-bold text-center">{type.label}</span></button>)})}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
                 {activeCard === 5 && renderCard5Content()}
                 {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">السعر المطلوب</label><div className="grid grid-cols-2 gap-1.5">{getPriceRanges().map(b => <button key={b.value} onClick={() => setListingData(f => ({ ...f, targetPrice: b.value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${listingData.targetPrice === b.value ? "bg-primary text-white" : "border-border"}`}>{b.label}</button>)}</div></div><div><label className="text-xs font-medium mb-1.5 block">خيارات الدفع المقبولة</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentPreference', 'cash')} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش فقط</button><button onClick={() => handleSelection('paymentPreference', 'finance', false)} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>أقبل التمويل</button></div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
-                {activeCard === 7 && !isComplete && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">مميزات العقار</label><div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">{(SPECIFIC_TAGS[listingData.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (<button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${listingData.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>{listingData.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span></button>))}</div><Textarea value={listingData.notes} onChange={e => setListingData(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSubmit} disabled={isRegistering} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">{isRegistering ? "جاري النشر..." : "نشر العقار"}</Button></div>}
+                {activeCard === 7 && !isComplete && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">مميزات العقار</label><div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">{(SPECIFIC_TAGS[listingData.propertyType] || SPECIFIC_TAGS["villa"]).map(tag => (<button key={tag} onClick={() => toggleFeature(tag)} className={`px-3 py-2 rounded-full border text-xs font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap h-auto ${listingData.smartTags.includes(tag) ? "bg-primary text-white border-primary shadow-sm" : "bg-white hover:bg-gray-50 border-gray-200 text-gray-600"}`}>{listingData.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span></button>))}</div><Textarea value={listingData.notes} onChange={e => setListingData(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSubmit} disabled={isRegistering || isLoadingData} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">{isRegistering ? (isEditMode ? "جاري الحفظ..." : "جاري النشر...") : (isEditMode ? "حفظ التغييرات" : "نشر العقار")}</Button></div>}
                 {isComplete && (
                   <div className="space-y-4 text-center py-8">
                     <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 mb-4">
                       <Check className="h-8 w-8 text-primary" />
                     </div>
-                    <h3 className="text-xl font-bold" data-testid="text-seller-completion-title">تم نشر عقارك بنجاح!</h3>
+                    <h3 className="text-xl font-bold" data-testid="text-seller-completion-title">
+                      {isEditMode ? "تم تحديث العقار بنجاح!" : "تم نشر عقارك بنجاح!"}
+                    </h3>
                     <p className="text-muted-foreground" data-testid="text-seller-completion-message">
-                      سنبدأ بالبحث عن مشترين مناسبين لعقارك وسنرسل لك العروض
-                    </p>
-                    <p className="text-sm text-muted-foreground" data-testid="text-seller-countdown">
-                      {isNewUser 
-                        ? `سيتم تحويلك لإعداد كلمة المرور خلال ${countdown} ثوانٍ...`
-                        : `سيتم تحويلك لتسجيل الدخول خلال ${countdown} ثوانٍ...`
+                      {isEditMode 
+                        ? "تم حفظ جميع التغييرات بنجاح"
+                        : "سنبدأ بالبحث عن مشترين مناسبين لعقارك وسنرسل لك العروض"
                       }
                     </p>
-                    <Button 
-                      onClick={() => navigate(isNewUser ? `/setup-password?phone=${encodeURIComponent(userPhone)}` : "/login")}
-                      className="mt-2"
-                      data-testid="button-seller-go-to-login"
-                    >
-                      {isNewUser ? "إعداد كلمة المرور الآن" : "تسجيل الدخول الآن"}
-                    </Button>
+                    {!isEditMode && (
+                      <p className="text-sm text-muted-foreground" data-testid="text-seller-redirect">
+                        {isNewUser 
+                          ? "سيتم تحويلك لإكمال معلومات العقار..."
+                          : "جاري التحويل إلى صفحة الملف الشخصي..."
+                        }
+                      </p>
+                    )}
+                    {isEditMode && onCancel && (
+                      <Button 
+                        onClick={onCancel}
+                        className="mt-2"
+                        variant="outline"
+                      >
+                        إغلاق
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

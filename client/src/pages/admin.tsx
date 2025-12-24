@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,6 +44,7 @@ import {
   Mail,
   CheckCircle,
   XCircle,
+  Check,
   Activity,
   Target,
   MessageSquare,
@@ -51,7 +55,9 @@ import {
   Handshake,
   LayoutDashboard,
   Settings,
+  Settings2,
   LogOut,
+  List,
   Send,
   History,
   PlayCircle,
@@ -85,18 +91,35 @@ import {
   Bed,
   Bath,
   Ruler,
+  Star,
+  AlertCircle,
+  Share2,
+  ChevronRight,
+  ChevronDown,
+  Edit,
+  Edit2,
+  FileSpreadsheet as FileExcel,
+  FileText as FilePdf,
+  Pencil,
+  Link2,
   // ✅ هنا الإصلاح: استيراد الأيقونة باسم مستعار لتجنب التعارض
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
 } from "lucide-react";
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp, SiWhatsapp } from "react-icons/si";
 // ✅ استيراد المكون البياني باسمه الأصلي
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend } from "recharts";
 import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, StaticPage } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { saudiCities } from "@shared/saudi-locations";
 import { MatchCard, MatchCardCompact } from "@/components/MatchCard";
 import { MarketPulse, MarketPulseCompact } from "@/components/MarketPulse";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import SellerPropertyForm from "@/components/SellerPropertyForm";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -144,6 +167,36 @@ const maskBudget = (min?: number | null, max?: number | null) => {
   return "**";
 };
 
+// ScrollableOptions component (نفس تصميم الفورم)
+const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { label: string, options: string[], selected: string, onSelect: (val: string) => void, unit?: string }) => (
+  <div className="mb-4">
+    <label className="block text-xs font-bold mb-2 text-gray-700">{label}</label>
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onSelect(opt)}
+          className={`
+            flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all whitespace-nowrap
+            ${selected === opt 
+              ? "bg-primary text-white border-primary shadow-sm scale-105" 
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
+          `}
+        >
+          {opt} {unit}
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+// SMART_RANGES (نفس الفورم)
+const SMART_RANGES = {
+  area: ["100-200", "200-300", "300-400", "400-600", "600-900", "900-1500", "1500-3000", "3000+"],
+  rooms: ["1", "2", "3", "4", "5", "6", "7+"],
+  bathrooms: ["1", "2", "3", "4", "5+"],
+};
+
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString("ar-SA", {
@@ -157,6 +210,25 @@ const getWhatsAppLink = (phone: string) => {
   const cleanedPhone = phone.replace(/\D/g, '');
   const formattedPhone = cleanedPhone.startsWith('966') ? cleanedPhone : `966${cleanedPhone.replace(/^0/, '')}`;
   return `https://wa.me/${formattedPhone}`;
+};
+
+// Helper function for status badge colors - محدث
+const getStatusBadgeConfig = (status: string) => {
+  const configs: Record<string, { label: string; className: string; icon: any }> = {
+    new: { label: "طلب جديد", className: "bg-blue-100 text-blue-700 border-blue-200", icon: Clock }, // أزرق فاتح
+    contacted: { label: "تم التواصل", className: "bg-orange-100 text-orange-700 border-orange-200", icon: Phone }, // برتقالي فاتح
+    confirmed: { label: "تم التأكيد", className: "bg-blue-200 text-blue-800 border-blue-300", icon: CheckCircle }, // أزرق متوسط
+    viewing: { label: "تم المعاينة", className: "bg-purple-100 text-purple-700 border-purple-200", icon: Eye }, // بنفسجي فاتح
+    agreed: { label: "تم الاتفاق", className: "bg-green-100 text-green-700 border-green-200", icon: Handshake }, // أخضر فاتح
+    vacated: { label: "تم الافراغ", className: "bg-green-200 text-green-800 border-green-300", icon: Home }, // أخضر
+    // حالات قديمة للتوافق مع البيانات الموجودة
+    handover_scheduled: { label: "تم تحديد موعد الافراغ", className: "bg-green-100 text-green-700 border-green-200", icon: Calendar },
+    sold: { label: "تم البيع", className: "bg-green-200 text-green-800 border-green-300", icon: CheckCircle },
+    viewing_scheduled: { label: "تم المعاينة", className: "bg-purple-100 text-purple-700 border-purple-200", icon: Calendar },
+    closed: { label: "تم البيع", className: "bg-green-200 text-green-800 border-green-300", icon: CheckCircle },
+    lost: { label: "فاشلة", className: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
+  };
+  return configs[status] || configs.new;
 };
 
 interface ClientWithUser extends BuyerPreference {
@@ -243,18 +315,53 @@ export default function AdminDashboard() {
   const [sendingClientId, setSendingClientId] = useState<string | null>(null);
   const [analyticsTimeFilter, setAnalyticsTimeFilter] = useState<"week" | "month" | "year">("month");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [selectedBuyerPreferenceId, setSelectedBuyerPreferenceId] = useState<string | null>(null);
   const [showMatchDetailsDialog, setShowMatchDetailsDialog] = useState(false);
   const [sendingMatchNotification, setSendingMatchNotification] = useState<string | null>(null);
   const [showMatchFilters, setShowMatchFilters] = useState(false);
   const [matchFilters, setMatchFilters] = useState({
     minScore: 0,
-    maxScore: 100,
-    status: "all" as "all" | "saved" | "contacted",
+    maxScore: 100, // تغيير إلى 100 لأننا نستخدم النسبة المئوية
+    status: "all" as "all" | "new" | "contacted" | "viewing_scheduled" | "closed" | "lost" | "saved",
     propertyType: "all",
     city: "all",
     minPrice: 0,
     maxPrice: 10000000,
   });
+  const [selectedMatchStatus, setSelectedMatchStatus] = useState<string>("all");
+  const [matchSearchQuery, setMatchSearchQuery] = useState("");
+  const [matchSortBy, setMatchSortBy] = useState<"score" | "date" | "status">("score");
+  const [matchViewMode, setMatchViewMode] = useState<"grid" | "list">("list"); // تغيير الافتراضي إلى list
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // لتتبع المجموعات المفتوحة
+  const [showAllMatchesPerGroup, setShowAllMatchesPerGroup] = useState(false); // خيار لعرض جميع المطابقات
+  // State للتأكيدات التفصيلية (لكل مطابقة)
+  const [detailedVerifications, setDetailedVerifications] = useState<Record<string, {
+    city: boolean;
+    district: boolean;
+    propertyType: boolean;
+    price: boolean;
+    rooms: boolean;
+    bathrooms: boolean;
+    area: boolean;
+  }>>({});
+  // State لتعديل بيانات البائع
+  const [selectedSellerMatchId, setSelectedSellerMatchId] = useState<string | null>(null);
+  const [showSellerEditDialog, setShowSellerEditDialog] = useState(false);
+  // State لتعديل بيانات المستخدم
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [userEditData, setUserEditData] = useState<Partial<User>>({});
+  // State لعرض تفاصيل الرغبة
+  const [selectedPreferenceId, setSelectedPreferenceId] = useState<string | null>(null);
+  const [showPreferenceDetailsDialog, setShowPreferenceDetailsDialog] = useState(false);
+  const [isEditingPreference, setIsEditingPreference] = useState(false);
+  const [preferenceEditData, setPreferenceEditData] = useState<Partial<BuyerPreference>>({});
+  // State لعرض تفاصيل العقار
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [showPropertyDetailsDialog, setShowPropertyDetailsDialog] = useState(false);
+  const [isEditingProperty, setIsEditingProperty] = useState(false);
+  const [propertyEditData, setPropertyEditData] = useState<Partial<Property>>({});
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
@@ -279,9 +386,19 @@ export default function AdminDashboard() {
     queryKey: ["/api/properties"],
   });
 
-  const { data: matches = [] } = useQuery<Match[]>({
+  const { data: matches = [], isLoading: matchesLoading, error: matchesError } = useQuery<Match[]>({
     queryKey: ["/api/admin/matches"],
   });
+
+  // Debug: Log matches data
+  useEffect(() => {
+    console.log("🔍 Matches Debug:", {
+      matchesCount: matches.length,
+      matches: matches,
+      isLoading: matchesLoading,
+      error: matchesError,
+    });
+  }, [matches, matchesLoading, matchesError]);
 
   const { data: contactRequests = [] } = useQuery<ContactRequest[]>({
     queryKey: ["/api/admin/contact-requests"],
@@ -315,6 +432,27 @@ export default function AdminDashboard() {
 
   const { data: demandByType = [] } = useQuery<Array<{ propertyType: string; count: number }>>({
     queryKey: ["/api/admin/analytics/demand-by-type"],
+  });
+
+  // Market Analytics Queries
+  const { data: supplyDemandData = [] } = useQuery<Array<{ city: string; supply: number; demand: number; ratio: number; marketType: "buyer" | "balanced" | "seller" }>>({
+    queryKey: ["/api/admin/analytics/supply-demand"],
+  });
+
+  const { data: pricePerSqmData = [] } = useQuery<Array<{ city: string; district?: string; propertyType?: string; avgPrice: number; avgArea: number; pricePerSqm: number; count: number }>>({
+    queryKey: ["/api/admin/analytics/price-per-sqm"],
+  });
+
+  const { data: districtPopularityData = [] } = useQuery<Array<{ city: string; district: string; demandCount: number; matchCount: number; contactCount: number; popularityScore: number }>>({
+    queryKey: ["/api/admin/analytics/district-popularity"],
+  });
+
+  const { data: marketQualityData = [] } = useQuery<Array<{ city: string; avgMatchScore: number; conversionRate: number; engagementRate: number; qualityScore: number; qualityLevel: "excellent" | "good" | "average" | "poor" }>>({
+    queryKey: ["/api/admin/analytics/market-quality"],
+  });
+
+  const { data: priceTrendsData = [] } = useQuery<Array<{ period: string; avgPrice: number; count: number; changePercent?: number }>>({
+    queryKey: ["/api/admin/analytics/price-trends"],
   });
 
   const togglePropertyMutation = useMutation({
@@ -436,20 +574,239 @@ export default function AdminDashboard() {
     setShowMatchDetailsDialog(true);
   };
 
+  // دالة عرض تفاصيل الرغبة
+  const handleShowPreferenceDetails = (preferenceId: string) => {
+    setSelectedPreferenceId(preferenceId);
+    setShowPreferenceDetailsDialog(true);
+  };
+
+  const handleShowBuyerMatches = (buyerPreferenceId: string) => {
+    setSelectedBuyerPreferenceId(buyerPreferenceId);
+    setShowMatchDetailsDialog(true);
+  };
+
   // تطبيق تصفية المطابقات
   // --- كود الإصلاح النهائي للمطابقات ---
-  const filteredMatches = (matches || []).filter(match => {
-    // التأكد من تحويل المعرفات لنصوص لضمان الربط الصحيح
-    const matchBuyerId = String(match.buyerPreferenceId);
-    const matchPropertyId = String(match.propertyId);
+  // تحسين فلترة وترتيب المطابقات
+  const filteredMatches = useMemo(() => {
+    let filtered = (matches || []).filter(match => {
+      // فلترة حسب النقاط - تحويل النقاط إلى نسبة مئوية للفلترة
+      const matchPercentage = Math.round((match.matchScore / 105) * 100);
+      if (matchPercentage < matchFilters.minScore || matchPercentage > matchFilters.maxScore) return false;
 
-    const pref = preferences?.find(p => String(p.id) === matchBuyerId);
-    const prop = properties?.find(p => String(p.id) === matchPropertyId);
+      // فلترة حسب الحالة
+      if (matchFilters.status !== "all") {
+        if (matchFilters.status === "saved" && !match.isSaved) return false;
+        else if (matchFilters.status !== "saved") {
+          // استخدام status الجديد من قاعدة البيانات
+          const matchStatus = (match as any).status || "new";
+          if (matchFilters.status !== matchStatus) return false;
+        }
+      }
 
-    // سنظهر المطابقة حتى لو البيانات المرتبطة بها غير كاملة لكي لا تختفي القائمة
-    return true; 
-  });
+      // فلترة حسب نوع العقار والمدينة والسعر
+      const pref = preferences?.find(p => String(p.id) === String(match.buyerPreferenceId));
+      const prop = properties?.find(p => String(p.id) === String(match.propertyId));
+
+      // إذا لم يكن هناك pref أو prop، نعرض المطابقة فقط إذا لم تكن هناك فلاتر نشطة
+      if (!pref || !prop) {
+        // إذا كانت هناك فلاتر نشطة (غير الافتراضية)، نخفي المطابقة
+        if (matchFilters.propertyType !== "all" || matchFilters.city !== "all" || matchFilters.minPrice > 0 || matchFilters.maxPrice < 10000000) {
+          return false;
+        }
+        return true; // نعرض المطابقة إذا لم تكن هناك فلاتر نشطة
+      }
+
+      if (matchFilters.propertyType !== "all" && prop.propertyType !== matchFilters.propertyType) return false;
+      if (matchFilters.city !== "all" && prop.city !== matchFilters.city) return false;
+      if (prop.price < matchFilters.minPrice || prop.price > matchFilters.maxPrice) return false;
+
+      // البحث النصي
+      if (matchSearchQuery) {
+        const query = matchSearchQuery.toLowerCase();
+        const buyer = users.find(u => u.id === pref.userId);
+        const seller = users.find(u => u.id === prop.sellerId);
+        const searchText = [
+          buyer?.name,
+          seller?.name,
+          buyer?.phone,
+          seller?.phone,
+          prop.city,
+          prop.district,
+          pref.city,
+          pref.districts?.join(" "),
+        ].filter(Boolean).join(" ").toLowerCase();
+        
+        if (!searchText.includes(query)) return false;
+      }
+
+      return true;
+    });
+
+    // الترتيب
+    filtered = [...filtered].sort((a, b) => {
+      if (matchSortBy === "score") {
+        return b.matchScore - a.matchScore; // من الأعلى للأقل
+      } else if (matchSortBy === "date") {
+        // ترتيب حسب createdAt
+        const aDate = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+        const bDate = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+        return bDate - aDate; // الأحدث أولاً
+      } else if (matchSortBy === "status") {
+        // محفوظ أولاً، ثم تم التواصل، ثم الباقي
+        if (a.isSaved && !b.isSaved) return -1;
+        if (!a.isSaved && b.isSaved) return 1;
+        if (a.isContacted && !b.isContacted) return -1;
+        if (!a.isContacted && b.isContacted) return 1;
+        return 0;
+      }
+      return 0;
+    });
+
+    console.log("🔍 Filtered matches result:", {
+      filteredCount: filtered.length,
+      totalMatches: matches.length,
+    });
+    
+    return filtered;
+  }, [matches, preferences, properties, users, matchFilters, matchSearchQuery, matchSortBy]);
   // --- نهاية كود الإصلاح ---
+
+  // دالة لحساب Match Breakdown (للعرض في Tooltip)
+  const calculateMatchBreakdown = useMemo(() => {
+    return (property: Property, preference: BuyerPreference) => {
+      let locationScore = 0;
+      let priceScore = 0;
+      let specsScore = 0;
+      let detailsScore = 0;
+      let bonusScore = 0;
+
+      // 1. الموقع (35 نقطة)
+      if (property.city === preference.city) {
+        if (preference.districts && preference.districts.length > 0) {
+          if (preference.districts.includes(property.district)) {
+            locationScore = 35;
+          } else {
+            locationScore = 22; // حي مجاور أو نفس المدينة
+          }
+        } else {
+          locationScore = 18;
+        }
+      }
+
+      // 2. السعر (30 نقطة)
+      if (preference.budgetMax) {
+        if (property.price <= preference.budgetMax) {
+          priceScore = preference.budgetMin && property.price >= preference.budgetMin ? 30 : 25;
+        } else if (property.price <= preference.budgetMax * 1.05) {
+          priceScore = 20;
+        } else if (property.price <= preference.budgetMax * 1.15) {
+          priceScore = 10;
+        }
+      } else {
+        priceScore = 15;
+      }
+
+      // 3. المواصفات (25 نقطة)
+      let propertyTypeScore = property.propertyType === preference.propertyType ? 12 : 6;
+      let roomsAreaScore = 0;
+      if (preference.rooms && property.rooms) {
+        const prefRooms = parseInt(String(preference.rooms).match(/\d+/)?.[0] || "0");
+        const propRooms = parseInt(String(property.rooms).match(/\d+/)?.[0] || "0");
+        if (propRooms === prefRooms) roomsAreaScore += 6.5;
+        else if (Math.abs(propRooms - prefRooms) === 1) roomsAreaScore += 4.5;
+      }
+      if (preference.area && property.area) {
+        roomsAreaScore += 6.5; // تبسيط
+      }
+      specsScore = propertyTypeScore + Math.min(13, roomsAreaScore);
+
+      // 4. التفاصيل (10 نقطة) - تبسيط
+      detailsScore = 8;
+
+      // 5. البونص (5 نقاط) - تبسيط
+      if (property.createdAt) {
+        const daysSinceCreation = Math.floor((Date.now() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceCreation <= 7) bonusScore += 2;
+        else if (daysSinceCreation <= 30) bonusScore += 1;
+      }
+      if (property.isActive) bonusScore += 1;
+      bonusScore = Math.min(5, bonusScore);
+
+      return {
+        location: Math.round(locationScore),
+        price: Math.round(priceScore),
+        specifications: Math.round(specsScore),
+        details: Math.round(detailsScore),
+        bonus: Math.round(bonusScore),
+        total: Math.round(locationScore + priceScore + specsScore + detailsScore + bonusScore),
+      };
+    };
+  }, []);
+
+  // دالة لحساب Match Priority (Smart Labels)
+  const calculateMatchPriority = (match: Match, property: Property, preference: BuyerPreference) => {
+    const breakdown = calculateMatchBreakdown(property, preference);
+    
+    if (match.matchScore >= 85) return "hot_deal";
+    
+    // Price Gap: كل شيء جيد إلا السعر
+    if (breakdown.location >= 30 && breakdown.specifications >= 20 && breakdown.price < 15) {
+      return "price_gap";
+    }
+    
+    // Location Match: الموقع مطابق تماماً لكن باقي المعايير متوسطة
+    if (breakdown.location >= 35 && breakdown.price < 20 && breakdown.specifications < 15) {
+      return "location_match";
+    }
+    
+    if (match.matchScore >= 70) return "high_potential";
+    
+    return null;
+  };
+
+  // دالة للحصول على Smart Label Badge
+  const getSmartLabelBadge = (priority: string | null) => {
+    if (!priority) return null;
+    
+    const labels: Record<string, { text: string; className: string }> = {
+      hot_deal: { text: "صفقة ساخنة", className: "bg-red-100 text-red-700 border-red-300" },
+      price_gap: { text: "فجوة سعرية", className: "bg-amber-100 text-amber-700 border-amber-300" },
+      location_match: { text: "موقع مثالي", className: "bg-blue-100 text-blue-700 border-blue-300" },
+      high_potential: { text: "إمكانية عالية", className: "bg-green-100 text-green-700 border-green-300" },
+    };
+    
+    const label = labels[priority];
+    if (!label) return null;
+    
+    return <Badge variant="outline" className={`text-[9px] ${label.className}`}>{label.text}</Badge>;
+  };
+
+  // دالة للحصول على Status Label
+  const getStatusLabel = (status: string | null | undefined) => {
+    const statusLabels: Record<string, string> = {
+      new: "جديد",
+      contacted: "تم التواصل",
+      viewing_scheduled: "زيارة مجدولة",
+      closed: "مغلقة",
+      lost: "فاشلة",
+    };
+    return statusLabels[status || "new"] || "جديد";
+  };
+
+  // دالة لتنسيق الوقت ("منذ X ساعة")
+  const formatTimeAgo = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "غير محدد";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) return `منذ ${diffDays} يوم`;
+    if (diffHours > 0) return `منذ ${diffHours} ساعة`;
+    return "منذ قليل";
+  };
 
   // الحصول على بيانات المطابقة المحددة
   const getSelectedMatchData = () => {
@@ -464,6 +821,163 @@ export default function AdminDashboard() {
     
     return { match, pref, prop, buyer, seller };
   };
+
+  const getSelectedBuyerMatches = () => {
+    if (!selectedBuyerPreferenceId) return null;
+    const pref = preferences.find(p => p.id === selectedBuyerPreferenceId);
+    if (!pref) return null;
+    const buyer = users.find(u => u.id === pref.userId);
+    const buyerMatches = filteredMatches.filter(m => m.buyerPreferenceId === selectedBuyerPreferenceId);
+    return { pref, buyer, matches: buyerMatches };
+  };
+
+  // Mutation لتحديث حالة المطابقة
+  const updateMatchStatusMutation = useMutation({
+    mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
+      return apiRequest("PATCH", `/api/admin/matches/${matchId}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      toast({ title: "تم تحديث الحالة بنجاح" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تحديث الحالة", variant: "destructive" });
+    },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: Partial<User> }) => {
+      return apiRequest("PATCH", `/api/admin/users/${userId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم التحديث", description: "تم تحديث بيانات المستخدم بنجاح" });
+      setIsEditingUser(false);
+      setUserEditData({});
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تحديث البيانات", variant: "destructive" });
+    },
+  });
+
+  const updatePreferenceMutation = useMutation({
+    mutationFn: async ({ preferenceId, data }: { preferenceId: string; data: Partial<BuyerPreference> }) => {
+      return apiRequest("PATCH", `/api/admin/preferences/${preferenceId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/preferences"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم التحديث", description: "تم تحديث الرغبة بنجاح" });
+      setIsEditingPreference(false);
+      setPreferenceEditData({});
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تحديث الرغبة", variant: "destructive" });
+    },
+  });
+
+  const updatePropertyMutation = useMutation({
+    mutationFn: async ({ propertyId, data }: { propertyId: string; data: Partial<Property> }) => {
+      return apiRequest("PATCH", `/api/admin/properties/${propertyId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم التحديث", description: "تم تحديث العقار بنجاح" });
+      setIsEditingProperty(false);
+      setPropertyEditData({});
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تحديث العقار", variant: "destructive" });
+    },
+  });
+
+  const updateMatchVerificationMutation = useMutation({
+    mutationFn: async ({ matchId, verificationType, verified }: { matchId: string; verificationType: "property" | "buyer" | "specs" | "financial"; verified: boolean }) => {
+      return apiRequest("PATCH", `/api/admin/matches/${matchId}/verify`, { verificationType, verified });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      toast({ title: "تم تحديث التأكيد بنجاح" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تحديث التأكيد", variant: "destructive" });
+    },
+  });
+
+  // منطق التجميع التلقائي للتأكيدات التفصيلية
+  useEffect(() => {
+    // لكل مطابقة في detailedVerifications، نتحقق من التأكيدات الكبيرة
+    Object.entries(detailedVerifications).forEach(([matchId, detailed]) => {
+      const match = matches.find(m => m.id === matchId);
+      if (!match) return;
+
+      // تأكيد الموقع = المدينة + الحي
+      const locationVerified = detailed.city && detailed.district;
+      
+      // تأكيد المواصفات = النوع + السعر + الغرف + الحمامات + المساحة
+      const specsVerified = detailed.propertyType && 
+                          detailed.price && 
+                          detailed.rooms && 
+                          detailed.bathrooms && 
+                          detailed.area;
+
+      // تحديث تأكيد الموقع
+      if (locationVerified !== (match as any).propertyVerified) {
+        updateMatchVerificationMutation.mutate({
+          matchId: match.id,
+          verificationType: "property",
+          verified: locationVerified,
+        });
+      }
+
+      // تحديث تأكيد المواصفات
+      if (specsVerified !== (match as any).specsVerified) {
+        updateMatchVerificationMutation.mutate({
+          matchId: match.id,
+          verificationType: "specs",
+          verified: specsVerified,
+        });
+      }
+    });
+  }, [detailedVerifications, matches, updateMatchVerificationMutation]);
+
+  // Mutation لحفظ التأكيدات التفصيلية
+  const updateDetailedVerificationsMutation = useMutation({
+    mutationFn: async ({ matchId, detailedVerifications }: { matchId: string; detailedVerifications: {
+      city: boolean;
+      district: boolean;
+      propertyType: boolean;
+      price: boolean;
+      rooms: boolean;
+      bathrooms: boolean;
+      area: boolean;
+    }}) => {
+      return apiRequest("PATCH", `/api/admin/matches/${matchId}/detailed-verifications`, { detailedVerifications });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في حفظ التأكيدات التفصيلية", variant: "destructive" });
+    },
+  });
+
+  // Mutation لتسجيل محاولة اتصال
+  const logCallMutation = useMutation({
+    mutationFn: async (matchId: string) => {
+      return apiRequest("POST", `/api/admin/matches/${matchId}/log-call`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      toast({ title: "تم تسجيل محاولة الاتصال" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في تسجيل المحاولة", variant: "destructive" });
+    },
+  });
 
   // دالة إرسال إشعار واتساب للبائع والمشتري
   const handleSendMatchNotification = (matchId: string) => {
@@ -625,163 +1139,68 @@ export default function AdminDashboard() {
           </header>
 
           <main className="flex-1 overflow-auto p-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-              <Card data-testid="card-stat-buyers">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-blue-500/10">
-                      <Users className="h-5 w-5 text-blue-500" />
+            <div className="max-w-7xl mx-auto">
+            {/* Unified KPI Header - فقط في قسم المطابقات */}
+            {activeSection !== "matches" && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card data-testid="card-stat-matches">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-pink-500/10">
+                        <Target className="h-5 w-5 text-pink-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{matches.length}</p>
+                        <p className="text-sm text-muted-foreground">المطابقات</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">{buyers.length} نشط</span>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{stats?.totalBuyers || 0}</p>
-                    <p className="text-xs text-muted-foreground">المشترين</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card data-testid="card-stat-sellers">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <Building className="h-5 w-5 text-green-500" />
+                  </CardContent>
+                </Card>
+                <Card data-testid="card-stat-properties">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-orange-500/10">
+                        <Home className="h-5 w-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{activeProperties.length}</p>
+                        <p className="text-sm text-muted-foreground">العقارات</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{stats?.totalSellers || 0}</p>
-                    <p className="text-xs text-muted-foreground">البائعين</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card data-testid="card-stat-properties">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-orange-500/10">
-                      <Home className="h-5 w-5 text-orange-500" />
+                  </CardContent>
+                </Card>
+                <Card data-testid="card-stat-preferences">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-purple-500/10">
+                        <ClipboardList className="h-5 w-5 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{activePreferences.length}</p>
+                        <p className="text-sm text-muted-foreground">الرغبات</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">{activeProperties.length} متاح</span>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{stats?.totalProperties || 0}</p>
-                    <p className="text-xs text-muted-foreground">العقارات</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card data-testid="card-stat-preferences">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-purple-500/10">
-                      <ClipboardList className="h-5 w-5 text-purple-500" />
+                  </CardContent>
+                </Card>
+                <Card data-testid="card-stat-contacts">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-teal-500/10">
+                        <MessageSquare className="h-5 w-5 text-teal-500" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{contactRequests.length}</p>
+                        <p className="text-sm text-muted-foreground">طلبات التواصل</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">{activePreferences.length} نشط</span>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{stats?.totalPreferences || 0}</p>
-                    <p className="text-xs text-muted-foreground">الرغبات</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card data-testid="card-stat-matches">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-pink-500/10">
-                      <Target className="h-5 w-5 text-pink-500" />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{matches.length}</p>
-                    <p className="text-xs text-muted-foreground">المطابقات</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card data-testid="card-stat-contacts">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="p-2 rounded-lg bg-teal-500/10">
-                      <MessageSquare className="h-5 w-5 text-teal-500" />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <p className="text-2xl font-bold">{contactRequests.length}</p>
-                    <p className="text-xs text-muted-foreground">طلبات التواصل</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
             {/* Overview Section */}
             {activeSection === "overview" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <Card className="lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        ملخص سريع
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <UserCheck className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                          <p className="text-2xl font-bold">{buyers.length}</p>
-                          <p className="text-sm text-muted-foreground">مشتري نشط</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <Building className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-                          <p className="text-2xl font-bold">{sellers.length}</p>
-                          <p className="text-sm text-muted-foreground">بائع مسجل</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <Home className="h-8 w-8 mx-auto text-orange-500 mb-2" />
-                          <p className="text-2xl font-bold">{activeProperties.length}</p>
-                          <p className="text-sm text-muted-foreground">عقار متاح</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-muted/50">
-                          <Target className="h-8 w-8 mx-auto text-purple-500 mb-2" />
-                          <p className="text-2xl font-bold">{matches.length}</p>
-                          <p className="text-sm text-muted-foreground">مطابقة ناجحة</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-primary" />
-                        آخر النشاطات
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[200px]">
-                        <div className="space-y-3">
-                          {preferences.slice(0, 5).map((pref, idx) => (
-                            <div key={pref.id} className="flex items-center gap-3 p-2 rounded-lg hover-elevate">
-                              <div className="p-2 rounded-full bg-blue-500/10">
-                                <Users className="h-4 w-4 text-blue-500" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">رغبة جديدة - {pref.city}</p>
-                                <p className="text-xs text-muted-foreground">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</p>
-                              </div>
-                            </div>
-                          ))}
-                          {preferences.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-4">لا توجد نشاطات</p>
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader>
@@ -797,7 +1216,7 @@ export default function AdminDashboard() {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="district" />
                             <YAxis />
-                            <Tooltip />
+                            <RechartsTooltip />
                             <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
@@ -812,7 +1231,6 @@ export default function AdminDashboard() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        {/* ✅ استخدام الأيقونة المستوردة باسم مستعار */}
                         <PieChartIcon className="h-5 w-5 text-primary" />
                         توزيع أنواع العقارات المطلوبة
                       </CardTitle>
@@ -820,7 +1238,6 @@ export default function AdminDashboard() {
                     <CardContent>
                       {demandByType && demandByType.length > 0 ? (
                         <ResponsiveContainer width="100%" height={250}>
-                          {/* ✅ استخدام المكون البياني من recharts */}
                           <PieChart>
                             <Pie
                               data={demandByType.map(d => ({ ...d, name: propertyTypeLabels[d.propertyType] || d.propertyType }))}
@@ -835,7 +1252,7 @@ export default function AdminDashboard() {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip />
+                            <RechartsTooltip />
                           </PieChart>
                         </ResponsiveContainer>
                       ) : (
@@ -851,269 +1268,817 @@ export default function AdminDashboard() {
 
             {/* Users Section */}
             {activeSection === "users" && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <CardTitle>المستخدمين ({users.length})</CardTitle>
-                      <CardDescription>إدارة جميع المستخدمين المسجلين</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="relative">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="بحث..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pr-9 w-[200px]"
-                          data-testid="input-search-users"
-                        />
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle>المستخدمين ({users.length})</CardTitle>
+                        <CardDescription>إدارة جميع المستخدمين المسجلين</CardDescription>
                       </div>
-                      <Select value={userFilter} onValueChange={setUserFilter}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="الكل" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">الكل</SelectItem>
-                          <SelectItem value="buyer">مشتري</SelectItem>
-                          <SelectItem value="seller">بائع</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="relative">
+                          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="بحث..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pr-9 w-[200px]"
+                            data-testid="input-search-users"
+                          />
+                        </div>
+                        <Select value={userFilter} onValueChange={setUserFilter}>
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="الكل" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">الكل</SelectItem>
+                            <SelectItem value="buyer">مشتري</SelectItem>
+                            <SelectItem value="seller">بائع</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="grid grid-cols-12 gap-2 p-3 bg-muted/50 text-sm font-medium">
-                      <div className="col-span-3">الاسم</div>
-                      <div className="col-span-3">البريد</div>
-                      <div className="col-span-2">الجوال</div>
-                      <div className="col-span-2">النوع</div>
-                      <div className="col-span-2">الإجراءات</div>
-                    </div>
-                    <ScrollArea className="h-[400px]">
+                  </CardHeader>
+                </Card>
+                <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                        <TableHead className="min-w-[200px] text-center font-semibold">الاسم</TableHead>
+                        <TableHead className="min-w-[200px] text-center font-semibold">البريد الإلكتروني</TableHead>
+                        <TableHead className="w-[150px] text-center font-semibold">الجوال</TableHead>
+                        <TableHead className="w-[120px] text-center font-semibold">النوع</TableHead>
+                        <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredUsers.length > 0 ? (
                         filteredUsers.map((user) => (
-                          <div key={user.id} className="grid grid-cols-12 gap-2 p-3 border-t items-center hover:bg-muted/30">
-                            <div className="col-span-3 font-medium truncate">{user.name}</div>
-                            <div className="col-span-3 text-sm text-muted-foreground truncate">{user.email}</div>
-                            <div className="col-span-2 text-sm" dir="rtl">{toArabicPhone(user.phone || '')}</div>
-                            <div className="col-span-2">
+                          <TableRow key={user.id} className="hover:bg-slate-50/50">
+                            <TableCell className="py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <UserIcon className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="flex flex-col items-start text-right">
+                                  <p className="font-medium text-sm">{user.name}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4 text-center">
+                              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                            </TableCell>
+                            <TableCell className="py-4 text-center" dir="rtl">
+                              <p className="text-sm">{toArabicPhone(user.phone || '')}</p>
+                            </TableCell>
+                            <TableCell className="py-4 text-center">
                               <Badge variant={user.role === "buyer" ? "default" : "secondary"}>
                                 {user.role === "buyer" ? "مشتري" : user.role === "seller" ? "بائع" : "مدير"}
                               </Badge>
-                            </div>
-                            <div className="col-span-2">
+                            </TableCell>
+                            <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-1">
+                                {user.phone && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const whatsappLink = getWhatsAppLink(user.phone!);
+                                      window.open(whatsappLink, '_blank');
+                                    }}
+                                    title="واتساب"
+                                  >
+                                    <MessageSquare className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {user.phone && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const cleanedPhone = user.phone!.replace(/\D/g, '');
+                                      window.location.href = `tel:${cleanedPhone}`;
+                                    }}
+                                    title="اتصال"
+                                  >
+                                    <Phone className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {user.email && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.location.href = `mailto:${user.email}`;
+                                    }}
+                                    title="إيميل"
+                                  >
+                                    <Mail className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
                               <Dialog>
                                 <DialogTrigger asChild>
-                                  <Button size="sm" variant="ghost" onClick={() => setSelectedUser(user)}>
-                                    <Eye className="h-4 w-4" />
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    setSelectedUser(user);
+                                    setIsEditingUser(false);
+                                    setUserEditData({});
+                                  }}>
+                                    <Eye className="w-3 h-3 ml-1" />
+                                    عرض
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>تفاصيل المستخدم</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4">
-                                    <div className="flex items-center gap-3">
-                                      <div className="p-3 rounded-full bg-primary/10">
-                                        <Users className="h-6 w-6 text-primary" />
-                                      </div>
+                                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+                                  <DialogHeader className="pb-4 border-b">
+                                    <div className="flex items-center justify-between">
                                       <div>
-                                        <p className="font-bold text-lg">{user.name}</p>
-                                        <Badge variant={user.role === "buyer" ? "default" : "secondary"}>
-                                          {user.role === "buyer" ? "مشتري" : "بائع"}
-                                        </Badge>
+                                        <DialogTitle className="text-2xl">تفاصيل المستخدم</DialogTitle>
+                                        <DialogDescription className="mt-1">عرض وتعديل معلومات المستخدم</DialogDescription>
                                       </div>
+                                      <Button
+                                        size="sm"
+                                        variant={isEditingUser ? "outline" : "default"}
+                                        className="gap-2"
+                                        onClick={() => {
+                                          if (isEditingUser) {
+                                            setIsEditingUser(false);
+                                            setUserEditData({});
+                                          } else {
+                                            setIsEditingUser(true);
+                                            setUserEditData({
+                                              name: user.name,
+                                              email: user.email,
+                                              phone: user.phone,
+                                              accountType: user.accountType,
+                                              entityName: user.entityName,
+                                              nationalId: user.nationalId,
+                                              city: user.city,
+                                              officeAddress: user.officeAddress,
+                                              whatsappNumber: user.whatsappNumber,
+                                              websiteUrl: user.websiteUrl,
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        {isEditingUser ? (
+                                          <>
+                                            <XCircle className="w-4 h-4" />
+                                            إلغاء التعديل
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Edit2 className="w-4 h-4" />
+                                            تعديل البيانات
+                                          </>
+                                        )}
+                                      </Button>
                                     </div>
-                                    <Separator />
-                                    <div className="space-y-2">
-                                      <div className="flex items-center gap-2">
-                                        <Mail className="h-4 w-4 text-muted-foreground" />
-                                        <span>{user.email}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4 text-muted-foreground" />
-                                        <span dir="rtl">{toArabicPhone(user.phone || '')}</span>
-                                      </div>
-                                      {user.accountType && (
-                                        <div className="flex items-center gap-2">
-                                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                                          <span>{user.accountType === "individual" ? "فرد" : user.accountType === "developer" ? "مطور" : "مكتب عقاري"}</span>
+                                  </DialogHeader>
+                                  
+                                  <div className="space-y-6 mt-6">
+                                    {/* بطاقة المستخدم الرئيسية */}
+                                    <Card className="border-2">
+                                      <CardContent className="p-6">
+                                        <div className="flex items-start gap-4">
+                                          <div className="p-4 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/20">
+                                            <Users className="h-8 w-8 text-primary" />
+                                          </div>
+                                          <div className="flex-1 space-y-2">
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.name || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, name: e.target.value })}
+                                                className="font-bold text-xl h-auto py-2 text-lg"
+                                                placeholder="اسم المستخدم"
+                                              />
+                                            ) : (
+                                              <h3 className="font-bold text-xl text-foreground">{user.name}</h3>
+                                            )}
+                                            <div className="flex items-center gap-2">
+                                              <Badge 
+                                                variant={user.role === "buyer" ? "default" : "secondary"}
+                                                className="text-sm px-3 py-1"
+                                              >
+                                                {user.role === "buyer" ? "مشتري" : "بائع"}
+                                              </Badge>
+                                              {user.isVerified && (
+                                                <Badge variant="outline" className="text-sm px-3 py-1 border-green-500 text-green-700 bg-green-50">
+                                                  <CheckCircle className="w-3 h-3 ml-1" />
+                                                  موثق
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
                                         </div>
-                                      )}
-                                      {user.entityName && (
-                                        <div className="flex items-center gap-2">
-                                          <Building className="h-4 w-4 text-muted-foreground" />
-                                          <span>{user.entityName}</span>
+                                      </CardContent>
+                                    </Card>
+
+                                    {/* معلومات التواصل */}
+                                    <Card>
+                                      <CardHeader className="pb-3">
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <div className="p-2 rounded-lg bg-blue-100">
+                                            <Phone className="h-4 w-4 text-blue-600" />
+                                          </div>
+                                          معلومات التواصل
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          {/* البريد الإلكتروني */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <Mail className="h-4 w-4" />
+                                              البريد الإلكتروني
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                type="email"
+                                                value={userEditData.email || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, email: e.target.value })}
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.email}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* الجوال */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <Phone className="h-4 w-4" />
+                                              الجوال
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.phone || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, phone: e.target.value })}
+                                                dir="rtl"
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{toArabicPhone(user.phone || '')}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* رقم واتساب */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <MessageSquare className="h-4 w-4" />
+                                              رقم واتساب
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.whatsappNumber || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, whatsappNumber: e.target.value })}
+                                                dir="rtl"
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.whatsappNumber ? toArabicPhone(user.whatsappNumber) : '-'}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* الموقع الإلكتروني */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <ExternalLink className="h-4 w-4" />
+                                              الموقع الإلكتروني
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                type="url"
+                                                value={userEditData.websiteUrl || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, websiteUrl: e.target.value })}
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                                {user.websiteUrl ? (
+                                                  <a href={user.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">
+                                                    {user.websiteUrl}
+                                                  </a>
+                                                ) : (
+                                                  <p className="text-sm text-muted-foreground">-</p>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                      )}
-                                    </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    {/* المعلومات الشخصية */}
+                                    <Card>
+                                      <CardHeader className="pb-3">
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <div className="p-2 rounded-lg bg-purple-100">
+                                            <UserIcon className="h-4 w-4 text-purple-600" />
+                                          </div>
+                                          المعلومات الشخصية
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          {/* رقم الهوية */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <UserIcon className="h-4 w-4" />
+                                              رقم الهوية/الإقامة
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.nationalId || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, nationalId: e.target.value })}
+                                                dir="rtl"
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.nationalId || '-'}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* المدينة */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <MapPin className="h-4 w-4" />
+                                              المدينة
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.city || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, city: e.target.value })}
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.city || '-'}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    {/* معلومات الحساب */}
+                                    <Card>
+                                      <CardHeader className="pb-3">
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                          <div className="p-2 rounded-lg bg-orange-100">
+                                            <Building2 className="h-4 w-4 text-orange-600" />
+                                          </div>
+                                          معلومات الحساب
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          {/* نوع الحساب */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <Building2 className="h-4 w-4" />
+                                              نوع الحساب
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Select
+                                                value={userEditData.accountType || ''}
+                                                onValueChange={(value) => setUserEditData({ ...userEditData, accountType: value })}
+                                              >
+                                                <SelectTrigger className="h-10">
+                                                  <SelectValue placeholder="اختر نوع الحساب" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="individual">فرد</SelectItem>
+                                                  <SelectItem value="developer">مطور</SelectItem>
+                                                  <SelectItem value="office">مكتب عقاري</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">
+                                                  {user.accountType === "individual" ? "فرد" : user.accountType === "developer" ? "مطور" : user.accountType === "office" ? "مكتب عقاري" : '-'}
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* اسم الكيان */}
+                                          <div className="space-y-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <Building className="h-4 w-4" />
+                                              اسم الكيان
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.entityName || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, entityName: e.target.value })}
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <Building className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.entityName || '-'}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* عنوان المكتب */}
+                                          <div className="space-y-2 md:col-span-2">
+                                            <Label className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                                              <MapPin className="h-4 w-4" />
+                                              عنوان المكتب
+                                            </Label>
+                                            {isEditingUser ? (
+                                              <Input
+                                                value={userEditData.officeAddress || ''}
+                                                onChange={(e) => setUserEditData({ ...userEditData, officeAddress: e.target.value })}
+                                                className="h-10"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                                <p className="text-sm font-medium">{user.officeAddress || '-'}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    {/* أزرار الحفظ */}
+                                    {isEditingUser && (
+                                      <div className="flex justify-end gap-3 pt-4 border-t">
+                                        <Button
+                                          variant="outline"
+                                          size="lg"
+                                          onClick={() => {
+                                            setIsEditingUser(false);
+                                            setUserEditData({});
+                                          }}
+                                          className="gap-2"
+                                        >
+                                          <XCircle className="w-4 h-4" />
+                                          إلغاء
+                                        </Button>
+                                        <Button
+                                          size="lg"
+                                          onClick={() => {
+                                            if (user.id) {
+                                              updateUserMutation.mutate({ userId: user.id, data: userEditData });
+                                            }
+                                          }}
+                                          disabled={updateUserMutation.isPending}
+                                          className="gap-2"
+                                        >
+                                          {updateUserMutation.isPending ? (
+                                            <>
+                                              <RefreshCw className="w-4 h-4 animate-spin" />
+                                              جاري الحفظ...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Save className="w-4 h-4" />
+                                              حفظ التغييرات
+                                            </>
+                                          )}
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 </DialogContent>
                               </Dialog>
-                            </div>
-                          </div>
+                            </TableCell>
+                          </TableRow>
                         ))
                       ) : (
-                        <div className="p-8 text-center text-muted-foreground">
-                          لا يوجد مستخدمين
-                        </div>
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                            لا يوجد مستخدمين
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             )}
 
             {/* Preferences Section */}
             {activeSection === "preferences" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>رغبات المشترين ({preferences.length})</CardTitle>
-                  <CardDescription>جميع طلبات الشراء المسجلة</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[500px]">
-                    <div className="space-y-3">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>رغبات المشترين ({preferences.length})</CardTitle>
+                    <CardDescription>جميع طلبات الشراء المسجلة</CardDescription>
+                  </CardHeader>
+                </Card>
+                <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                        <TableHead className="min-w-[200px] text-center font-semibold">المشتري</TableHead>
+                        <TableHead className="min-w-[150px] text-center font-semibold">المدينة</TableHead>
+                        <TableHead className="min-w-[150px] text-center font-semibold">الأحياء</TableHead>
+                        <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
+                        <TableHead className="w-[150px] text-center font-semibold">الميزانية</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
+                        <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {preferences.length > 0 ? (
                         preferences.map((pref) => {
                           const user = users.find(u => u.id === pref.userId);
                           return (
-                            <Card key={pref.id} className="p-4">
-                              <div className="flex items-start justify-between gap-4 flex-wrap">
-                                <div className="space-y-2 flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge variant="secondary">{pref.city}</Badge>
-                                    <Badge variant="outline">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</Badge>
-                                    {pref.paymentMethod && (
-                                      <Badge variant="outline">{paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}</Badge>
-                                    )}
-                                    {pref.purpose && (
-                                      <Badge variant="outline">{pref.purpose === "residence" ? "سكن" : "استثمار"}</Badge>
-                                    )}
+                            <TableRow key={pref.id} className="hover:bg-slate-50/50">
+                              <TableCell className="py-4">
+                                {user ? (
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <UserIcon className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div className="flex flex-col items-start text-right">
+                                      <p className="font-medium text-sm">{user.name}</p>
+                                      <p className="text-xs text-muted-foreground">{toArabicPhone(user.phone || '')}</p>
+                                    </div>
                                   </div>
-                                  {user && (
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      <span className="flex items-center gap-1">
-                                        <Users className="h-3 w-3" />
-                                        {user.name}
-                                      </span>
-                                      <span className="flex items-center gap-1" dir="rtl">
-                                        <Phone className="h-3 w-3" />
-                                        {toArabicPhone(user.phone || '')}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {pref.districts && pref.districts.length > 0 && (
-                                    <div className="text-sm">
-                                      <span className="text-muted-foreground">الأحياء: </span>
-                                      {pref.districts.join("، ")}
-                                    </div>
-                                  )}
-                                  {(pref.budgetMin || pref.budgetMax) && (
-                                    <div className="text-sm">
-                                      <span className="text-muted-foreground">الميزانية: </span>
-                                      {maskBudget(pref.budgetMin, pref.budgetMax)}
-                                    </div>
-                                  )}
-                                  {pref.rooms && (
-                                    <div className="text-sm">
-                                      <span className="text-muted-foreground">الغرف: </span>{pref.rooms}
-                                    </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">غير معروف</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <Badge variant="secondary">{pref.city}</Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <div className="text-sm">
+                                  {pref.districts && pref.districts.length > 0 ? (
+                                    <span className="text-muted-foreground">{pref.districts.slice(0, 2).join("، ")}{pref.districts.length > 2 ? ` +${pref.districts.length - 2}` : ''}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
                                   )}
                                 </div>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <Badge variant="outline">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <div className="text-sm font-medium">
+                                  {(pref.budgetMin || pref.budgetMax) ? maskBudget(pref.budgetMin, pref.budgetMax) : '-'}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <span className="text-sm">{pref.rooms || '-'}</span>
+                              </TableCell>
+                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                {user && (
+                                  <div className="flex items-center justify-center gap-1">
+                                    {user.phone && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const whatsappLink = getWhatsAppLink(user.phone!);
+                                          window.open(whatsappLink, '_blank');
+                                        }}
+                                        title="واتساب"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {user.phone && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const cleanedPhone = user.phone!.replace(/\D/g, '');
+                                          window.location.href = `tel:${cleanedPhone}`;
+                                        }}
+                                        title="اتصال"
+                                      >
+                                        <Phone className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {user.email && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.location.href = `mailto:${user.email}`;
+                                        }}
+                                        title="إيميل"
+                                      >
+                                        <Mail className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
                                 <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
                                   {pref.isActive ? "نشط" : "غير نشط"}
                                 </Badge>
-                              </div>
-                            </Card>
+                              </TableCell>
+                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleShowPreferenceDetails(pref.id)}
+                                >
+                                  <Eye className="w-3 h-3 ml-1" />
+                                  عرض
+                                </Button>
+                              </TableCell>
+                            </TableRow>
                           );
                         })
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          لا توجد رغبات مسجلة
-                        </div>
+                        <TableRow>
+                          <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                            لا توجد رغبات مسجلة
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             )}
 
             {/* Properties Section */}
             {activeSection === "properties" && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <CardTitle>العقارات ({properties.length})</CardTitle>
-                      <CardDescription>إدارة العقارات المعروضة</CardDescription>
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle>العقارات ({properties.length})</CardTitle>
+                        <CardDescription>إدارة العقارات المعروضة</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="الكل" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">الكل</SelectItem>
+                            <SelectItem value="active">نشط</SelectItem>
+                            <SelectItem value="inactive">غير نشط</SelectItem>
+                            <SelectItem value="apartment">شقة</SelectItem>
+                            <SelectItem value="villa">فيلا</SelectItem>
+                            <SelectItem value="land">أرض</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Select value={propertyFilter} onValueChange={setPropertyFilter}>
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue placeholder="الكل" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">الكل</SelectItem>
-                          <SelectItem value="active">نشط</SelectItem>
-                          <SelectItem value="inactive">غير نشط</SelectItem>
-                          <SelectItem value="apartment">شقة</SelectItem>
-                          <SelectItem value="villa">فيلا</SelectItem>
-                          <SelectItem value="land">أرض</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[500px]">
-                    <div className="space-y-3">
+                  </CardHeader>
+                </Card>
+                <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                        <TableHead className="min-w-[200px] text-center font-semibold">البائع</TableHead>
+                        <TableHead className="min-w-[120px] text-center font-semibold">المدينة</TableHead>
+                        <TableHead className="min-w-[120px] text-center font-semibold">الحي</TableHead>
+                        <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
+                        <TableHead className="w-[150px] text-center font-semibold">السعر</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">المساحة</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">المشاهدات</TableHead>
+                        <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                        <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
+                        <TableHead className="w-[120px] text-center font-semibold">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredProperties.length > 0 ? (
                         filteredProperties.map((prop) => {
                           const seller = users.find(u => u.id === prop.sellerId);
                           return (
-                            <Card key={prop.id} className="p-4">
-                              <div className="flex items-start justify-between gap-3 flex-wrap">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge variant="secondary">{prop.city}</Badge>
-                                    <Badge variant="outline">{prop.district}</Badge>
-                                    <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
-                                    <Badge variant="secondary">{statusLabels[prop.status] || prop.status}</Badge>
-                                  </div>
-                                  <div className="text-xl font-bold text-primary">
-                                    {formatCurrency(prop.price)} ريال
-                                  </div>
-                                  {seller && (
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                      <span className="flex items-center gap-1">
-                                        <Users className="h-3 w-3" />
-                                        {seller.name}
-                                      </span>
-                                      <span className="flex items-center gap-1" dir="rtl">
-                                        <Phone className="h-3 w-3" />
-                                        {toArabicPhone(seller.phone || '')}
-                                      </span>
+                            <TableRow key={prop.id} className="hover:bg-slate-50/50">
+                              <TableCell className="py-4">
+                                {seller ? (
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <Store className="w-5 h-5 text-green-600" />
                                     </div>
-                                  )}
-                                  {prop.description && (
-                                    <p className="text-sm text-muted-foreground line-clamp-2">{prop.description}</p>
-                                  )}
-                                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Eye className="h-3 w-3" />
-                                      {prop.viewsCount || 0} مشاهدة
-                                    </span>
-                                    {prop.area && <span>المساحة: {prop.area}</span>}
-                                    {prop.rooms && <span>الغرف: {prop.rooms}</span>}
+                                    <div className="flex flex-col items-start text-right">
+                                      <p className="font-medium text-sm">{seller.name}</p>
+                                      <p className="text-xs text-muted-foreground">{toArabicPhone(seller.phone || '')}</p>
+                                    </div>
                                   </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">غير معروف</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <Badge variant="secondary">{prop.city}</Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <span className="text-sm">{prop.district}</span>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <div className="text-sm font-bold text-primary">
+                                  {formatCurrency(prop.price)} ريال
                                 </div>
-                                <div className="flex flex-col gap-2 items-end">
-                                  <Badge className={prop.isActive ? "bg-green-500" : "bg-red-500"}>
-                                    {prop.isActive ? "نشط" : "موقوف"}
-                                  </Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <span className="text-sm">{prop.area || '-'}</span>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <span className="text-sm">{prop.rooms || '-'}</span>
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                                  <Eye className="w-3 h-3" />
+                                  {prop.viewsCount || 0}
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                {seller && (
+                                  <div className="flex items-center justify-center gap-1">
+                                    {seller.phone && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const whatsappLink = getWhatsAppLink(seller.phone!);
+                                          window.open(whatsappLink, '_blank');
+                                        }}
+                                        title="واتساب"
+                                      >
+                                        <MessageSquare className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {seller.phone && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const cleanedPhone = seller.phone!.replace(/\D/g, '');
+                                          window.location.href = `tel:${cleanedPhone}`;
+                                        }}
+                                        title="اتصال"
+                                      >
+                                        <Phone className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {seller.email && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.location.href = `mailto:${seller.email}`;
+                                        }}
+                                        title="إيميل"
+                                      >
+                                        <Mail className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-4 text-center">
+                                <Badge className={prop.isActive ? "bg-green-500" : "bg-red-500"}>
+                                  {prop.isActive ? "نشط" : "موقوف"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1">
                                   <Button
                                     size="sm"
                                     variant={prop.isActive ? "destructive" : "default"}
@@ -1123,67 +2088,213 @@ export default function AdminDashboard() {
                                   >
                                     {prop.isActive ? (
                                       <>
-                                        <XCircle className="h-4 w-4 ml-1" />
+                                        <XCircle className="w-3 h-3 ml-1" />
                                         إيقاف
                                       </>
                                     ) : (
                                       <>
-                                        <CheckCircle className="h-4 w-4 ml-1" />
+                                        <CheckCircle className="w-3 h-3 ml-1" />
                                         تفعيل
                                       </>
                                     )}
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedPropertyId(prop.id);
+                                      setShowPropertyDetailsDialog(true);
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3 ml-1" />
+                                    عرض
+                                  </Button>
                                 </div>
-                              </div>
-                            </Card>
+                              </TableCell>
+                            </TableRow>
                           );
                         })
                       ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          لا توجد عقارات
-                        </div>
+                        <TableRow>
+                          <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+                            لا توجد عقارات
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             )}
 
-            {/* ✅ قسم المطابقات - التصميم الجديد: بائع، مشتري، ومحور الربط */}
+            {/* ✅ قسم المطابقات - Deal-Driven Pipeline */}
             {activeSection === "matches" && (
               <div className="space-y-6">
-                {/* Market Pulse - نبض السوق */}
-                <MarketPulse 
-                  activeBrowsers={users.length}
-                  newRequests={preferences.filter(p => p.isActive).length}
-                  completedDeals={contactRequests.filter(c => c.status === "completed").length}
-                  matchedProperties={matches.length}
-                  newInterests={matches.filter(m => m.isSaved).length}
-                  ongoingChats={contactRequests.filter(c => c.status === "pending").length}
-                />
-
-                <Card className="bg-slate-50/50 dark:bg-slate-900/50 border-none shadow-none">
-                  <CardHeader className="px-0">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div>
-                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                          <Handshake className="h-6 w-6 text-primary" />
-                          المطابقات الذكية v2.0
-                          <Badge variant="secondary" className="text-sm font-normal">
-                            {matches.length} نتيجة
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          خوارزمية النقاط الموزونة: موقع (40) + سعر (30) + مواصفات (30) = 100 نقطة
-                        </CardDescription>
+                {/* Unified KPI Header - محدث */}
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {/* الكل */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "all" ? "ring-2 ring-primary" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("all");
+                      setMatchFilters({ ...matchFilters, status: "all", minScore: 0, maxScore: 100 });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Target className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold">{matches.length}</p>
+                          <p className="text-xs text-muted-foreground">الكل</p>
+                        </div>
                       </div>
-                      <Popover open={showMatchFilters} onOpenChange={setShowMatchFilters}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" data-testid="button-filter-matches">
-                            <Filter className="h-4 w-4 ml-2" />
-                            تصفية النتائج
-                          </Button>
-                        </PopoverTrigger>
+                    </CardContent>
+                  </Card>
+                  {/* مطابقات جديدة */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "new" ? "ring-2 ring-blue-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("new");
+                      setMatchFilters({ ...matchFilters, status: "new" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-blue-600">{matches.filter(m => ((m as any).status || "new") === "new").length}</p>
+                          <p className="text-xs text-muted-foreground">مطابقات جديدة</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* بانتظار الرد */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "contacted" ? "ring-2 ring-purple-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("contacted");
+                      setMatchFilters({ ...matchFilters, status: "contacted" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <MessageSquare className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-purple-600">{matches.filter(m => ((m as any).status || "new") === "contacted").length}</p>
+                          <p className="text-xs text-muted-foreground">بانتظار الرد</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* مواعيد معاينة */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "viewing_scheduled" ? "ring-2 ring-orange-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("viewing_scheduled");
+                      setMatchFilters({ ...matchFilters, status: "viewing_scheduled" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-orange-600">{matches.filter(m => ((m as any).status || "new") === "viewing_scheduled").length}</p>
+                          <p className="text-xs text-muted-foreground">مواعيد معاينة</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* عالية الإمكانية (>85%) */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "high_potential" ? "ring-2 ring-emerald-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("high_potential");
+                      setMatchFilters({ ...matchFilters, status: "all", minScore: 85, maxScore: 100 });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-emerald-600">{matches.filter(m => m.matchScore >= 85).length}</p>
+                          <p className="text-xs text-muted-foreground">عالية الإمكانية (&gt;85%)</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* صفقات مغلقة */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "closed" ? "ring-2 ring-green-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("closed");
+                      setMatchFilters({ ...matchFilters, status: "closed" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-green-600">{matches.filter(m => ((m as any).status || "new") === "closed").length}</p>
+                          <p className="text-xs text-muted-foreground">صفقات مغلقة</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+
+                {/* Grouped Control Bar */}
+                <div className="flex items-center justify-between gap-3 pb-4 border-b">
+                  <div className="flex items-center gap-2">
+                    <div className="flex border rounded-md">
+                      <Button
+                        variant={matchViewMode === "grid" ? "default" : "ghost"}
+                        size="sm"
+                        className="h-9 rounded-r-none"
+                        onClick={() => setMatchViewMode("grid")}
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={matchViewMode === "list" ? "default" : "ghost"}
+                        size="sm"
+                        className="h-9 rounded-l-none"
+                        onClick={() => setMatchViewMode("list")}
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Badge variant="secondary" className="h-9 px-3">
+                      {filteredMatches.length} من {matches.length} نتيجة
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 justify-end">
+                    <div className="relative">
+                      <Search className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="بحث في المطابقات..."
+                        value={matchSearchQuery}
+                        onChange={(e) => setMatchSearchQuery(e.target.value)}
+                        className="w-64 pr-8 h-9"
+                      />
+                    </div>
+                    <Select value={matchSortBy} onValueChange={(val) => setMatchSortBy(val as any)}>
+                      <SelectTrigger className="w-32 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="score">حسب النقاط</SelectItem>
+                        <SelectItem value="date">حسب التاريخ</SelectItem>
+                        <SelectItem value="status">حسب الحالة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Popover open={showMatchFilters} onOpenChange={setShowMatchFilters}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9" data-testid="button-filter-matches">
+                          <Filter className="h-4 w-4 ml-2" />
+                          تصفية
+                        </Button>
+                      </PopoverTrigger>
                         <PopoverContent className="w-64 p-3" align="start" dir="rtl">
                           <div className="space-y-3">
                             <div className="space-y-1.5">
@@ -1197,8 +2308,12 @@ export default function AdminDashboard() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">الكل</SelectItem>
-                                <SelectItem value="saved">محفوظ</SelectItem>
+                                <SelectItem value="new">جديد</SelectItem>
                                 <SelectItem value="contacted">تم التواصل</SelectItem>
+                                <SelectItem value="viewing_scheduled">زيارة مجدولة</SelectItem>
+                                <SelectItem value="closed">مغلقة</SelectItem>
+                                <SelectItem value="lost">فاشلة</SelectItem>
+                                <SelectItem value="saved">محفوظ</SelectItem>
                               </SelectContent>
                             </Select>
                             <Select value={matchFilters.propertyType} onValueChange={(val) => setMatchFilters({...matchFilters, propertyType: val})} data-testid="select-property-filter">
@@ -1235,154 +2350,798 @@ export default function AdminDashboard() {
                         </PopoverContent>
                       </Popover>
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-0">
+                  </div>
+
+                  {/* Debug Info */}
+                  {matchesLoading && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      جاري تحميل المطابقات...
+                    </div>
+                  )}
+                  {matchesError && (
+                    <div className="text-center py-8 text-red-500">
+                      خطأ في تحميل المطابقات: {String(matchesError)}
+                    </div>
+                  )}
+                  {!matchesLoading && !matchesError && matches.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      لا توجد مطابقات في قاعدة البيانات. قم بإضافة عقارات ورغبات لإنشاء مطابقات.
+                    </div>
+                  )}
+
+                  {/* Table View */}
                   {filteredMatches.length > 0 ? (
-                    <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-                      <div className="grid gap-6 pb-10">
-                        {filteredMatches.map((match) => {
-                          // استخراج البيانات المرتبطة بالمطابقة
-                          const pref = preferences.find(p => p.id === match.buyerPreferenceId);
-                          const prop = properties.find(p => p.id === match.propertyId);
-                          const buyer = pref ? users.find(u => u.id === pref.userId) : null;
-                          const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
-
-                          // تخطي إذا كانت البيانات ناقصة
-                          if (!pref || !prop) return null;
-
-                          return (
-                            <Card key={match.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 max-w-[750px] mx-auto w-full px-6">
-                              <div className="grid grid-cols-1 md:grid-cols-9">
-
-                                {/* الجزء الأيمن: بطاقة المشتري (Persona) */}
-                                <div className="md:col-span-2 bg-blue-50/30 p-3 flex flex-col items-center text-center border-b md:border-b-0 md:border-l border-slate-100 -mx-10">
-                                  <div className="flex flex-col items-center w-full gap-1">
-                                    <div className="relative">
-                                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                                        <UserIcon className="w-5 h-5" />
-                                      </div>
-                                      <Badge className="absolute -bottom-1 -right-1 bg-blue-600 text-white text-[8px] px-1 h-3.5 border border-white">مشتري</Badge>
-                                    </div>
-                                    <h4 className="font-semibold text-slate-800 text-xs truncate w-full" title={buyer?.name}>
-                                      {buyer?.name || "مستخدم"}
-                                    </h4>
-                                    <div className="flex items-center gap-1.5">
-                                      {buyer?.phone && (
-                                        <>
-                                          <a href={`tel:${buyer.phone}`} title="اتصال" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-600 transition-all">
-                                            <Phone className="w-3 h-3" />
-                                          </a>
-                                          <a href={getWhatsAppLink(buyer.phone)} target="_blank" rel="noopener noreferrer" title="واتساب" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-[#25D366] hover:border-[#25D366] transition-all">
-                                            <SiWhatsapp className="w-3 h-3" />
-                                          </a>
-                                        </>
-                                      )}
-                                      {buyer?.email && (
-                                        <a href={`mailto:${buyer.email}`} title="بريد" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all">
-                                          <Mail className="w-3 h-3" />
-                                        </a>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1 items-center justify-center mt-2 w-full">
-                                     <Badge variant="secondary" className="text-[9px] h-4 bg-white">{pref.city}</Badge>
-                                     <Badge variant="secondary" className="text-[9px] h-4 bg-white">{propertyTypeLabels[pref.propertyType]}</Badge>
-                                  </div>
+                    matchViewMode === "list" ? (
+                      // Table View - Professional Optimized
+                      <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                        {/* Quick Edit Bar */}
+                        {selectedMatchIds.size > 0 && (
+                          <div className="border-b bg-slate-50 px-4 py-2 flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">
+                              {(() => {
+                                // حساب عدد المشترين المختارين
+                                const selectedBuyerPreferenceIds = new Set(
+                                  Array.from(selectedMatchIds)
+                                    .map(id => matches.find(m => m.id === id)?.buyerPreferenceId)
+                                    .filter(Boolean) as string[]
+                                );
+                                return `${selectedMatchIds.size} مطابقة من ${selectedBuyerPreferenceIds.size} مشتري محددة`;
+                              })()}
+                            </span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                  <Pencil className="w-4 h-4" />
+                                  تحرير سريع
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>إجراءات سريعة</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  // تغيير حالة المطابقة
+                                  const statusOptions = ["new", "contacted", "confirmed", "viewing", "agreed", "vacated"];
+                                  const selectedStatus = window.prompt(`اختر الحالة:\n${statusOptions.map((s, i) => `${i + 1}. ${getStatusBadgeConfig(s).label}`).join('\n')}\n\nأدخل الرقم:`);
+                                  if (selectedStatus && statusOptions[parseInt(selectedStatus) - 1]) {
+                                    const status = statusOptions[parseInt(selectedStatus) - 1];
+                                    Array.from(selectedMatchIds).forEach(id => {
+                                      updateMatchStatusMutation.mutate({ matchId: id, status });
+                                    });
+                                    toast({ title: `تم تحديث حالة ${selectedMatchIds.size} مطابقة` });
+                                    setSelectedMatchIds(new Set());
+                                  }
+                                }}>
+                                  <Edit className="w-4 h-4 ml-2" />
+                                  تغيير حالة المطابقة
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  // إرسال إشعار واتساب
+                                  Array.from(selectedMatchIds).forEach(id => {
+                                    handleSendMatchNotification(id);
+                                  });
+                                  toast({ title: `تم إرسال إشعارات لـ ${selectedMatchIds.size} مطابقة` });
+                                  setSelectedMatchIds(new Set());
+                                }}>
+                                  <MessageSquare className="w-4 h-4 ml-2" />
+                                  إرسال إشعار واتساب
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={async () => {
+                                  // حفظ/إلغاء الحفظ
+                                  const firstMatch = matches.find(m => selectedMatchIds.has(m.id));
+                                  const isSaved = !firstMatch?.isSaved;
+                                  for (const id of Array.from(selectedMatchIds)) {
+                                    try {
+                                      await apiRequest("PUT", `/api/matches/${id}/toggle-saved`, { isSaved });
+                                    } catch (error) {
+                                      console.error(error);
+                                    }
+                                  }
+                                  queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+                                  toast({ title: `تم ${isSaved ? 'حفظ' : 'إلغاء حفظ'} ${selectedMatchIds.size} مطابقة` });
+                                  setSelectedMatchIds(new Set());
+                                }}>
+                                  <Save className="w-4 h-4 ml-2" />
+                                  حفظ/إلغاء الحفظ
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  // تصدير Excel
+                                  toast({ title: "جاري تصدير المطابقات إلى Excel...", description: "هذه الميزة قيد التطوير" });
+                                }}>
+                                  <FileExcel className="w-4 h-4 ml-2" />
+                                  تصدير Excel
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  // تصدير PDF
+                                  toast({ title: "جاري تصدير المطابقات إلى PDF...", description: "هذه الميزة قيد التطوير" });
+                                }}>
+                                  <FilePdf className="w-4 h-4 ml-2" />
+                                  تصدير PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={async () => {
+                                  // حذف المطابقات - TODO: إضافة DELETE endpoint في المستقبل
+                                  toast({ title: "ميزة الحذف قيد التطوير", description: "سيتم إضافة endpoint للحذف قريباً" });
+                                }} className="text-red-600">
+                                  <Trash2 className="w-4 h-4 ml-2" />
+                                  حذف المطابقات
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                              <TableHead className="w-14 text-center">
+                                <div className="flex justify-center">
+                                  <Checkbox 
+                                    checked={selectedMatchIds.size === filteredMatches.length && filteredMatches.length > 0}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedMatchIds(new Set(filteredMatches.map(m => m.id)));
+                                      } else {
+                                        setSelectedMatchIds(new Set());
+                                      }
+                                    }}
+                                  />
                                 </div>
+                              </TableHead>
+                              <TableHead className="min-w-[220px] text-center font-semibold">المشتري</TableHead>
+                              <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                              <TableHead className="w-[130px] text-center font-semibold">عدد المطابقات</TableHead>
+                              <TableHead className="w-[130px] text-center font-semibold">أفضل تطابق</TableHead>
+                              <TableHead className="w-[140px] text-center font-semibold">التأكيدات</TableHead>
+                              <TableHead className="w-[150px] text-center font-semibold">الحالة</TableHead>
+                              <TableHead className="w-[110px] text-center font-semibold">إجراءات</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(() => {
+                              // إزالة التكرارات بناءً على buyerPreferenceId + propertyId
+                              const seenMatches = new Map<string, Match>();
+                              const uniqueMatches = filteredMatches.filter(match => {
+                                const key = `${match.buyerPreferenceId}-${match.propertyId}`;
+                                if (seenMatches.has(key)) {
+                                  return false; // تكرار
+                                }
+                                seenMatches.set(key, match);
+                                return true;
+                              });
 
-                                {/* الجزء الأوسط: محور الربط */}
-                                <div className="md:col-span-5 p-4 bg-slate-50 flex items-center justify-center gap-2 -mx-6">
-                                  {/* زر الرسائل */}
-                                  <Button 
-                                    size="icon" 
-                                    className="h-9 w-9 rounded-full bg-primary text-white"
-                                    onClick={() => handleSendMatchNotification(match.id)}
-                                    disabled={sendingMatchNotification === match.id}
-                                    data-testid={`button-group-chat-${match.id}`}
-                                  >
-                                    {sendingMatchNotification === match.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
-                                  </Button>
-                                  
-                                  {/* دائرة نسبة التطابق */}
-                                  <div className="relative flex items-center justify-center">
-                                    <svg className="w-16 h-16 transform -rotate-90">
-                                      <circle stroke="#e2e8f0" strokeWidth="4" fill="white" r="28" cx="32" cy="32" />
-                                      <circle 
-                                        stroke="#22c55e"
-                                        strokeWidth="4" 
-                                        strokeDasharray={2 * Math.PI * 28} 
-                                        strokeDashoffset={2 * Math.PI * 28 * (1 - match.matchScore / 100)} 
-                                        strokeLinecap="round" 
-                                        fill="transparent" 
-                                        r="28" 
-                                        cx="32" 
-                                        cy="32" 
+                              // تجميع المطابقات حسب buyerPreferenceId
+                              const groupedByBuyer = new Map<string, Match[]>();
+                              uniqueMatches.forEach(match => {
+                                const key = match.buyerPreferenceId || 'unknown';
+                                if (!groupedByBuyer.has(key)) {
+                                  groupedByBuyer.set(key, []);
+                                }
+                                groupedByBuyer.get(key)!.push(match);
+                              });
+
+                              // تحويل المجموعات إلى مصفوفة للعرض
+                              return Array.from(groupedByBuyer.entries());
+                            })().map(([buyerPreferenceId, buyerMatches]) => {
+                              // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
+                              const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
+                              const bestMatch = sortedMatches[0];
+                              const matchCount = sortedMatches.length;
+
+                              const pref = preferences.find(p => p.id === buyerPreferenceId);
+                              if (!pref) return null;
+                              const buyer = users.find(u => u.id === pref.userId);
+                              if (!buyer) return null;
+
+                              // أفضل مطابقة
+                              const bestProp = properties.find(p => p.id === bestMatch.propertyId);
+                              if (!bestProp) return null;
+                              
+                              const bestMatchStatus = (bestMatch as any).status || "new";
+                              const bestBuyerVerified = (bestMatch as any).buyerVerified || false;
+                              
+                              const getScoreColor = (score: number) => {
+                                // تدرج الألوان: أحمر → برتقالي → أخضر
+                                const percentage = Math.round((score / 105) * 100);
+                                if (percentage >= 70) return "#10b981"; // أخضر
+                                if (percentage >= 40) return "#f59e0b"; // برتقالي
+                                return "#ef4444"; // أحمر
+                              };
+
+                              const bestPercentage = Math.round((bestMatch.matchScore / 105) * 100);
+                              
+                              // جمع جميع match IDs للمشتري للـ checkbox
+                              const buyerMatchIds = sortedMatches.map(m => m.id);
+                              const allSelected = buyerMatchIds.every(id => selectedMatchIds.has(id));
+                              const someSelected = buyerMatchIds.some(id => selectedMatchIds.has(id));
+
+                              return (
+                                <TableRow 
+                                  key={buyerPreferenceId} 
+                                  className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                                  onClick={(e) => {
+                                    // منع التوسيع عند الضغط على Checkbox أو Button أو Badge
+                                    const target = e.target as HTMLElement;
+                                    if (
+                                      target.closest('input[type="checkbox"]') || 
+                                      target.closest('button') || 
+                                      target.closest('[role="button"]') ||
+                                      target.closest('[role="combobox"]') ||
+                                      target.closest('[data-radix-popper-content-wrapper]')
+                                    ) {
+                                      return;
+                                    }
+                                    // فتح Dialog "مطابقات المشتري"
+                                    handleShowBuyerMatches(buyerPreferenceId);
+                                  }}
+                                >
+                                  {/* Checkbox */}
+                                  <TableCell className="w-14 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex justify-center">
+                                      <Checkbox 
+                                        checked={allSelected}
+                                        ref={(el) => {
+                                          if (el) {
+                                            (el as any).indeterminate = someSelected && !allSelected;
+                                          }
+                                        }}
+                                        onCheckedChange={(checked) => {
+                                          const newSet = new Set(selectedMatchIds);
+                                          if (checked) {
+                                            buyerMatchIds.forEach(id => newSet.add(id));
+                                          } else {
+                                            buyerMatchIds.forEach(id => newSet.delete(id));
+                                          }
+                                          setSelectedMatchIds(newSet);
+                                        }}
                                       />
-                                    </svg>
-                                    <span className="absolute text-base font-bold text-black">{match.matchScore}%</span>
-                                  </div>
-                                  
-                                  {/* زر التفاصيل */}
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost"
-                                    className="h-9 w-9 rounded-full text-slate-900 hover:text-slate-800"
-                                    onClick={() => handleShowMatchDetails(match.id)}
-                                    data-testid={`button-full-details-${match.id}`}
-                                  >
-                                    <ExternalLink className="w-4 h-4" strokeWidth="2" />
-                                  </Button>
-                                </div>
-
-                                {/* الجزء الأيسر: بطاقة البائع */}
-                                <div className="md:col-span-2 bg-green-50/30 p-3 flex flex-col items-center text-center border-t md:border-t-0 md:border-r border-slate-100 -mx-10">
-                                  <div className="flex flex-col items-center w-full gap-1">
-                                    <div className="relative">
-                                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                                        <Store className="w-5 h-5" />
+                                    </div>
+                                  </TableCell>
+                                  {/* المشتري - Avatar + الاسم */}
+                                  <TableCell className="min-w-[220px] py-4 text-center align-middle">
+                                    <div className="flex items-center gap-3 justify-center">
+                                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <UserIcon className="w-5 h-5 text-primary" />
                                       </div>
-                                      <Badge className="absolute -bottom-1 -left-1 bg-green-600 text-white text-[8px] px-1 h-3.5 border border-white">بائع</Badge>
+                                      <div className="flex flex-col items-start text-right">
+                                        <p className="font-medium text-sm">{buyer.name || "مستخدم"}</p>
+                                        <p className="text-xs text-muted-foreground">{buyer.phone || "-"}</p>
+                                      </div>
                                     </div>
-                                    <h4 className="font-semibold text-slate-800 text-xs truncate w-full" title={seller?.name}>
-                                      {seller?.name || "مالك العقار"}
-                                    </h4>
-                                    <div className="flex items-center gap-1.5">
-                                      {seller?.phone && (
-                                        <>
-                                          <a href={`tel:${seller.phone}`} title="اتصال" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-600 transition-all">
-                                            <Phone className="w-3 h-3" />
-                                          </a>
-                                          <a href={getWhatsAppLink(seller.phone)} target="_blank" rel="noopener noreferrer" title="واتساب" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-[#25D366] hover:border-[#25D366] transition-all">
-                                            <SiWhatsapp className="w-3 h-3" />
-                                          </a>
-                                        </>
+                                  </TableCell>
+                                  {/* وسائل التواصل */}
+                                  <TableCell className="w-[140px] text-center align-middle py-4">
+                                    <div className="flex items-center justify-center gap-1 pointer-events-auto">
+                                      {buyer.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const whatsappLink = getWhatsAppLink(buyer.phone!);
+                                            window.open(whatsappLink, '_blank');
+                                          }}
+                                          title="واتساب"
+                                        >
+                                          <SiWhatsapp className="w-4 h-4" />
+                                        </Button>
                                       )}
-                                      {seller?.email && (
-                                        <a href={`mailto:${seller.email}`} title="بريد" className="p-1 bg-white rounded-full border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-600 transition-all">
-                                          <Mail className="w-3 h-3" />
-                                        </a>
+                                      {buyer.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const cleanedPhone = buyer.phone!.replace(/\D/g, '');
+                                            window.location.href = `tel:${cleanedPhone}`;
+                                          }}
+                                          title="اتصال"
+                                        >
+                                          <Phone className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {buyer.email && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `mailto:${buyer.email}`;
+                                          }}
+                                          title="إيميل"
+                                        >
+                                          <Mail className="w-4 h-4" />
+                                        </Button>
                                       )}
                                     </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1 items-center justify-center mt-2 w-full">
-                                     <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{prop.city}</Badge>
-                                     <Badge variant="outline" className="text-[9px] h-4 bg-white text-slate-600 border-slate-200">{formatCurrency(prop.price)}</Badge>
-                                  </div>
-                                </div>
-
-                              </div>
-                              {/* الشريط السفلي المدمج */}
-                              {(match.isSaved || match.isContacted) && (
-                                <div className="bg-slate-50 border-t border-slate-100 px-3 py-1.5 flex items-center gap-2">
-                                  {match.isSaved && <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[9px] h-4 gap-0.5"><Save className="w-2.5 h-2.5"/> محفوظ</Badge>}
-                                  {match.isContacted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[9px] h-4 gap-0.5"><CheckCircle className="w-2.5 h-2.5"/> تم التواصل</Badge>}
-                                </div>
-                              )}
-                            </Card>
-                          );
-                        })}
+                                  </TableCell>
+                                  {/* عدد المطابقات */}
+                                  <TableCell className="w-[130px] text-center align-middle py-4">
+                                    <div className="flex items-center justify-center">
+                                      <Badge variant="outline" className="text-sm font-semibold px-3 py-1.5">
+                                        {matchCount} مطابقة
+                                      </Badge>
+                                    </div>
+                                  </TableCell>
+                                  {/* أفضل تطابق */}
+                                  <TableCell className="w-[130px] text-center align-middle py-4">
+                                    <div className="flex flex-col items-center justify-center gap-1">
+                                      <div className="relative w-12 h-12">
+                                        <svg className="w-12 h-12 transform -rotate-90">
+                                          <circle stroke="#e2e8f0" strokeWidth="3" fill="white" r="16" cx="24" cy="24" />
+                                          <circle 
+                                            stroke={getScoreColor(bestMatch.matchScore)}
+                                            strokeWidth="3"
+                                            strokeDasharray={2 * Math.PI * 16}
+                                            strokeDashoffset={2 * Math.PI * 16 * (1 - bestMatch.matchScore / 105)}
+                                            strokeLinecap="round"
+                                            fill="transparent"
+                                            r="16"
+                                            cx="24"
+                                            cy="24"
+                                          />
+                                        </svg>
+                                        <span className={`absolute inset-0 flex items-center justify-center text-sm font-bold ${
+                                          bestPercentage >= 70 ? "text-emerald-600" : bestPercentage >= 40 ? "text-amber-600" : "text-red-600"
+                                        }`}>
+                                          {bestPercentage}%
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">أفضل تطابق</p>
+                                    </div>
+                                  </TableCell>
+                                  {/* التأكيدات - buyerVerified فقط */}
+                                  <TableCell className="w-[140px] py-4 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      {/* أيقونة عقار - رمادي */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="relative w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
+                                              <Building2 className="w-3.5 h-3.5" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد حالة العقار وصحته</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      {/* أيقونة مستخدم - نشط إذا buyerVerified */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                              bestBuyerVerified 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-slate-200 text-slate-400"
+                                            }`}>
+                                              <UserIcon className="w-3.5 h-3.5" />
+                                              {bestBuyerVerified && (
+                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد رغبة المشتري وجديته</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      {/* أيقونة قائمة - رمادي */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="relative w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
+                                              <ClipboardList className="w-3.5 h-3.5" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد مطابقة المواصفات الفنية</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      {/* أيقونة محفظة - رمادي */}
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="relative w-6 h-6 rounded-full flex items-center justify-center bg-slate-200 text-slate-400">
+                                              <Wallet className="w-3.5 h-3.5" />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد الملاءة المالية والقدرة على الشراء</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  </TableCell>
+                                  {/* الحالة - حالة المهمة */}
+                                  <TableCell className="w-[150px] py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex justify-center items-center">
+                                      {(() => {
+                                        const statusConfig = getStatusBadgeConfig(bestMatchStatus);
+                                        const StatusIcon = statusConfig.icon;
+                                        return (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Badge className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5`}>
+                                                <StatusIcon className="w-3 h-3" />
+                                                {statusConfig.label}
+                                              </Badge>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-56">
+                                              <DropdownMenuLabel>تغيير حالة المهمة</DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              {["new", "contacted", "confirmed", "viewing", "agreed", "vacated"].map((status) => {
+                                                const config = getStatusBadgeConfig(status);
+                                                const Icon = config.icon;
+                                                return (
+                                                  <DropdownMenuItem
+                                                    key={status}
+                                                    onClick={() => {
+                                                      // تحديث حالة جميع مطابقات المشتري
+                                                      buyerMatchIds.forEach(id => {
+                                                        updateMatchStatusMutation.mutate({ matchId: id, status });
+                                                      });
+                                                    }}
+                                                    className={bestMatchStatus === status ? "bg-slate-100" : ""}
+                                                  >
+                                                    <Icon className="w-4 h-4 ml-2" />
+                                                    {config.label}
+                                                    {bestMatchStatus === status && <CheckCircle className="w-4 h-4 mr-auto" />}
+                                                  </DropdownMenuItem>
+                                                );
+                                              })}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        );
+                                      })()}
+                                    </div>
+                                  </TableCell>
+                                  {/* زر عرض المطابقات */}
+                                  <TableCell className="w-[110px] py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleShowBuyerMatches(buyerPreferenceId);
+                                      }}
+                                      className="gap-1"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      عرض
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
                       </div>
-                    </ScrollArea>
+                    ) : (
+                      // Grid View - جدول كثيف قابل للتوسيع
+                      <div className="border rounded-lg overflow-hidden bg-white">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50">
+                              <TableHead className="w-12 text-center">
+                                <Checkbox
+                                  checked={selectedMatchIds.size === filteredMatches.length && filteredMatches.length > 0}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedMatchIds(new Set(filteredMatches.map(m => m.id)));
+                                    } else {
+                                      setSelectedMatchIds(new Set());
+                                    }
+                                  }}
+                                />
+                              </TableHead>
+                              <TableHead className="w-12 text-center">توسيع</TableHead>
+                              <TableHead className="min-w-[200px]">المشتري</TableHead>
+                              <TableHead className="min-w-[200px]">البائع</TableHead>
+                              <TableHead className="w-32 text-center">نسبة التطابق</TableHead>
+                              <TableHead className="w-[150px] text-center">الحالة</TableHead>
+                              <TableHead className="w-24 text-center">تفاصيل</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredMatches.map((match) => {
+                              const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+                              const prop = properties.find(p => p.id === match.propertyId);
+                              const buyer = pref ? users.find(u => u.id === pref.userId) : null;
+                              const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+
+                              if (!pref || !prop) return null;
+
+                              const percentage = Math.round((match.matchScore / 105) * 100);
+                              const isExpanded = expandedRows.has(match.id);
+                              const breakdown = calculateMatchBreakdown(prop, pref);
+                              
+                              const getScoreColor = (score: number) => {
+                                const scorePercentage = Math.round((score / 105) * 100);
+                                if (scorePercentage >= 70) return "#10b981"; // أخضر
+                                if (scorePercentage >= 40) return "#f59e0b"; // برتقالي
+                                return "#ef4444"; // أحمر
+                              };
+
+                              const toggleExpand = () => {
+                                const newExpanded = new Set(expandedRows);
+                                if (newExpanded.has(match.id)) {
+                                  newExpanded.delete(match.id);
+                                } else {
+                                  newExpanded.add(match.id);
+                                }
+                                setExpandedRows(newExpanded);
+                              };
+
+                              return (
+                                <React.Fragment key={match.id}>
+                                  <TableRow className="hover:bg-slate-50/50">
+                                    {/* Checkbox */}
+                                    <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                      <Checkbox
+                                        checked={selectedMatchIds.has(match.id)}
+                                        onCheckedChange={(checked) => {
+                                          const newSet = new Set(selectedMatchIds);
+                                          if (checked) {
+                                            newSet.add(match.id);
+                                          } else {
+                                            newSet.delete(match.id);
+                                          }
+                                          setSelectedMatchIds(newSet);
+                                        }}
+                                      />
+                                    </TableCell>
+                                    {/* سهم التوسيع */}
+                                    <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7"
+                                        onClick={toggleExpand}
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronDown className="w-4 h-4" />
+                                        ) : (
+                                          <ChevronRight className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                    </TableCell>
+                                    {/* المشتري */}
+                                    <TableCell className="py-2">
+                                      <div className="flex items-center gap-2">
+                                        <UserIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-medium text-sm truncate">{buyer?.name || "مستخدم"}</p>
+                                          <p className="text-xs text-muted-foreground truncate">{buyer?.phone || "-"}</p>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    {/* البائع */}
+                                    <TableCell className="py-2">
+                                      <div className="flex items-center gap-2">
+                                        <Store className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="font-medium text-sm truncate">{seller?.name || "بائع"}</p>
+                                          <p className="text-xs text-muted-foreground truncate">{seller?.phone || "-"}</p>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    {/* نسبة التطابق */}
+                                    <TableCell className="py-2 text-center">
+                                      <div className="flex flex-col items-center">
+                                        <div className="relative w-10 h-10">
+                                          <svg className="w-10 h-10 transform -rotate-90">
+                                            <circle stroke="#e2e8f0" strokeWidth="2.5" fill="white" r="13" cx="20" cy="20" />
+                                            <circle 
+                                              stroke={getScoreColor(match.matchScore)}
+                                              strokeWidth="2.5"
+                                              strokeDasharray={2 * Math.PI * 13}
+                                              strokeDashoffset={2 * Math.PI * 13 * (1 - match.matchScore / 105)}
+                                              strokeLinecap="round"
+                                              fill="transparent"
+                                              r="13"
+                                              cx="20"
+                                              cy="20"
+                                            />
+                                          </svg>
+                                          <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                                            percentage >= 70 ? "text-emerald-600" : percentage >= 40 ? "text-amber-600" : "text-red-600"
+                                          }`}>
+                                            {percentage}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    {/* الحالة - قائمة منسدلة */}
+                                    <TableCell className="py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                      <div className="flex justify-center items-center">
+                                        {(() => {
+                                          const matchStatus = (match as any).status || "new";
+                                          const statusConfig = getStatusBadgeConfig(matchStatus);
+                                          const StatusIcon = statusConfig.icon;
+                                          return (
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <button
+                                                  type="button"
+                                                  className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5 rounded-md whitespace-nowrap text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80`}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                >
+                                                  <StatusIcon className="w-3 h-3" />
+                                                  {statusConfig.label}
+                                                </button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                                                <DropdownMenuLabel>تغيير حالة المهمة</DropdownMenuLabel>
+                                                <DropdownMenuSeparator />
+                                                {["new", "contacted", "confirmed", "viewing", "agreed", "vacated"].map((status) => {
+                                                  const config = getStatusBadgeConfig(status);
+                                                  const Icon = config.icon;
+                                                  return (
+                                                    <DropdownMenuItem
+                                                      key={status}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        updateMatchStatusMutation.mutate({ matchId: match.id, status });
+                                                      }}
+                                                      className={matchStatus === status ? "bg-slate-100" : ""}
+                                                    >
+                                                      <Icon className="w-4 h-4 ml-2" />
+                                                      {config.label}
+                                                      {matchStatus === status && <CheckCircle className="w-4 h-4 mr-auto" />}
+                                                    </DropdownMenuItem>
+                                                  );
+                                                })}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          );
+                                        })()}
+                                      </div>
+                                    </TableCell>
+                                    {/* زر تفاصيل */}
+                                    <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleShowMatchDetails(match.id)}
+                                        className="gap-1"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        تفاصيل
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                  {/* الصف الموسع - Score Breakdown */}
+                                  {isExpanded && (
+                                    <TableRow>
+                                      <TableCell colSpan={7} className="bg-slate-50/50 p-4">
+                                        <div className="space-y-4">
+                                          <h4 className="font-semibold text-sm mb-3">تفصيل النقاط (Score Breakdown)</h4>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {/* الموقع */}
+                                            <Card className="border-l-4 border-l-blue-500">
+                                              <CardContent className="p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <MapPin className="w-4 h-4 text-blue-600" />
+                                                    <span className="font-medium text-sm">الموقع</span>
+                                                  </div>
+                                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                    {breakdown.location} / 35
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {breakdown.location === 35 ? "مطابقة الحي بالضبط = 35 نقطة" :
+                                                   breakdown.location === 22 ? "حي مجاور = 22 نقطة" :
+                                                   breakdown.location === 18 ? "نفس المدينة فقط = 18 نقطة" :
+                                                   breakdown.location === 12 ? "نفس المدينة فقط = 12 نقطة" : "لا يوجد تطابق"}
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                            {/* السعر */}
+                                            <Card className="border-l-4 border-l-green-500">
+                                              <CardContent className="p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <Wallet className="w-4 h-4 text-green-600" />
+                                                    <span className="font-medium text-sm">السعر</span>
+                                                  </div>
+                                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                                    {breakdown.price} / 30
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  {breakdown.price === 30 ? "ضمن الميزانية بالضبط = 30 نقطة" :
+                                                   breakdown.price === 25 ? "ضمن الميزانية = 25 نقطة" :
+                                                   breakdown.price === 20 ? "أعلى بـ 5% = 20 نقطة" :
+                                                   breakdown.price === 15 ? "تقدير = 15 نقطة" :
+                                                   breakdown.price === 10 ? "أعلى بـ 15% = 10 نقاط" : "لا يوجد تطابق"}
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                            {/* المواصفات */}
+                                            <Card className="border-l-4 border-l-purple-500">
+                                              <CardContent className="p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <Building2 className="w-4 h-4 text-purple-600" />
+                                                    <span className="font-medium text-sm">المواصفات</span>
+                                                  </div>
+                                                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                                    {breakdown.specifications} / 25
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  نوع العقار = 12 نقطة | الغرف/المساحة = 13 نقطة
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                            {/* التفاصيل */}
+                                            <Card className="border-l-4 border-l-orange-500">
+                                              <CardContent className="p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <ClipboardList className="w-4 h-4 text-orange-600" />
+                                                    <span className="font-medium text-sm">التفاصيل</span>
+                                                  </div>
+                                                  <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                                    {breakdown.details} / 10
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  transactionType + purpose + paymentMethod + amenities
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                            {/* البونص */}
+                                            <Card className="border-l-4 border-l-yellow-500">
+                                              <CardContent className="p-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <Star className="w-4 h-4 text-yellow-600" />
+                                                    <span className="font-medium text-sm">البونص</span>
+                                                  </div>
+                                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                                    {breakdown.bonus} / 5
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  حديث الإعلان (2) + الشعبية (2) + الحالة النشطة (1)
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                            {/* الإجمالي */}
+                                            <Card className="border-l-4 border-l-primary">
+                                              <CardContent className="p-4 bg-primary/5">
+                                                <div className="flex items-center justify-between mb-2">
+                                                  <div className="flex items-center gap-2">
+                                                    <Target className="w-4 h-4 text-primary" />
+                                                    <span className="font-semibold text-sm">الإجمالي</span>
+                                                  </div>
+                                                  <Badge variant="default" className="bg-primary text-primary-foreground">
+                                                    {breakdown.total} / 105
+                                                  </Badge>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                  النسبة المئوية: {percentage}%
+                                                </p>
+                                              </CardContent>
+                                            </Card>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-lg border border-dashed m-1">
                       <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-4">
@@ -1394,13 +3153,112 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-              </div>
-            )}
+
+                  {/* Side Drawer - Checklist */}
+                </div>
+              )}
             {/* Analytics Section - Enhanced Dashboard */}
-            {activeSection === "analytics" && (
-              <div className="space-y-6">
+            {/* Analytics Section - Enhanced Dashboard */}
+            {activeSection === "analytics" && (() => {
+              // حساب البيانات الفعلية (داخل IIFE لأنها تحتاج props)
+              const totalRevenue = properties.reduce((sum, p) => sum + (p.price || 0), 0);
+
+              const conversionRate = preferences.length === 0 
+                ? 0 
+                : ((contactRequests.length / preferences.length) * 100);
+
+              const retentionRate = (() => {
+                const activeUsers = new Set<string>();
+                preferences.forEach(p => {
+                  if (p.userId) activeUsers.add(p.userId);
+                });
+                properties.forEach(p => {
+                  if (p.sellerId) activeUsers.add(p.sellerId);
+                });
+                return users.length === 0 ? 0 : ((activeUsers.size / users.length) * 100);
+              })();
+
+              const propertyTypeAnalysis = (() => {
+                const types = ["apartment", "villa", "land", "building", "duplex"];
+                const labels: Record<string, string> = {
+                  apartment: "شقق",
+                  villa: "فلل",
+                  land: "أراضي",
+                  building: "عمارات",
+                  duplex: "دوبلكس",
+                };
+                return types.map(type => {
+                  const typeProperties = properties.filter(p => p.propertyType === type);
+                  const prices = typeProperties.map(p => p.price || 0).filter(p => p > 0);
+                  const avgPrice = prices.length > 0 
+                    ? Math.round(prices.reduce((sum, p) => sum + p, 0) / prices.length)
+                    : 0;
+                  return {
+                    type,
+                    label: labels[type] || type,
+                    count: typeProperties.length,
+                    avgPrice,
+                    trend: 0, // يمكن حسابه لاحقاً من بيانات تاريخية
+                  };
+                }).filter(item => item.count > 0);
+              })();
+
+              const timeOnMarket = (() => {
+                const now = Date.now();
+                const periods = {
+                  "0-7 أيام": 0,
+                  "8-14 يوم": 0,
+                  "15-30 يوم": 0,
+                  "31-60 يوم": 0,
+                  "+60 يوم": 0,
+                };
+                let totalDays = 0;
+                let count = 0;
+
+                properties.forEach(prop => {
+                  if (prop.createdAt) {
+                    const days = Math.floor((now - new Date(prop.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                    totalDays += days;
+                    count++;
+                    if (days <= 7) periods["0-7 أيام"]++;
+                    else if (days <= 14) periods["8-14 يوم"]++;
+                    else if (days <= 30) periods["15-30 يوم"]++;
+                    else if (days <= 60) periods["31-60 يوم"]++;
+                    else periods["+60 يوم"]++;
+                  }
+                });
+
+                const avgDays = count > 0 ? Math.round(totalDays / count) : 0;
+                const total = Object.values(periods).reduce((sum, v) => sum + v, 0);
+
+                return {
+                  avgDays,
+                  periods: Object.entries(periods).map(([period, count]) => ({
+                    period,
+                    count,
+                    percentage: total > 0 ? (count / total) * 100 : 0,
+                  })),
+                };
+              })();
+
+              const conversionFunnel = (() => {
+                // نبدأ من تسجيل الرغبات (بيانات فعلية) بدلاً من الزوار المقدرة
+                const stages = [
+                  { stage: "تسجيل الرغبات", count: preferences.length, color: "bg-violet-500" },
+                  { stage: "مطابقات ناجحة", count: matches.length, color: "bg-amber-500" },
+                  { stage: "طلبات تواصل", count: contactRequests.length, color: "bg-orange-500" },
+                  { stage: "صفقات مكتملة", count: contactRequests.filter(cr => cr.status === "completed").length, color: "bg-green-500" },
+                ];
+                // حساب النسب بناءً على المرحلة الأولى (تسجيل الرغبات)
+                const baseCount = preferences.length;
+                return stages.map((stage, index) => ({
+                  ...stage,
+                  percentage: baseCount > 0 ? (stage.count / baseCount) * 100 : 0,
+                }));
+              })();
+
+              return (
+                <div className="space-y-6">
                 {/* Header with Time Filters and Export */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
@@ -1454,14 +3312,10 @@ export default function AdminDashboard() {
                         <div className="p-2 rounded-lg bg-white/20">
                           <DollarSign className="h-6 w-6" />
                         </div>
-                        <Badge className="bg-white/20 text-white border-0 gap-1">
-                          <ArrowUpRight className="h-3 w-3" />
-                          +12.5%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold">2.4M</p>
-                        <p className="text-sm text-white/80">إجمالي الإيرادات (ريال)</p>
+                        <p className="text-3xl font-bold">{formatCurrency(totalRevenue)}</p>
+                        <p className="text-sm text-white/80">إجمالي قيمة العقارات (ريال)</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1472,14 +3326,10 @@ export default function AdminDashboard() {
                         <div className="p-2 rounded-lg bg-white/20">
                           <Percent className="h-6 w-6" />
                         </div>
-                        <Badge className="bg-white/20 text-white border-0 gap-1">
-                          <ArrowUpRight className="h-3 w-3" />
-                          +3.2%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold">24.8%</p>
-                        <p className="text-sm text-white/80">معدل التحويل</p>
+                        <p className="text-3xl font-bold">{conversionRate.toFixed(1)}%</p>
+                        <p className="text-sm text-white/80">معدل التحويل (طلبات تواصل / رغبات)</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1490,10 +3340,6 @@ export default function AdminDashboard() {
                         <div className="p-2 rounded-lg bg-white/20">
                           <UserPlus className="h-6 w-6" />
                         </div>
-                        <Badge className="bg-white/20 text-white border-0 gap-1">
-                          <ArrowUpRight className="h-3 w-3" />
-                          +18.7%
-                        </Badge>
                       </div>
                       <div className="mt-4">
                         <p className="text-3xl font-bold">{users.length}</p>
@@ -1508,14 +3354,10 @@ export default function AdminDashboard() {
                         <div className="p-2 rounded-lg bg-white/20">
                           <Heart className="h-6 w-6" />
                         </div>
-                        <Badge className="bg-white/20 text-white border-0 gap-1">
-                          <ArrowDownRight className="h-3 w-3" />
-                          -2.1%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold">67.3%</p>
-                        <p className="text-sm text-white/80">معدل الاحتفاظ</p>
+                        <p className="text-3xl font-bold">{retentionRate.toFixed(1)}%</p>
+                        <p className="text-sm text-white/80">معدل النشاط (مستخدمين نشطين)</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1533,13 +3375,7 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {[
-                          { type: "apartment", label: "شقق", count: properties.filter(p => p.propertyType === "apartment").length, avgPrice: 850000, trend: 5.2 },
-                          { type: "villa", label: "فلل", count: properties.filter(p => p.propertyType === "villa").length, avgPrice: 2500000, trend: 8.1 },
-                          { type: "land", label: "أراضي", count: properties.filter(p => p.propertyType === "land").length, avgPrice: 1200000, trend: -2.3 },
-                          { type: "building", label: "عمارات", count: properties.filter(p => p.propertyType === "building").length, avgPrice: 5000000, trend: 3.7 },
-                          { type: "duplex", label: "دوبلكس", count: properties.filter(p => p.propertyType === "duplex").length, avgPrice: 1800000, trend: 12.5 },
-                        ].map((item) => (
+                        {propertyTypeAnalysis.map((item) => (
                           <div key={item.type} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 transition-colors hover:bg-muted/50">
                             <div className="w-20 text-sm font-medium">{item.label}</div>
                             <div className="flex-1">
@@ -1551,66 +3387,59 @@ export default function AdminDashboard() {
                               </div>
                             </div>
                             <div className="w-10 text-sm text-muted-foreground text-center">{item.count}</div>
-                            <div className="w-24 text-xs text-muted-foreground">{formatCurrency(item.avgPrice)}</div>
-                            <Badge 
-                              variant="secondary" 
-                              className={`w-16 justify-center ${item.trend >= 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
-                            >
-                              {item.trend >= 0 ? <ArrowUpRight className="h-3 w-3 ml-1" /> : <ArrowDownRight className="h-3 w-3 ml-1" />}
-                              {Math.abs(item.trend)}%
-                            </Badge>
+                            <div className="w-24 text-xs text-muted-foreground">{item.avgPrice > 0 ? formatCurrency(item.avgPrice) : "-"}</div>
+                            <div className="w-16 text-xs text-muted-foreground text-center">-</div>
                           </div>
                         ))}
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* 3. Most Searched Keywords */}
+                  {/* 3. Popular Property Types (استبدال الكلمات المفتاحية ببيانات فعلية) */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Search className="h-5 w-5 text-primary" />
-                        الكلمات المفتاحية الأكثر بحثاً
+                        <Building2 className="h-5 w-5 text-primary" />
+                        أنواع العقارات المطلوبة
                       </CardTitle>
-                      <CardDescription>أهم 5 عمليات بحث مع نسب النمو</CardDescription>
+                      <CardDescription>توزيع الرغبات حسب نوع العقار</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {[
-                          { keyword: "شقة في جدة", count: 1250, trend: 15.3 },
-                          { keyword: "فيلا للبيع الرياض", count: 980, trend: 8.7 },
-                          { keyword: "أرض سكنية", count: 756, trend: -3.2 },
-                          { keyword: "شقق تمليك", count: 642, trend: 22.1 },
-                          { keyword: "عمارة تجارية", count: 438, trend: 5.5 },
-                        ].map((item, index) => (
-                          <div 
-                            key={item.keyword} 
-                            className="flex items-center gap-4 p-3 rounded-lg border bg-background transition-all hover:shadow-sm"
-                          >
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{item.keyword}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-                                  <div
-                                    className="h-full bg-primary/60 rounded-full"
-                                    style={{ width: `${(item.count / 1250) * 100}%` }}
-                                  />
+                        {demandByType && demandByType.length > 0 ? (
+                          demandByType
+                            .sort((a, b) => b.count - a.count)
+                            .slice(0, 5)
+                            .map((item, index) => {
+                              const maxCount = Math.max(...demandByType.map(d => d.count));
+                              return (
+                                <div 
+                                  key={item.propertyType} 
+                                  className="flex items-center gap-4 p-3 rounded-lg border bg-background transition-all hover:shadow-sm"
+                                >
+                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                                    {index + 1}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">{propertyTypeLabels[item.propertyType] || item.propertyType}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                                        <div
+                                          className="h-full bg-primary/60 rounded-full"
+                                          style={{ width: `${(item.count / maxCount) * 100}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-xs text-muted-foreground w-16">{item.count.toLocaleString('ar-SA')} رغبة</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className="text-xs text-muted-foreground w-16">{item.count.toLocaleString('ar-SA')} بحث</span>
-                              </div>
-                            </div>
-                            <Badge 
-                              variant="secondary" 
-                              className={`${item.trend >= 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
-                            >
-                              {item.trend >= 0 ? <TrendingUp className="h-3 w-3 ml-1" /> : <TrendingDown className="h-3 w-3 ml-1" />}
-                              {Math.abs(item.trend)}%
-                            </Badge>
+                              );
+                            })
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground">
+                            لا توجد بيانات
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1627,13 +3456,7 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {[
-                        { stage: "زوار الموقع", count: 15000, color: "bg-blue-500", percentage: 100 },
-                        { stage: "تسجيل الرغبات", count: preferences.length || 3200, color: "bg-violet-500", percentage: 21.3 },
-                        { stage: "مطابقات ناجحة", count: matches.length || 890, color: "bg-amber-500", percentage: 5.9 },
-                        { stage: "طلبات تواصل", count: contactRequests.length || 245, color: "bg-orange-500", percentage: 1.6 },
-                        { stage: "صفقات مكتملة", count: 52, color: "bg-green-500", percentage: 0.35 },
-                      ].map((item, index, arr) => {
+                      {conversionFunnel.map((item, index, arr) => {
                         const conversionRate = index > 0 ? ((item.count / arr[index - 1].count) * 100).toFixed(1) : null;
                         return (
                           <div key={item.stage} className="relative">
@@ -1676,29 +3499,29 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-center mb-4">
-                        <p className="text-4xl font-bold text-primary">23</p>
+                        <p className="text-4xl font-bold text-primary">{timeOnMarket.avgDays}</p>
                         <p className="text-sm text-muted-foreground">يوم (المتوسط العام)</p>
                       </div>
                       <div className="space-y-3">
-                        {[
-                          { period: "0-7 أيام", count: 45, color: "bg-green-500" },
-                          { period: "8-14 يوم", count: 32, color: "bg-lime-500" },
-                          { period: "15-30 يوم", count: 28, color: "bg-amber-500" },
-                          { period: "31-60 يوم", count: 15, color: "bg-orange-500" },
-                          { period: "+60 يوم", count: 8, color: "bg-red-500" },
-                        ].map((item) => {
-                          const total = 128;
+                        {timeOnMarket.periods.map((item) => {
+                          const colorMap: Record<string, string> = {
+                            "0-7 أيام": "bg-green-500",
+                            "8-14 يوم": "bg-lime-500",
+                            "15-30 يوم": "bg-amber-500",
+                            "31-60 يوم": "bg-orange-500",
+                            "+60 يوم": "bg-red-500",
+                          };
                           return (
                             <div key={item.period} className="flex items-center gap-3">
                               <div className="w-20 text-sm">{item.period}</div>
                               <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
                                 <div
-                                  className={`h-full ${item.color} rounded-full transition-all duration-500`}
-                                  style={{ width: `${(item.count / total) * 100}%` }}
+                                  className={`h-full ${colorMap[item.period] || "bg-gray-500"} rounded-full transition-all duration-500`}
+                                  style={{ width: `${item.percentage}%` }}
                                 />
                               </div>
                               <div className="w-8 text-sm text-muted-foreground text-left">{item.count}</div>
-                              <div className="w-12 text-xs text-muted-foreground text-left">{((item.count / total) * 100).toFixed(0)}%</div>
+                              <div className="w-12 text-xs text-muted-foreground text-left">{item.percentage.toFixed(0)}%</div>
                             </div>
                           );
                         })}
@@ -1706,118 +3529,340 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* Peak Activity Hours */}
+                  {/* Match Quality Distribution */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Zap className="h-5 w-5 text-primary" />
-                        أوقات الذروة
+                        <Target className="h-5 w-5 text-primary" />
+                        توزيع جودة المطابقات
                       </CardTitle>
-                      <CardDescription>تحليل النشاط على مدار اليوم</CardDescription>
+                      <CardDescription>توزيع المطابقات حسب نقاط المطابقة</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        {[
-                          { hour: "6-9 صباحاً", activity: 35, level: "low" },
-                          { hour: "9-12 ظهراً", activity: 75, level: "high" },
-                          { hour: "12-3 مساءً", activity: 45, level: "medium" },
-                          { hour: "3-6 مساءً", activity: 60, level: "medium" },
-                          { hour: "6-9 مساءً", activity: 95, level: "peak" },
-                          { hour: "9-12 ليلاً", activity: 85, level: "high" },
-                        ].map((item) => {
-                          const levelColors: Record<string, string> = {
-                            peak: "bg-red-500",
-                            high: "bg-orange-500",
-                            medium: "bg-amber-500",
-                            low: "bg-green-500",
-                          };
-                          const levelLabels: Record<string, string> = {
-                            peak: "ذروة عالية",
-                            high: "نشاط مرتفع",
-                            medium: "نشاط متوسط",
-                            low: "نشاط منخفض",
-                          };
-                          return (
-                            <div key={item.hour} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                              <div className="w-24 text-sm font-medium">{item.hour}</div>
-                              <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
+                      <div className="space-y-3">
+                        {(() => {
+                          const scoreRanges = [
+                            { range: "80-100", label: "ممتاز", color: "bg-green-500", min: 80, max: 105 },
+                            { range: "60-79", label: "جيد جداً", color: "bg-lime-500", min: 60, max: 79 },
+                            { range: "40-59", label: "جيد", color: "bg-amber-500", min: 40, max: 59 },
+                            { range: "20-39", label: "متوسط", color: "bg-orange-500", min: 20, max: 39 },
+                            { range: "0-19", label: "ضعيف", color: "bg-red-500", min: 0, max: 19 },
+                          ];
+                          const distribution = scoreRanges.map(range => ({
+                            ...range,
+                            count: matches.filter(m => m.matchScore >= range.min && m.matchScore <= range.max).length,
+                          }));
+                          const maxCount = Math.max(...distribution.map(d => d.count), 1);
+                          return distribution.map((item) => (
+                            <div key={item.range} className="flex items-center gap-3">
+                              <div className="w-24 text-sm">{item.label}</div>
+                              <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
                                 <div
-                                  className={`h-full ${levelColors[item.level]} rounded-full transition-all duration-500`}
-                                  style={{ width: `${item.activity}%` }}
+                                  className={`h-full ${item.color} rounded-full transition-all duration-500`}
+                                  style={{ width: `${(item.count / maxCount) * 100}%` }}
                                 />
                               </div>
-                              <Badge 
-                                variant="secondary" 
-                                className={`w-24 justify-center text-xs ${
-                                  item.level === 'peak' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                  item.level === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                  item.level === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                }`}
-                              >
-                                {levelLabels[item.level]}
-                              </Badge>
+                              <div className="w-8 text-sm text-muted-foreground text-left">{item.count}</div>
+                              <div className="w-12 text-xs text-muted-foreground text-left">
+                                {matches.length > 0 ? ((item.count / matches.length) * 100).toFixed(0) : 0}%
+                              </div>
                             </div>
-                          );
-                        })}
+                          ));
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* 7. Additional Metrics - 3 Gradient Cards */}
+                {/* 7. Additional Metrics - 3 Cards with Real Data */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/30 dark:to-rose-900/20 border-rose-200 dark:border-rose-800">
+                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="p-2 rounded-lg bg-rose-500/10">
-                          <MousePointerClick className="h-6 w-6 text-rose-600 dark:text-rose-400" />
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                          <Handshake className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <Badge variant="secondary" className="bg-rose-200 text-rose-700 dark:bg-rose-800 dark:text-rose-300 gap-1">
-                          <ArrowDownRight className="h-3 w-3" />
-                          -5.2%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold text-rose-700 dark:text-rose-300">32.5%</p>
-                        <p className="text-sm text-rose-600/80 dark:text-rose-400/80">معدل الارتداد (Bounce Rate)</p>
+                        <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{matches.length}</p>
+                        <p className="text-sm text-blue-600/80 dark:text-blue-400/80">إجمالي المطابقات</p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-950/30 dark:to-cyan-900/20 border-cyan-200 dark:border-cyan-800">
+                  <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-200 dark:border-green-800">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="p-2 rounded-lg bg-cyan-500/10">
-                          <Clock className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+                        <div className="p-2 rounded-lg bg-green-500/10">
+                          <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                         </div>
-                        <Badge variant="secondary" className="bg-cyan-200 text-cyan-700 dark:bg-cyan-800 dark:text-cyan-300 gap-1">
-                          <ArrowUpRight className="h-3 w-3" />
-                          +12.8%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold text-cyan-700 dark:text-cyan-300">4:35</p>
-                        <p className="text-sm text-cyan-600/80 dark:text-cyan-400/80">متوسط مدة الجلسة (دقائق)</p>
+                        <p className="text-3xl font-bold text-green-700 dark:text-green-300">{matches.filter(m => m.matchScore >= 70).length}</p>
+                        <p className="text-sm text-green-600/80 dark:text-green-400/80">مطابقات عالية الجودة (≥70)</p>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 dark:from-fuchsia-950/30 dark:to-fuchsia-900/20 border-fuchsia-200 dark:border-fuchsia-800">
+                  <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="p-2 rounded-lg bg-fuchsia-500/10">
-                          <Heart className="h-6 w-6 text-fuchsia-600 dark:text-fuchsia-400" />
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <Heart className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <Badge variant="secondary" className="bg-fuchsia-200 text-fuchsia-700 dark:bg-fuchsia-800 dark:text-fuchsia-300 gap-1">
-                          <ArrowUpRight className="h-3 w-3" />
-                          +23.4%
-                        </Badge>
                       </div>
                       <div className="mt-4">
-                        <p className="text-3xl font-bold text-fuchsia-700 dark:text-fuchsia-300">{matches.filter(m => m.isSaved).length || 156}</p>
-                        <p className="text-sm text-fuchsia-600/80 dark:text-fuchsia-400/80">العقارات المفضلة</p>
+                        <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{matches.filter(m => m.isSaved).length}</p>
+                        <p className="text-sm text-purple-600/80 dark:text-purple-400/80">مطابقات محفوظة</p>
                       </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Market Analytics - Supply & Demand */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ArrowRightLeft className="h-5 w-5 text-primary" />
+                      مؤشر العرض والطلب (Supply & Demand Index)
+                    </CardTitle>
+                    <CardDescription>نسبة العرض للطلب حسب المدينة - يحدد نوع السوق</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {supplyDemandData && supplyDemandData.length > 0 ? (
+                      <div className="space-y-4">
+                        {supplyDemandData.map((item) => {
+                          const marketTypeLabels = {
+                            buyer: { label: "سوق المشتري", color: "bg-green-500", badge: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+                            balanced: { label: "سوق متوازن", color: "bg-blue-500", badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+                            seller: { label: "سوق البائع", color: "bg-orange-500", badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
+                          };
+                          const typeInfo = marketTypeLabels[item.marketType];
+                          return (
+                            <div key={item.city} className="p-4 rounded-lg border bg-background">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="font-semibold">{item.city}</div>
+                                <Badge className={typeInfo.badge}>{typeInfo.label}</Badge>
+                              </div>
+                              <div className="grid grid-cols-3 gap-4 mb-3">
+                                <div>
+                                  <div className="text-sm text-muted-foreground">العرض</div>
+                                  <div className="text-lg font-bold">{item.supply}</div>
+                                </div>
+                                <div>
+                                  <div className="text-sm text-muted-foreground">الطلب</div>
+                                  <div className="text-lg font-bold">{item.demand}</div>
+                                </div>
+                                <div>
+                                  <div className="text-sm text-muted-foreground">النسبة</div>
+                                  <div className="text-lg font-bold">{item.ratio.toFixed(2)}</div>
+                                </div>
+                              </div>
+                              <div className="bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                  className={`h-full ${typeInfo.color} rounded-full transition-all`}
+                                  style={{ width: `${Math.min(item.ratio * 50, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                        لا توجد بيانات
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Market Analytics - Price per Square Meter */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ruler className="h-5 w-5 text-primary" />
+                      متوسط سعر المتر المربع
+                    </CardTitle>
+                    <CardDescription>حسب المدينة والمنطقة ونوع العقار</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {pricePerSqmData && pricePerSqmData.length > 0 ? (
+                      <div className="space-y-3">
+                        {pricePerSqmData.slice(0, 10).map((item, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-background">
+                            <div className="flex-1">
+                              <div className="font-medium">{item.city}</div>
+                              {item.district && <div className="text-sm text-muted-foreground">{item.district}</div>}
+                              {item.propertyType && <div className="text-xs text-muted-foreground">{propertyTypeLabels[item.propertyType] || item.propertyType}</div>}
+                            </div>
+                            <div className="text-right ml-4">
+                              <div className="font-bold text-lg">{formatCurrency(item.pricePerSqm)}/م²</div>
+                              <div className="text-xs text-muted-foreground">{item.count} عقار</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                        لا توجد بيانات
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Market Analytics - District Popularity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      مؤشر شعبية المناطق
+                    </CardTitle>
+                    <CardDescription>المناطق الأكثر طلباً حسب مؤشر الشعبية</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {districtPopularityData && districtPopularityData.length > 0 ? (
+                      <div className="space-y-3">
+                        {districtPopularityData.slice(0, 10).map((item, index) => {
+                          const maxScore = districtPopularityData[0]?.popularityScore || 1;
+                          return (
+                            <div key={`${item.city}-${item.district}`} className="p-3 rounded-lg border bg-background">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
+                                    {index + 1}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">{item.district}</div>
+                                    <div className="text-xs text-muted-foreground">{item.city}</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-lg">{item.popularityScore}</div>
+                                  <div className="text-xs text-muted-foreground">نقطة</div>
+                                </div>
+                              </div>
+                              <div className="flex gap-4 text-xs text-muted-foreground mb-2">
+                                <span>طلب: {item.demandCount}</span>
+                                <span>مطابقات: {item.matchCount}</span>
+                                <span>تواصل: {item.contactCount}</span>
+                              </div>
+                              <div className="bg-muted rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full transition-all"
+                                  style={{ width: `${(item.popularityScore / maxScore) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                        لا توجد بيانات
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Market Analytics - Market Quality Index */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-primary" />
+                        مؤشر جودة السوق
+                      </CardTitle>
+                      <CardDescription>تصنيف السوق حسب الجودة والأداء</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {marketQualityData && marketQualityData.length > 0 ? (
+                        <div className="space-y-3">
+                          {marketQualityData.map((item) => {
+                            const qualityColors = {
+                              excellent: "bg-green-500",
+                              good: "bg-blue-500",
+                              average: "bg-amber-500",
+                              poor: "bg-red-500",
+                            };
+                            const qualityLabels = {
+                              excellent: "ممتاز",
+                              good: "جيد",
+                              average: "متوسط",
+                              poor: "ضعيف",
+                            };
+                            return (
+                              <div key={item.city} className="p-4 rounded-lg border bg-background">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="font-semibold">{item.city}</div>
+                                  <Badge className={qualityColors[item.qualityLevel] + " text-white"}>{qualityLabels[item.qualityLevel]}</Badge>
+                                </div>
+                                <div className="mb-3">
+                                  <div className="text-3xl font-bold mb-1">{item.qualityScore.toFixed(1)}</div>
+                                  <div className="text-xs text-muted-foreground">من 100 نقطة</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <div className="text-muted-foreground">مطابقة</div>
+                                    <div className="font-medium">{item.avgMatchScore}</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-muted-foreground">تحويل</div>
+                                    <div className="font-medium">{item.conversionRate.toFixed(1)}%</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-muted-foreground">تفاعل</div>
+                                    <div className="font-medium">{item.engagementRate.toFixed(1)}%</div>
+                                  </div>
+                                </div>
+                                <div className="mt-3 bg-muted rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className={`h-full ${qualityColors[item.qualityLevel]} rounded-full transition-all`}
+                                    style={{ width: `${item.qualityScore}%` }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                          لا توجد بيانات
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Market Analytics - Price Trends */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        اتجاهات الأسعار
+                      </CardTitle>
+                      <CardDescription>التغير الشهري في متوسط الأسعار</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {priceTrendsData && priceTrendsData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={priceTrendsData}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="period" />
+                            <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}ك`} />
+                            <RechartsTooltip 
+                              formatter={(value: number, name: string, props: any) => [
+                                `${formatCurrency(value)} ريال${props.payload.changePercent ? ` (${props.payload.changePercent > 0 ? '+' : ''}${props.payload.changePercent}%)` : ''}`,
+                                "متوسط السعر"
+                              ]}
+                              contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
+                            />
+                            <Line type="monotone" dataKey="avgPrice" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                          لا توجد بيانات
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1838,7 +3883,7 @@ export default function AdminDashboard() {
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                             <XAxis dataKey="city" />
                             <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}ك`} />
-                            <Tooltip 
+                            <RechartsTooltip 
                               formatter={(value: number) => [`${formatCurrency(value)} ريال`, "متوسط الميزانية"]}
                               contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))' }}
                             />
@@ -1911,8 +3956,9 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            )}
+                </div>
+              );
+            })()}
 
             {/* Sending Section */}
             {activeSection === "sending" && (
@@ -2445,185 +4491,2415 @@ export default function AdminDashboard() {
             {activeSection === "pages" && (
               <StaticPagesSection />
             )}
+            </div>
           </main>
         </div>
       </div>
-      {/* Match Details Dialog */}
-      <Dialog open={showMatchDetailsDialog} onOpenChange={setShowMatchDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" dir="rtl">
+      {/* Buyer Matches Dialog */}
+      <Dialog open={showMatchDetailsDialog} onOpenChange={(open) => {
+        setShowMatchDetailsDialog(open);
+        if (!open) {
+          setSelectedBuyerPreferenceId(null);
+          setSelectedMatchId(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
           {(() => {
-            const data = getSelectedMatchData();
-            if (!data) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
-            const { match, pref, prop, buyer, seller } = data;
+            // محاولة استخدام selectedBuyerPreferenceId أولاً
+            let buyerData = selectedBuyerPreferenceId ? getSelectedBuyerMatches() : null;
+            if (!buyerData && selectedMatchId) {
+              // إذا لم يكن هناك selectedBuyerPreferenceId، نستخدم selectedMatchId
+              const matchData = getSelectedMatchData();
+              if (matchData && matchData.pref) {
+                const tempPreferenceId = matchData.pref.id;
+                const tempData = filteredMatches.filter(m => m.buyerPreferenceId === tempPreferenceId);
+                const tempBuyer = users.find(u => u.id === matchData.pref!.userId);
+                buyerData = { pref: matchData.pref, buyer: tempBuyer, matches: tempData };
+              }
+            }
             
+            if (!buyerData) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            const { pref, buyer, matches: buyerMatches } = buyerData;
+            
+            // حساب التأكيدات المجمعة
+            const aggregatedVerifications = {
+              property: buyerMatches.some(m => (m as any).propertyVerified),
+              buyer: buyerMatches.some(m => (m as any).buyerVerified),
+              specs: buyerMatches.some(m => (m as any).specsVerified),
+              financial: buyerMatches.some(m => (m as any).financialVerified),
+            };
+
+            // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
+            const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
+
+            const getScoreColor = (score: number) => {
+              // تدرج الألوان: أحمر → برتقالي → أخضر
+              const percentage = Math.round((score / 105) * 100);
+              if (percentage >= 70) return "#10b981"; // أخضر
+              if (percentage >= 40) return "#f59e0b"; // برتقالي
+              return "#ef4444"; // أحمر
+            };
+
+            // أفضل مطابقة للتفاصيل
+            const bestMatch = sortedMatches[0];
+            const bestProp = bestMatch ? properties.find(p => p.id === bestMatch.propertyId) : null;
+            const bestSeller = bestProp ? users.find(u => u.id === bestProp.sellerId) : null;
+            const bestBreakdown = bestMatch && bestProp ? calculateMatchBreakdown(bestProp, pref) : null;
+
             return (
               <>
                 <DialogHeader>
                   <DialogTitle className="text-xl flex items-center gap-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 text-white font-bold text-lg">
-                      {match.matchScore}%
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <UserIcon className="w-6 h-6 text-blue-600" />
                     </div>
-                    <span>تفاصيل المطابقة</span>
+                    <div>
+                      <div>مطابقات المشتري</div>
+                      <DialogDescription className="mt-1">
+                        {buyer?.name || "مشتري"} - {buyerMatches.length} مطابقة
+                      </DialogDescription>
+                    </div>
                   </DialogTitle>
-                  <DialogDescription>
-                    مقارنة تفصيلية بين متطلبات المشتري والعقار المعروض
-                  </DialogDescription>
                 </DialogHeader>
                 
-                <div className="space-y-6 mt-4">
-                  {/* Header with parties */}
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-                    <div className="text-center">
-                      <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-2">
-                        <UserIcon className="w-6 h-6" />
-                      </div>
-                      <p className="font-bold text-sm">{buyer?.name || "مشتري"}</p>
-                      <p className="text-xs text-muted-foreground">{buyer?.phone || "لا يوجد رقم"}</p>
-                    </div>
-                    
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center gap-2 text-primary">
-                        <ArrowRightLeft className="w-6 h-6" />
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-2">
-                        <Store className="w-6 h-6" />
-                      </div>
-                      <p className="font-bold text-sm">{seller?.name || "بائع"}</p>
-                      <p className="text-xs text-muted-foreground">{seller?.phone || "لا يوجد رقم"}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Scoring breakdown */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4" />
-                        تفصيل النتيجة (100 نقطة)
-                      </CardTitle>
+                <Tabs defaultValue="matches" className="mt-4 flex flex-col flex-1 min-h-0" dir="rtl">
+                  <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+                    <TabsTrigger value="matches" className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      المطابقات
+                    </TabsTrigger>
+                    <TabsTrigger value="details" className="flex items-center gap-2">
+                      <Eye className="w-4 h-4" />
+                      التفاصيل
+                    </TabsTrigger>
+                    <TabsTrigger value="verifications" className="flex items-center gap-2">
+                      <ClipboardList className="w-4 h-4" />
+                      التأكيدات
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* تبويب المطابقات */}
+                  <TabsContent value="matches" className="mt-4 overflow-y-auto flex-1">
+                    <Card className="h-full flex flex-col">
+                    <CardHeader className="pb-2 flex-shrink-0">
+                      <CardTitle className="text-base">جميع المطابقات</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-blue-500" /> الموقع
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(match.locationScore || 0) / 40 * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-mono w-12 text-left">{match.locationScore || 0}/40</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm flex items-center gap-2">
-                            <Wallet className="w-4 h-4 text-green-500" /> السعر
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-green-500 rounded-full" style={{ width: `${(match.priceScore || 0) / 30 * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-mono w-12 text-left">{match.priceScore || 0}/30</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-purple-500" /> المواصفات
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${(match.specsScore || 0) / 30 * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-mono w-12 text-left">{match.specsScore || 0}/30</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  {/* Comparison table */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">مقارنة تفصيلية</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 overflow-auto">
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-right py-2 px-3 font-medium text-muted-foreground w-1/3">يريد المشتري</th>
-                              <th className="text-center py-2 px-3 font-medium text-muted-foreground w-1/3">المعيار</th>
-                              <th className="text-left py-2 px-3 font-medium text-muted-foreground w-1/3">يعرض البائع</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y">
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.city || "-"}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />المدينة</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.city || "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.districts?.join(", ") || "أي حي"}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><MapPin className="w-3 h-3 mr-1" />الحي</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.district || "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.propertyType ? propertyTypeLabels[pref.propertyType] : "-"}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Building2 className="w-3 h-3 mr-1" />النوع</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.propertyType ? propertyTypeLabels[prop.propertyType] : "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{maskBudget(pref?.budgetMin || 0, pref?.budgetMax || 0)}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Wallet className="w-3 h-3 mr-1" />الميزانية</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.price ? formatCurrency(prop.price) + " ريال" : "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.bedroomsMin || 0} - {pref?.bedroomsMax || "∞"}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Bed className="w-3 h-3 mr-1" />الغرف</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.bedrooms || "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.bathroomsMin || 0} - {pref?.bathroomsMax || "∞"}</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Bath className="w-3 h-3 mr-1" />الحمامات</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.bathrooms || "-"}</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-right">{pref?.areaMin || 0} - {pref?.areaMax || "∞"} م²</td>
-                              <td className="py-2 px-3 text-center"><Badge variant="outline"><Ruler className="w-3 h-3 mr-1" />المساحة</Badge></td>
-                              <td className="py-2 px-3 text-left">{prop?.area ? prop.area + " م²" : "-"}</td>
-                            </tr>
-                          </tbody>
-                        </table>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                              <TableHead className="min-w-[220px] text-center font-semibold">البائع</TableHead>
+                              <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                              <TableHead className="w-[130px] text-center font-semibold">نسبة التطابق</TableHead>
+                              <TableHead className="w-[140px] text-center font-semibold">التأكيدات</TableHead>
+                              <TableHead className="w-[200px] text-center font-semibold">الحالة</TableHead>
+                              <TableHead className="w-[200px] text-center font-semibold">إجراءات</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sortedMatches.map((match) => {
+                              const prop = properties.find(p => p.id === match.propertyId);
+                              const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+                              if (!prop || !seller) return null;
+
+                              const matchStatus = (match as any).status || "new";
+                              const percentage = Math.round((match.matchScore / 105) * 100);
+
+                              return (
+                                <TableRow 
+                                  key={match.id} 
+                                  className="hover:bg-slate-50/50 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedSellerMatchId(match.id);
+                                    setShowSellerEditDialog(true);
+                                  }}
+                                >
+                                  {/* البائع */}
+                                  <TableCell className="min-w-[220px] py-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center gap-2">
+                                      <Store className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-sm truncate">{seller.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{seller.phone || "-"}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  {/* وسائل التواصل */}
+                                  <TableCell className="w-[140px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-center gap-2">
+                                      {seller.email && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `mailto:${seller.email}`;
+                                          }}
+                                          title="بريد إلكتروني"
+                                        >
+                                          <Mail className="w-3.5 h-3.5" />
+                                        </Button>
+                                      )}
+                                      {seller.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const cleanedPhone = seller.phone!.replace(/\D/g, '');
+                                            window.location.href = `tel:${cleanedPhone}`;
+                                            logCallMutation.mutate(match.id);
+                                          }}
+                                          title="اتصال"
+                                        >
+                                          <Phone className="w-3.5 h-3.5" />
+                                        </Button>
+                                      )}
+                                      {seller.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const whatsappLink = getWhatsAppLink(seller.phone!);
+                                            window.open(whatsappLink, '_blank');
+                                          }}
+                                          title="واتساب"
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  {/* نسبة التطابق */}
+                                  <TableCell className="w-[130px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col items-center">
+                                      <div className="relative w-10 h-10">
+                                        <svg className="w-10 h-10 transform -rotate-90">
+                                          <circle stroke="#e2e8f0" strokeWidth="2.5" fill="white" r="13" cx="20" cy="20" />
+                                          <circle 
+                                            stroke={getScoreColor(match.matchScore)}
+                                            strokeWidth="2.5"
+                                            strokeDasharray={2 * Math.PI * 13}
+                                            strokeDashoffset={2 * Math.PI * 13 * (1 - match.matchScore / 105)}
+                                            strokeLinecap="round"
+                                            fill="transparent"
+                                            r="13"
+                                            cx="20"
+                                            cy="20"
+                                          />
+                                        </svg>
+                                        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                                          percentage >= 70 ? "text-emerald-600" : percentage >= 40 ? "text-amber-600" : "text-red-600"
+                                        }`}>
+                                          {percentage}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  {/* التأكيدات */}
+                                  <TableCell className="w-[140px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                              (match as any).propertyVerified 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-slate-200 text-slate-400"
+                                            }`}>
+                                              <Building2 className="w-3.5 h-3.5" />
+                                              {(match as any).propertyVerified && (
+                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد حالة العقار</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                              (match as any).buyerVerified 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-slate-200 text-slate-400"
+                                            }`}>
+                                              <UserIcon className="w-3.5 h-3.5" />
+                                              {(match as any).buyerVerified && (
+                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد رغبة المشتري</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                              (match as any).specsVerified 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-slate-200 text-slate-400"
+                                            }`}>
+                                              <ClipboardList className="w-3.5 h-3.5" />
+                                              {(match as any).specsVerified && (
+                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد المواصفات</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                                              (match as any).financialVerified 
+                                                ? "bg-primary text-primary-foreground" 
+                                                : "bg-slate-200 text-slate-400"
+                                            }`}>
+                                              <Wallet className="w-3.5 h-3.5" />
+                                              {(match as any).financialVerified && (
+                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
+                                              )}
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">تأكيد الملاءة المالية</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  </TableCell>
+                                  {/* الحالة */}
+                                  <TableCell className="w-[200px] py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex justify-center items-center">
+                                      {(() => {
+                                        const statusConfig = getStatusBadgeConfig(matchStatus);
+                                        const StatusIcon = statusConfig.icon;
+                                        return (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <button
+                                                type="button"
+                                                className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5 rounded-md whitespace-nowrap text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80`}
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <StatusIcon className="w-3 h-3" />
+                                                {statusConfig.label}
+                                              </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                                              <DropdownMenuLabel>تغيير حالة المهمة</DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              {["new", "contacted", "confirmed", "viewing", "agreed", "vacated"].map((status) => {
+                                                const config = getStatusBadgeConfig(status);
+                                                const Icon = config.icon;
+                                                return (
+                                                  <DropdownMenuItem
+                                                    key={status}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      updateMatchStatusMutation.mutate({ matchId: match.id, status });
+                                                    }}
+                                                    className={matchStatus === status ? "bg-slate-100" : ""}
+                                                  >
+                                                    <Icon className="w-4 h-4 ml-2" />
+                                                    {config.label}
+                                                    {matchStatus === status && <CheckCircle className="w-4 h-4 mr-auto" />}
+                                                  </DropdownMenuItem>
+                                                );
+                                              })}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        );
+                                      })()}
+                                    </div>
+                                  </TableCell>
+                                  {/* إجراءات */}
+                                  <TableCell className="w-[200px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        asChild
+                                        className="gap-1"
+                                        title="تفاصيل العقار"
+                                      >
+                                        <Link href={`/property/${match.propertyId}`}>
+                                          <Eye className="w-3 h-3" />
+                                          تفاصيل العقار
+                                        </Link>
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedSellerMatchId(match.id);
+                                          setShowSellerEditDialog(true);
+                                        }}
+                                        className="gap-1"
+                                        title="تعديل بيانات البائع"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
                       </div>
                     </CardContent>
                   </Card>
-                  
-                  {/* Actions */}
-                  <div className="flex gap-3 justify-center pt-2">
-                    <Button 
-                      onClick={() => handleSendMatchNotification(match.id)}
-                      disabled={sendingMatchNotification === match.id}
-                      data-testid="button-dialog-send-notification"
+                  </TabsContent>
+
+                  {/* تبويب التفاصيل */}
+                  <TabsContent value="details" className="mt-4 overflow-y-auto flex-1">
+                    {bestMatch && bestProp && bestSeller && bestBreakdown ? (
+                      <div className="space-y-4 pb-4">
+                        {/* أفضل مطابقة - Header with parties */}
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <Target className="w-5 h-5 text-primary" />
+                              أفضل مطابقة - {Math.round((bestMatch.matchScore / 105) * 100)}%
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border">
+                              <div className="text-center space-y-2">
+                                <div className="w-14 h-14 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shadow-sm">
+                                  <UserIcon className="w-7 h-7" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-base">{buyer?.name || "مشتري"}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{buyer?.phone || "لا يوجد رقم"}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-center">
+                                <div className="flex items-center gap-2 text-primary">
+                                  <ArrowRightLeft className="w-8 h-8" />
+                                </div>
+                              </div>
+                              
+                              <div className="text-center space-y-2">
+                                <div className="w-14 h-14 mx-auto bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-sm">
+                                  <Store className="w-7 h-7" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-base">{bestSeller.name || "بائع"}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{bestSeller.phone || "لا يوجد رقم"}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* تفصيل النتيجة */}
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <BarChart3 className="w-5 h-5 text-primary" />
+                              تفصيل النتيجة (100 نقطة)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <MapPin className="w-5 h-5 text-blue-500" /> الموقع
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.location}/35</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <Wallet className="w-5 h-5 text-green-500" /> السعر
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.price}/30</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                <span className="text-sm font-medium flex items-center gap-2">
+                                  <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}></div>
+                                  </div>
+                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.specifications}/25</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        {/* مقارنة تفصيلية */}
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <FileText className="w-5 h-5 text-primary" />
+                              مقارنة تفصيلية
+                            </CardTitle>
+                            <CardDescription className="text-sm mt-2">
+                              عرض تفصيلي لبيانات المشتري والبائعين. للتعديل، استخدم زر "تعديل" في جدول المطابقات.
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            {(() => {
+                              // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
+                              const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
+
+                              // تم إزالة دوال التعديل - القسم الآن للعرض فقط
+
+                              return (
+                                <div className="w-full" dir="rtl">
+                                  {/* بيانات المشتري فقط */}
+                                  <div className="space-y-4">
+                                    <Accordion type="single" collapsible defaultValue="buyer-data" className="w-full">
+                                      <AccordionItem value="buyer-data">
+                                        <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
+                                          <UserIcon className="w-5 h-5 text-primary" />
+                                          <span className="font-bold text-lg">بيانات المشتري: {buyer?.name || "مشتري"}</span>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="space-y-6 pt-4">
+                                          {/* الموقع */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <MapPin className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">الموقع</h4>
+                                            </div>
+                                            
+                                            {/* المدينة */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">المدينة</label>
+                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                                {saudiCities.map((city) => (
+                                                  <div
+                                                    key={city.name}
+                                                    className={`
+                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
+                                                      ${pref?.city === city.name 
+                                                        ? "bg-primary text-white border-primary" 
+                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                    `}
+                                                  >
+                                                    {city.name}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* الأحياء */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">الأحياء</label>
+                                              <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                                                {(() => {
+                                                  const selectedCity = saudiCities.find(c => c.name === pref?.city);
+                                                  const districts = selectedCity?.neighborhoods || [];
+                                                  return districts.length > 0 ? districts.map((district) => (
+                                                    <div
+                                                      key={district.name}
+                                                      className={`
+                                                        py-3 px-2 rounded-lg border text-sm font-bold cursor-default
+                                                        ${pref?.districts?.includes(district.name)
+                                                          ? "bg-primary text-white border-primary" 
+                                                          : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                      `}
+                                                    >
+                                                      {pref?.districts?.includes(district.name) && <Check className="inline-block w-3 h-3 ml-1" />}
+                                                      {district.name}
+                                                    </div>
+                                                  )) : <p className="col-span-3 text-center text-muted-foreground py-10">لا توجد أحياء</p>;
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* المواصفات */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Building2 className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">المواصفات</h4>
+                                            </div>
+                                            
+                                            {/* النوع */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">نوع العقار</label>
+                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                                  <div
+                                                    key={key}
+                                                    className={`
+                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
+                                                      ${pref?.propertyType === key 
+                                                        ? "bg-primary text-white border-primary" 
+                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                    `}
+                                                  >
+                                                    {label}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* الغرف */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">عدد الغرف</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.rooms || "غير محدد"}
+                                              </div>
+                                            </div>
+
+                                            {/* المساحة */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">المساحة (م²)</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.area || "غير محدد"} م²
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* المالية */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Wallet className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">المالية</h4>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">الميزانية</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.budgetMin && pref?.budgetMax 
+                                                  ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
+                                                  : "غير محدد"}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* إضافية */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Settings2 className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">إضافية</h4>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-4">
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium">نوع المعاملة</Label>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {pref?.transactionType === "buy" ? "شراء" : pref?.transactionType === "rent" ? "تأجير" : "غير محدد"}
+                                                </div>
+                                              </div>
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium">الغرض</Label>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {pref?.purpose === "residence" ? "سكن" : pref?.purpose === "investment" ? "استثمار" : "غير محدد"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    </Accordion>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">لا توجد تفاصيل متاحة</div>
+                    )}
+                  </TabsContent>
+
+                  {/* تبويب التأكيدات */}
+                  <TabsContent value="verifications" className="mt-4 overflow-y-auto flex-1">
+                    {bestMatch && bestProp && bestBreakdown ? (
+                      <div className="space-y-4 pb-4">
+                        {/* صف الموقع */}
+                        <div 
+                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedSellerMatchId(bestMatch.id);
+                            setShowSellerEditDialog(true);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-5 h-5 text-blue-500" />
+                                <span className="font-medium text-sm">الموقع</span>
+                              </div>
+                              <span className="text-sm font-bold text-blue-600">
+                                {bestBreakdown.location}/35
+                              </span>
+                            </div>
+                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* صف السعر */}
+                        <div 
+                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedSellerMatchId(bestMatch.id);
+                            setShowSellerEditDialog(true);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Wallet className="w-5 h-5 text-green-500" />
+                                <span className="font-medium text-sm">السعر</span>
+                              </div>
+                              <span className="text-sm font-bold text-green-600">
+                                {bestBreakdown.price}/30
+                              </span>
+                            </div>
+                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 rounded-full transition-all"
+                                style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* صف المواصفات */}
+                        <div 
+                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedSellerMatchId(bestMatch.id);
+                            setShowSellerEditDialog(true);
+                          }}
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-purple-500" />
+                                <span className="font-medium text-sm">المواصفات</span>
+                              </div>
+                              <span className="text-sm font-bold text-purple-600">
+                                {bestBreakdown.specifications}/25
+                              </span>
+                            </div>
+                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-purple-500 rounded-full transition-all"
+                                style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* مقارنة تفصيلية */}
+                        <Card className="mt-6">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <FileText className="w-5 h-5 text-primary" />
+                              مقارنة تفصيلية
+                            </CardTitle>
+                            <CardDescription className="text-sm mt-2">
+                              عرض تفصيلي لبيانات المشتري والبائعين. للتعديل، استخدم زر "تعديل" في جدول المطابقات.
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            {(() => {
+                              // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
+                              const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
+
+                              return (
+                                <div className="w-full" dir="rtl">
+                                  {/* بيانات المشتري فقط */}
+                                  <div className="space-y-4">
+                                    <Accordion type="single" collapsible defaultValue="buyer-data" className="w-full">
+                                      <AccordionItem value="buyer-data">
+                                        <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
+                                          <UserIcon className="w-5 h-5 text-primary" />
+                                          <span className="font-bold text-lg">بيانات المشتري: {buyer?.name || "مشتري"}</span>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="space-y-6 pt-4">
+                                          {/* الموقع */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <MapPin className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">الموقع</h4>
+                                            </div>
+                                            
+                                            {/* المدينة */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">المدينة</label>
+                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                                {saudiCities.map((city) => (
+                                                  <div
+                                                    key={city.name}
+                                                    className={`
+                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
+                                                      ${pref?.city === city.name 
+                                                        ? "bg-primary text-white border-primary" 
+                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                    `}
+                                                  >
+                                                    {city.name}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* الأحياء */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">الأحياء</label>
+                                              <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                                                {(() => {
+                                                  const selectedCity = saudiCities.find(c => c.name === pref?.city);
+                                                  const districts = selectedCity?.neighborhoods || [];
+                                                  return districts.length > 0 ? districts.map((district) => (
+                                                    <div
+                                                      key={district.name}
+                                                      className={`
+                                                        py-3 px-2 rounded-lg border text-sm font-bold cursor-default
+                                                        ${pref?.districts?.includes(district.name)
+                                                          ? "bg-primary text-white border-primary" 
+                                                          : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                      `}
+                                                    >
+                                                      {pref?.districts?.includes(district.name) && <Check className="inline-block w-3 h-3 ml-1" />}
+                                                      {district.name}
+                                                    </div>
+                                                  )) : <p className="col-span-3 text-center text-muted-foreground py-10">لا توجد أحياء</p>;
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* المواصفات */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Building2 className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">المواصفات</h4>
+                                            </div>
+                                            
+                                            {/* النوع */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">نوع العقار</label>
+                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                                  <div
+                                                    key={key}
+                                                    className={`
+                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
+                                                      ${pref?.propertyType === key 
+                                                        ? "bg-primary text-white border-primary" 
+                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                                    `}
+                                                  >
+                                                    {label}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+
+                                            {/* الغرف */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">عدد الغرف</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.rooms || "غير محدد"}
+                                              </div>
+                                            </div>
+
+                                            {/* المساحة */}
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">المساحة (م²)</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.area || "غير محدد"} م²
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* المالية */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Wallet className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">المالية</h4>
+                                            </div>
+                                            
+                                            <div className="space-y-2">
+                                              <label className="block text-xs font-bold text-gray-700">الميزانية</label>
+                                              <div className="text-sm text-muted-foreground">
+                                                {pref?.budgetMin && pref?.budgetMax 
+                                                  ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
+                                                  : "غير محدد"}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* إضافية */}
+                                          <div className="space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Settings2 className="w-4 h-4 text-primary" />
+                                              <h4 className="font-bold text-sm">إضافية</h4>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-4">
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium">نوع المعاملة</Label>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {pref?.transactionType === "buy" ? "شراء" : pref?.transactionType === "rent" ? "تأجير" : "غير محدد"}
+                                                </div>
+                                              </div>
+                                              <div className="space-y-2">
+                                                <Label className="text-sm font-medium">الغرض</Label>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {pref?.purpose === "residence" ? "سكن" : pref?.purpose === "investment" ? "استثمار" : "غير محدد"}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    </Accordion>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8">
+                          <div className="text-center text-muted-foreground">لا توجد بيانات متاحة</div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+                </Tabs>
+                
+                {/* Actions */}
+                <div className="flex gap-3 justify-center pt-4 mt-4 border-t flex-shrink-0">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowMatchDetailsDialog(false)}
+                    data-testid="button-close-match-details"
+                  >
+                    إغلاق
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تعديل بيانات البائع */}
+      <Dialog open={showSellerEditDialog} onOpenChange={setShowSellerEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          {(() => {
+            if (!selectedSellerMatchId) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            
+            const match = matches.find(m => m.id === selectedSellerMatchId);
+            if (!match) return <div className="text-center py-8 text-muted-foreground">المطابقة غير موجودة</div>;
+            
+            const prop = properties.find(p => p.id === match.propertyId);
+            const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+            if (!prop || !seller) return <div className="text-center py-8 text-muted-foreground">البيانات غير متوفرة</div>;
+
+            // دالة لحفظ بيانات العقار
+            const savePropertyField = async (field: string, value: any) => {
+              try {
+                const updatedData = { [field]: value };
+                await apiRequest("PATCH", `/api/properties/${prop.id}`, updatedData);
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/properties"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+                toast({ title: "تم الحفظ", description: "تم تحديث بيانات العقار بنجاح" });
+              } catch (error: any) {
+                toast({ title: "خطأ", description: error.message || "فشل في الحفظ", variant: "destructive" });
+              }
+            };
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <Store className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <div>بيانات البائع والعقار</div>
+                      <DialogDescription className="mt-1">
+                        {seller.name} - {prop.city || "غير محدد"}
+                      </DialogDescription>
+                    </div>
+                  </DialogTitle>
+                </DialogHeader>
+
+                <div className="mt-4 space-y-6">
+                  {/* بيانات البائع */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <UserIcon className="w-4 h-4" />
+                        بيانات البائع
+                      </CardTitle>
+                      <CardDescription className="text-sm">معلومات البائع للعرض فقط</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">الاسم</Label>
+                          <div className="text-sm text-muted-foreground mt-1">{seller.name}</div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">الهاتف</Label>
+                          <div className="text-sm text-muted-foreground mt-1">{seller.phone || "غير محدد"}</div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">البريد الإلكتروني</Label>
+                          <div className="text-sm text-muted-foreground mt-1">{seller.email || "غير محدد"}</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* بيانات العقار - قابلة للتعديل */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        بيانات العقار
+                      </CardTitle>
+                      <CardDescription className="text-sm">يمكنك تعديل بيانات العقار مباشرة</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* الموقع */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin className="w-4 h-4 text-primary" />
+                          <h4 className="font-bold text-sm">الموقع</h4>
+                        </div>
+                        
+                        {/* المدينة */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-gray-700">المدينة</label>
+                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                            {saudiCities.map((city) => (
+                              <button
+                                key={city.name}
+                                onClick={() => savePropertyField("city", city.name)}
+                                className={`
+                                  flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all whitespace-nowrap
+                                  ${prop?.city === city.name 
+                                    ? "bg-primary text-white border-primary shadow-sm scale-105" 
+                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
+                                `}
+                              >
+                                {city.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* الحي */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-gray-700">الحي</label>
+                          <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                            {(() => {
+                              const selectedCity = saudiCities.find(c => c.name === prop?.city);
+                              const districts = selectedCity?.neighborhoods || [];
+                              return districts.length > 0 ? districts.map((district) => (
+                                <button
+                                  key={district.name}
+                                  onClick={() => savePropertyField("district", district.name)}
+                                  className={`
+                                    py-3 px-2 rounded-lg border text-sm font-bold transition-all
+                                    ${prop?.district === district.name
+                                      ? "bg-primary text-white border-primary" 
+                                      : "bg-white hover:bg-muted border-border"}
+                                  `}
+                                >
+                                  {prop?.district === district.name && <Check className="inline-block w-3 h-3 ml-1" />}
+                                  {district.name}
+                                </button>
+                              )) : <p className="col-span-3 text-center text-muted-foreground py-10">اختر مدينة أولاً</p>;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* المواصفات */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Building2 className="w-4 h-4 text-primary" />
+                          <h4 className="font-bold text-sm">المواصفات</h4>
+                        </div>
+                        
+                        {/* النوع */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-gray-700">نوع العقار</label>
+                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                            {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                              <button
+                                key={key}
+                                onClick={() => savePropertyField("propertyType", key)}
+                                className={`
+                                  flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all whitespace-nowrap
+                                  ${prop?.propertyType === key 
+                                    ? "bg-primary text-white border-primary shadow-sm scale-105" 
+                                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
+                                `}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* الغرف */}
+                        <ScrollableOptions 
+                          label="عدد الغرف" 
+                          options={SMART_RANGES.rooms} 
+                          selected={prop?.rooms || ""} 
+                          onSelect={(v) => savePropertyField("rooms", v)} 
+                        />
+
+                        {/* الحمامات */}
+                        <ScrollableOptions 
+                          label="عدد الحمامات" 
+                          options={SMART_RANGES.bathrooms} 
+                          selected={prop?.bathrooms || ""} 
+                          onSelect={(v) => savePropertyField("bathrooms", v)} 
+                        />
+
+                        {/* المساحة */}
+                        <ScrollableOptions 
+                          label="المساحة (م²)" 
+                          options={SMART_RANGES.area} 
+                          selected={prop?.area || ""} 
+                          onSelect={(v) => savePropertyField("area", v)} 
+                          unit="م²"
+                        />
+                      </div>
+
+                      {/* المالية */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Wallet className="w-4 h-4 text-primary" />
+                          <h4 className="font-bold text-sm">المالية</h4>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold text-gray-700">السعر</label>
+                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                            {(() => {
+                              const priceRanges = [
+                                { min: 0, max: 800000, label: "< 800 ألف" },
+                                { min: 800000, max: 1200000, label: "800 - 1.2 مليون" },
+                                { min: 1200000, max: 1800000, label: "1.2 - 1.8 مليون" },
+                                { min: 1800000, max: 2500000, label: "1.8 - 2.5 مليون" },
+                                { min: 2500000, max: 3500000, label: "2.5 - 3.5 مليون" },
+                                { min: 3500000, max: 5000000, label: "3.5 - 5 مليون" },
+                                { min: 5000000, max: 999999999, label: "+ 5 مليون" }
+                              ];
+                              const propPrice = prop?.price || 0;
+                              return priceRanges.map((range) => {
+                                const isSelected = propPrice >= range.min && propPrice <= range.max;
+                                return (
+                                  <button
+                                    key={range.label}
+                                    onClick={() => savePropertyField("price", Math.round(range.min + (range.max - range.min) / 2))}
+                                    className={`
+                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all whitespace-nowrap
+                                      ${isSelected
+                                        ? "bg-primary text-white border-primary shadow-sm scale-105" 
+                                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
+                                    `}
+                                  >
+                                    {range.label}
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* إضافية */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Settings2 className="w-4 h-4 text-primary" />
+                          <h4 className="font-bold text-sm">إضافية</h4>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">التشطيب</Label>
+                            <Select defaultValue={prop?.furnishing || ""} onValueChange={(value) => savePropertyField("furnishing", value)}>
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="furnished">مفروش</SelectItem>
+                                <SelectItem value="semi_furnished">شبه مفروش</SelectItem>
+                                <SelectItem value="unfurnished">غير مفروش</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">الحالة</Label>
+                            <Select defaultValue={prop?.status || ""} onValueChange={(value) => savePropertyField("status", value)}>
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ready">جاهز</SelectItem>
+                                <SelectItem value="under_construction">قيد الإنشاء</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 justify-center pt-4 mt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowSellerEditDialog(false)}
+                  >
+                    إغلاق
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تفاصيل الرغبة */}
+      <Dialog open={showPreferenceDetailsDialog} onOpenChange={(open) => {
+        setShowPreferenceDetailsDialog(open);
+        if (!open) {
+          setSelectedPreferenceId(null);
+          setIsEditingPreference(false);
+          setPreferenceEditData({});
+        }
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          {(() => {
+            if (!selectedPreferenceId) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            
+            const pref = preferences.find(p => p.id === selectedPreferenceId);
+            if (!pref) return <div className="text-center py-8 text-muted-foreground">الرغبة غير موجودة</div>;
+            
+            const buyer = users.find(u => u.id === pref.userId);
+            if (!buyer) return <div className="text-center py-8 text-muted-foreground">المشتري غير موجود</div>;
+
+            const currentData = isEditingPreference ? preferenceEditData : pref;
+            const currentCity = currentData.city || pref.city;
+            const currentDistricts = currentData.districts || pref.districts || [];
+
+            return (
+              <>
+                <DialogHeader className="pb-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <ClipboardList className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl">تفاصيل الرغبة</DialogTitle>
+                        <DialogDescription className="mt-1">
+                          {buyer.name} - {pref.city}
+                        </DialogDescription>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isEditingPreference ? "outline" : "default"}
+                      className="gap-2"
+                      onClick={() => {
+                        if (isEditingPreference) {
+                          setIsEditingPreference(false);
+                          setPreferenceEditData({});
+                        } else {
+                          setIsEditingPreference(true);
+                          setPreferenceEditData({
+                            city: pref.city,
+                            districts: pref.districts || [],
+                            propertyType: pref.propertyType,
+                            transactionType: pref.transactionType,
+                            rooms: pref.rooms,
+                            area: pref.area,
+                            budgetMin: pref.budgetMin,
+                            budgetMax: pref.budgetMax,
+                            paymentMethod: pref.paymentMethod,
+                            purpose: pref.purpose,
+                            purchaseTimeline: pref.purchaseTimeline,
+                            clientType: pref.clientType,
+                            isActive: pref.isActive,
+                          });
+                        }
+                      }}
                     >
-                      {sendingMatchNotification === match.id ? (
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      {isEditingPreference ? (
+                        <>
+                          <XCircle className="w-4 h-4" />
+                          إلغاء التعديل
+                        </>
                       ) : (
-                        <MessageSquare className="w-4 h-4 mr-2" />
+                        <>
+                          <Edit2 className="w-4 h-4" />
+                          تعديل الرغبة
+                        </>
                       )}
-                      إرسال إشعار واتساب
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowMatchDetailsDialog(false)}
-                      data-testid="button-close-match-details"
-                    >
-                      إغلاق
                     </Button>
                   </div>
+                </DialogHeader>
+                
+                <div className="max-w-4xl mx-auto space-y-6 mt-6">
+                  {/* معلومات المشتري - للعرض فقط */}
+                  {!isEditingPreference && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-100">
+                            <UserIcon className="h-4 w-4 text-blue-600" />
+                          </div>
+                          معلومات المشتري
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{buyer.name}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{toArabicPhone(buyer.phone || '')}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">البريد الإلكتروني</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{buyer.email}</p>
+                            </div>
+                          </div>
+                          {buyer.whatsappNumber && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">واتساب</Label>
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                <p className="text-sm font-medium">{toArabicPhone(buyer.whatsappNumber)}</p>
+                              </div>
+                            </div>
+                          )}
+                          {buyer.websiteUrl && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">الموقع الإلكتروني</Label>
+                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                <a href={buyer.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">
+                                  {buyer.websiteUrl}
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الحالة</Label>
+                            <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
+                              {pref.isActive ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">عدد المطابقات</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Link2 className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{matches.filter(m => m.buyerPreferenceId === pref.id).length} مطابقة</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* تفاصيل الرغبة */}
+                  <div className="space-y-4">
+                    {/* الموقع والمنطقة */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-100">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                          </div>
+                          الموقع والمنطقة
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* المدينة */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">المدينة المفضلة</Label>
+                            {isEditingPreference ? (
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                {saudiCities.map((city) => (
+                                  <button
+                                    key={city.name}
+                                    type="button"
+                                    onClick={() => {
+                                      setPreferenceEditData({
+                                        ...preferenceEditData,
+                                        city: city.name,
+                                        districts: [], // إعادة تعيين الأحياء عند تغيير المدينة
+                                      });
+                                    }}
+                                    className={`
+                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
+                                      ${currentCity === city.name 
+                                        ? "bg-primary text-white border-primary shadow-sm" 
+                                        : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
+                                    `}
+                                  >
+                                    {currentCity === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                    {city.name}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                {saudiCities.map((city) => (
+                                  <div
+                                    key={city.name}
+                                    className={`
+                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
+                                      ${pref.city === city.name 
+                                        ? "bg-primary text-white border-primary shadow-sm" 
+                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                    `}
+                                  >
+                                    {pref.city === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                    {city.name}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* الأحياء */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">
+                              الأحياء المفضلة ({currentDistricts.length})
+                            </Label>
+                            {isEditingPreference ? (
+                              <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
+                                {(() => {
+                                  const selectedCity = saudiCities.find(c => c.name === currentCity);
+                                  const districts = selectedCity?.neighborhoods || [];
+                                  
+                                  if (districts.length === 0) {
+                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
+                                  }
+                                  
+                                  return districts.map((district) => {
+                                    const isSelected = currentDistricts.includes(district.name);
+                                    return (
+                                      <button
+                                        key={district.name}
+                                        type="button"
+                                        onClick={() => {
+                                          const newDistricts = isSelected
+                                            ? currentDistricts.filter(d => d !== district.name)
+                                            : [...currentDistricts, district.name];
+                                          setPreferenceEditData({
+                                            ...preferenceEditData,
+                                            districts: newDistricts,
+                                          });
+                                        }}
+                                        className={`
+                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
+                                          ${isSelected
+                                            ? "bg-primary text-white border-primary shadow-sm"
+                                            : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
+                                        `}
+                                      >
+                                        {isSelected && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                        {district.name}
+                                      </button>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
+                                {(() => {
+                                  const selectedCity = saudiCities.find(c => c.name === pref.city);
+                                  const districts = selectedCity?.neighborhoods || [];
+                                  const selectedDistricts = pref.districts || [];
+                                  
+                                  if (districts.length === 0) {
+                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
+                                  }
+                                  
+                                  if (selectedDistricts.length === 0) {
+                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لم يتم اختيار أي أحياء</p>;
+                                  }
+                                  
+                                  return districts.filter(d => selectedDistricts.includes(d.name)).map((district) => (
+                                    <div
+                                      key={district.name}
+                                      className="flex-shrink-0 px-4 py-2.5 rounded-lg border bg-primary text-white border-primary shadow-sm cursor-default text-sm font-bold whitespace-nowrap"
+                                    >
+                                      <Check className="inline-block w-3.5 h-3.5 ml-1.5" />
+                                      {district.name}
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* نوع العقار والمواصفات */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-green-100">
+                            <Building2 className="h-4 w-4 text-green-600" />
+                          </div>
+                          نوع العقار والمواصفات
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* نوع العقار */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">نوع العقار المطلوب</Label>
+                            {isEditingPreference ? (
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => {
+                                      setPreferenceEditData({ ...preferenceEditData, propertyType: key });
+                                    }}
+                                    className={`
+                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
+                                      ${(preferenceEditData.propertyType || pref.propertyType) === key 
+                                        ? "bg-primary text-white border-primary shadow-sm" 
+                                        : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
+                                    `}
+                                  >
+                                    {(preferenceEditData.propertyType || pref.propertyType) === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                  <div
+                                    key={key}
+                                    className={`
+                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
+                                      ${pref.propertyType === key 
+                                        ? "bg-primary text-white border-primary shadow-sm" 
+                                        : "bg-slate-50 border-gray-200 text-gray-500"}
+                                    `}
+                                  >
+                                    {pref.propertyType === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                    {label}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* المواصفات التفصيلية */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                            {/* الغرف */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                <Bed className="h-4 w-4" />
+                                عدد الغرف
+                              </Label>
+                              {isEditingPreference ? (
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                  {["1", "2", "3", "4", "5", "6", "7+"].map((room) => (
+                                    <button
+                                      key={room}
+                                      type="button"
+                                      onClick={() => {
+                                        setPreferenceEditData({ ...preferenceEditData, rooms: room });
+                                      }}
+                                      className={`
+                                        flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap transition-colors
+                                        ${(preferenceEditData.rooms || pref.rooms) === room 
+                                          ? "bg-primary text-white border-primary shadow-sm" 
+                                          : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
+                                      `}
+                                    >
+                                      {(preferenceEditData.rooms || pref.rooms) === room && <Check className="inline-block w-3 h-3 ml-1" />}
+                                      {room} غرفة
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                pref.rooms ? (
+                                  <div className="p-3 rounded-lg bg-slate-50 border">
+                                    <p className="text-base font-bold text-primary">{pref.rooms} غرفة</p>
+                                  </div>
+                                ) : (
+                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                    <p className="text-sm text-muted-foreground">غير محدد</p>
+                                  </div>
+                                )
+                              )}
+                            </div>
+
+                            {/* المساحة */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                <Ruler className="h-4 w-4" />
+                                المساحة
+                              </Label>
+                              {isEditingPreference ? (
+                                <Input
+                                  value={preferenceEditData.area || pref.area || ''}
+                                  onChange={(e) => setPreferenceEditData({ ...preferenceEditData, area: e.target.value })}
+                                  placeholder="متر مربع"
+                                  dir="rtl"
+                                />
+                              ) : (
+                                pref.area ? (
+                                  <div className="p-3 rounded-lg bg-slate-50 border">
+                                    <p className="text-base font-bold text-primary">{pref.area} م²</p>
+                                  </div>
+                                ) : (
+                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                    <p className="text-sm text-muted-foreground">غير محدد</p>
+                                  </div>
+                                )
+                              )}
+                            </div>
+
+                            {/* نوع المعاملة */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                <Handshake className="h-4 w-4" />
+                                نوع المعاملة
+                              </Label>
+                              {isEditingPreference ? (
+                                <Select
+                                  value={preferenceEditData.transactionType || pref.transactionType || 'buy'}
+                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, transactionType: value as 'buy' | 'rent' })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="buy">شراء</SelectItem>
+                                    <SelectItem value="rent">إيجار</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="p-3 rounded-lg bg-slate-50 border">
+                                  <Badge variant="outline" className="text-sm">
+                                    {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* الميزانية والدفع */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-orange-100">
+                            <Wallet className="h-4 w-4 text-orange-600" />
+                          </div>
+                          الميزانية وطريقة الدفع
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* الميزانية */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الميزانية المتاحة</Label>
+                            {isEditingPreference ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-muted-foreground">من (ريال)</Label>
+                                  <Input
+                                    type="number"
+                                    value={preferenceEditData.budgetMin || pref.budgetMin || ''}
+                                    onChange={(e) => setPreferenceEditData({ 
+                                      ...preferenceEditData, 
+                                      budgetMin: e.target.value ? parseInt(e.target.value) : undefined 
+                                    })}
+                                    placeholder="الحد الأدنى"
+                                    dir="rtl"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-muted-foreground">إلى (ريال)</Label>
+                                  <Input
+                                    type="number"
+                                    value={preferenceEditData.budgetMax || pref.budgetMax || ''}
+                                    onChange={(e) => setPreferenceEditData({ 
+                                      ...preferenceEditData, 
+                                      budgetMax: e.target.value ? parseInt(e.target.value) : undefined 
+                                    })}
+                                    placeholder="الحد الأقصى"
+                                    dir="rtl"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              (pref.budgetMin || pref.budgetMax) ? (
+                                <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
+                                  <p className="text-xl font-bold text-primary">{maskBudget(pref.budgetMin, pref.budgetMax)}</p>
+                                  {(pref.budgetMin || pref.budgetMax) && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {pref.budgetMin ? `من ${formatCurrency(pref.budgetMin)}` : ''} 
+                                      {pref.budgetMin && pref.budgetMax ? ' إلى ' : ''}
+                                      {pref.budgetMax ? `${formatCurrency(pref.budgetMax)}` : ''}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="p-4 rounded-lg bg-slate-50 border border-dashed">
+                                  <p className="text-sm text-muted-foreground">غير محدد</p>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* طريقة الدفع والغرض */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">طريقة الدفع</Label>
+                              {isEditingPreference ? (
+                                <Select
+                                  value={preferenceEditData.paymentMethod || pref.paymentMethod || ''}
+                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, paymentMethod: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر طريقة الدفع" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="cash">كاش</SelectItem>
+                                    <SelectItem value="bank">تمويل بنكي</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                pref.paymentMethod ? (
+                                  <div className="p-3 rounded-lg bg-slate-50 border">
+                                    <Badge variant="outline" className="text-sm">
+                                      {paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                    <p className="text-sm text-muted-foreground">غير محدد</p>
+                                  </div>
+                                )
+                              )}
+                            </div>
+
+                            {/* الغرض */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">الغرض من الشراء</Label>
+                              {isEditingPreference ? (
+                                <Select
+                                  value={preferenceEditData.purpose || pref.purpose || ''}
+                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, purpose: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر الغرض" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="residence">سكن</SelectItem>
+                                    <SelectItem value="investment">استثمار</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                pref.purpose ? (
+                                  <div className="p-3 rounded-lg bg-slate-50 border">
+                                    <Badge variant="outline" className="text-sm">
+                                      {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                    <p className="text-sm text-muted-foreground">غير محدد</p>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          {/* الجدول الزمني */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              الجدول الزمني للشراء
+                            </Label>
+                            {isEditingPreference ? (
+                              <Select
+                                value={preferenceEditData.purchaseTimeline || pref.purchaseTimeline || ''}
+                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, purchaseTimeline: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="اختر الجدول الزمني" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="asap">فوراً</SelectItem>
+                                  <SelectItem value="within_month">خلال شهر</SelectItem>
+                                  <SelectItem value="within_3months">خلال 3 أشهر</SelectItem>
+                                  <SelectItem value="within_6months">خلال 6 أشهر</SelectItem>
+                                  <SelectItem value="within_year">خلال سنة</SelectItem>
+                                  <SelectItem value="flexible">مرن</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              pref.purchaseTimeline ? (
+                                <div className="p-3 rounded-lg bg-slate-50 border">
+                                  <Badge variant="outline" className="text-sm">
+                                    {pref.purchaseTimeline === "asap" ? "فوراً" :
+                                     pref.purchaseTimeline === "within_month" ? "خلال شهر" :
+                                     pref.purchaseTimeline === "within_3months" ? "خلال 3 أشهر" :
+                                     pref.purchaseTimeline === "within_6months" ? "خلال 6 أشهر" :
+                                     pref.purchaseTimeline === "within_year" ? "خلال سنة" :
+                                     pref.purchaseTimeline === "flexible" ? "مرن" : pref.purchaseTimeline}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                  <p className="text-sm text-muted-foreground">غير محدد</p>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* نوع العميل */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                              <UserIcon className="h-4 w-4" />
+                              نوع العميل
+                            </Label>
+                            {isEditingPreference ? (
+                              <Select
+                                value={preferenceEditData.clientType || pref.clientType || 'direct'}
+                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, clientType: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="direct">مباشر</SelectItem>
+                                  <SelectItem value="broker">وسيط</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="p-3 rounded-lg bg-slate-50 border">
+                                <Badge variant="outline" className="text-sm">
+                                  {pref.clientType === "direct" ? "مباشر" : pref.clientType === "broker" ? "وسيط" : pref.clientType}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* الحالة */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                              <Power className="h-4 w-4" />
+                              حالة الرغبة
+                            </Label>
+                            {isEditingPreference ? (
+                              <Select
+                                value={preferenceEditData.isActive !== undefined ? (preferenceEditData.isActive ? 'active' : 'inactive') : (pref.isActive ? 'active' : 'inactive')}
+                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, isActive: value === 'active' })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="active">نشط</SelectItem>
+                                  <SelectItem value="inactive">غير نشط</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
+                                {pref.isActive ? "نشط" : "غير نشط"}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* أزرار الحفظ */}
+                  {isEditingPreference && (
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          setIsEditingPreference(false);
+                          setPreferenceEditData({});
+                        }}
+                        className="gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        إلغاء
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={() => {
+                          if (pref.id) {
+                            updatePreferenceMutation.mutate({ 
+                              preferenceId: pref.id, 
+                              data: preferenceEditData 
+                            });
+                          }
+                        }}
+                        disabled={updatePreferenceMutation.isPending}
+                        className="gap-2"
+                      >
+                        {updatePreferenceMutation.isPending ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            جاري الحفظ...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            حفظ التغييرات
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تفاصيل العقار */}
+      <Dialog open={showPropertyDetailsDialog} onOpenChange={(open) => {
+        setShowPropertyDetailsDialog(open);
+        if (!open) {
+          setSelectedPropertyId(null);
+          setIsEditingProperty(false);
+          setPropertyEditData({});
+        }
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          {(() => {
+            if (!selectedPropertyId) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            
+            const prop = properties.find(p => p.id === selectedPropertyId);
+            if (!prop) return <div className="text-center py-8 text-muted-foreground">العقار غير موجود</div>;
+            
+            const seller = users.find(u => u.id === prop.sellerId);
+            if (!seller) return <div className="text-center py-8 text-muted-foreground">البائع غير موجود</div>;
+
+            const currentData = isEditingProperty ? propertyEditData : prop;
+            const currentCity = currentData.city || prop.city;
+            const currentDistrict = currentData.district || prop.district;
+
+            return (
+              <>
+                <DialogHeader className="pb-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl">تفاصيل العقار</DialogTitle>
+                        <DialogDescription className="mt-1">
+                          {propertyTypeLabels[prop.propertyType] || prop.propertyType} - {prop.city} - {prop.district}
+                        </DialogDescription>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={isEditingProperty ? "outline" : "default"}
+                      className="gap-2"
+                      onClick={() => {
+                        if (isEditingProperty) {
+                          setIsEditingProperty(false);
+                          setPropertyEditData({});
+                        } else {
+                          setIsEditingProperty(true);
+                          setPropertyEditData({
+                            city: prop.city,
+                            district: prop.district,
+                            propertyType: prop.propertyType,
+                            price: prop.price,
+                            area: prop.area,
+                            rooms: prop.rooms,
+                            bathrooms: prop.bathrooms,
+                            description: prop.description,
+                            status: prop.status,
+                            furnishing: prop.furnishing,
+                            yearBuilt: prop.yearBuilt,
+                            amenities: prop.amenities || [],
+                            isActive: prop.isActive,
+                          });
+                        }
+                      }}
+                    >
+                      {isEditingProperty ? (
+                        <>
+                          <XCircle className="w-4 h-4" />
+                          إلغاء التعديل
+                        </>
+                      ) : (
+                        <>
+                          <Edit2 className="w-4 h-4" />
+                          تعديل العقار
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogHeader>
+                
+                <div className="max-w-4xl mx-auto space-y-6 mt-6">
+                  {/* معلومات البائع - للعرض فقط */}
+                  {!isEditingProperty && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-100">
+                            <UserIcon className="h-4 w-4 text-blue-600" />
+                          </div>
+                          معلومات البائع
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <UserIcon className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{seller.name}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{toArabicPhone(seller.phone || '')}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">البريد الإلكتروني</Label>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <p className="text-sm font-medium">{seller.email}</p>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الحالة</Label>
+                            <Badge className={prop.isActive ? "bg-green-500" : "bg-muted"}>
+                              {prop.isActive ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* تفاصيل العقار */}
+                  <div className="space-y-4">
+                    {/* الموقع */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-100">
+                            <MapPin className="h-4 w-4 text-blue-600" />
+                          </div>
+                          الموقع
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">المدينة</Label>
+                            {isEditingProperty ? (
+                              <Select
+                                value={currentCity}
+                                onValueChange={(value) => {
+                                  setPropertyEditData({ ...propertyEditData, city: value, district: "" });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="اختر المدينة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {saudiCities.map(city => (
+                                    <SelectItem key={city.name} value={city.name}>{city.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="p-2 rounded-lg bg-muted/50">
+                                <p className="text-sm font-medium">{prop.city}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الحي</Label>
+                            {isEditingProperty ? (
+                              <Select
+                                value={currentDistrict}
+                                onValueChange={(value) => {
+                                  setPropertyEditData({ ...propertyEditData, district: value });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="اختر الحي" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(() => {
+                                    const selectedCity = saudiCities.find(c => c.name === currentCity);
+                                    return selectedCity?.neighborhoods.map(neighborhood => (
+                                      <SelectItem key={neighborhood.name} value={neighborhood.name}>{neighborhood.name}</SelectItem>
+                                    )) || [];
+                                  })()}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div className="p-2 rounded-lg bg-muted/50">
+                                <p className="text-sm font-medium">{prop.district}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* معلومات العقار */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-green-100">
+                            <Building2 className="h-4 w-4 text-green-600" />
+                          </div>
+                          معلومات العقار
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">نوع العقار</Label>
+                              {isEditingProperty ? (
+                                <Select
+                                  value={currentData.propertyType || ""}
+                                  onValueChange={(value) => {
+                                    setPropertyEditData({ ...propertyEditData, propertyType: value });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر النوع" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">السعر (ريال)</Label>
+                              {isEditingProperty ? (
+                                <Input
+                                  type="number"
+                                  value={currentData.price || ""}
+                                  onChange={(e) => setPropertyEditData({ ...propertyEditData, price: parseInt(e.target.value) || 0 })}
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{formatCurrency(prop.price)} ريال</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">المساحة (م²)</Label>
+                              {isEditingProperty ? (
+                                <Input
+                                  value={currentData.area || ""}
+                                  onChange={(e) => setPropertyEditData({ ...propertyEditData, area: e.target.value })}
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{prop.area || '-'}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">عدد الغرف</Label>
+                              {isEditingProperty ? (
+                                <Input
+                                  value={currentData.rooms || ""}
+                                  onChange={(e) => setPropertyEditData({ ...propertyEditData, rooms: e.target.value })}
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{prop.rooms || '-'}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">دورات المياه</Label>
+                              {isEditingProperty ? (
+                                <Input
+                                  value={currentData.bathrooms || ""}
+                                  onChange={(e) => setPropertyEditData({ ...propertyEditData, bathrooms: e.target.value })}
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{prop.bathrooms || '-'}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">سنة البناء</Label>
+                              {isEditingProperty ? (
+                                <Input
+                                  value={currentData.yearBuilt || ""}
+                                  onChange={(e) => setPropertyEditData({ ...propertyEditData, yearBuilt: e.target.value })}
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">{prop.yearBuilt || '-'}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">التأثيث</Label>
+                              {isEditingProperty ? (
+                                <Select
+                                  value={currentData.furnishing || "unfurnished"}
+                                  onValueChange={(value) => {
+                                    setPropertyEditData({ ...propertyEditData, furnishing: value });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="furnished">مفروش</SelectItem>
+                                    <SelectItem value="semi_furnished">شبه مفروش</SelectItem>
+                                    <SelectItem value="unfurnished">غير مفروش</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">
+                                    {prop.furnishing === "furnished" ? "مفروش" : 
+                                     prop.furnishing === "semi_furnished" ? "شبه مفروش" : 
+                                     prop.furnishing === "unfurnished" ? "غير مفروش" : prop.furnishing || '-'}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">حالة البناء</Label>
+                              {isEditingProperty ? (
+                                <Select
+                                  value={currentData.status || "ready"}
+                                  onValueChange={(value) => {
+                                    setPropertyEditData({ ...propertyEditData, status: value });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ready">جاهز</SelectItem>
+                                    <SelectItem value="under_construction">قيد الإنشاء</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="p-2 rounded-lg bg-muted/50">
+                                  <p className="text-sm font-medium">
+                                    {prop.status === "ready" ? "جاهز" : prop.status === "under_construction" ? "قيد الإنشاء" : prop.status || '-'}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-semibold text-muted-foreground">الحالة</Label>
+                              {isEditingProperty ? (
+                                <Select
+                                  value={currentData.isActive?.toString() || "true"}
+                                  onValueChange={(value) => {
+                                    setPropertyEditData({ ...propertyEditData, isActive: value === "true" });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="true">نشط</SelectItem>
+                                    <SelectItem value="false">غير نشط</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge className={prop.isActive ? "bg-green-500" : "bg-muted"}>
+                                  {prop.isActive ? "نشط" : "غير نشط"}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold text-muted-foreground">الوصف</Label>
+                            {isEditingProperty ? (
+                              <Textarea
+                                value={currentData.description || ""}
+                                onChange={(e) => setPropertyEditData({ ...propertyEditData, description: e.target.value })}
+                                rows={4}
+                                placeholder="اكتب وصفاً للعقار..."
+                              />
+                            ) : (
+                              <div className="p-2 rounded-lg bg-muted/50">
+                                <p className="text-sm font-medium whitespace-pre-line">{prop.description || '-'}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* المزايا */}
+                    {prop.amenities && prop.amenities.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-purple-100">
+                              <Star className="h-4 w-4 text-purple-600" />
+                            </div>
+                            المزايا
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {prop.amenities.map((amenity, idx) => (
+                              <Badge key={idx} variant="outline">{amenity}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+
+                  {/* أزرار الحفظ */}
+                  {isEditingProperty && (
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => {
+                          setIsEditingProperty(false);
+                          setPropertyEditData({});
+                        }}
+                        className="gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        إلغاء
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={() => {
+                          if (prop.id) {
+                            updatePropertyMutation.mutate({ 
+                              propertyId: prop.id, 
+                              data: propertyEditData 
+                            });
+                          }
+                        }}
+                        disabled={updatePropertyMutation.isPending}
+                        className="gap-2"
+                      >
+                        {updatePropertyMutation.isPending ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            جاري الحفظ...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            حفظ التغييرات
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </>
             );

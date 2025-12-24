@@ -10,11 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock, BarChart3, Settings } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock, BarChart3, Settings, Car, Snowflake, Wifi, Shield, Trees, Dumbbell, Users, Droplets, Bath, Ruler, Calendar } from "lucide-react";
 import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
 import { getCityNames, getNeighborhoodsByCity } from "@shared/saudi-locations";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { MessagingPanel } from "@/components/MessagingPanel";
 import { MatchedPropertiesPanel } from "@/components/MatchedPropertiesPanel";
 import {
@@ -39,6 +41,24 @@ const propertyTypes = [
   { value: "land", label: "أرض" },
   { value: "duplex", label: "دوبلكس" },
   { value: "building", label: "عمارة" },
+];
+
+const amenityOptions = [
+  { id: "parking", label: "موقف سيارة", icon: Car },
+  { id: "ac", label: "تكييف مركزي", icon: Snowflake },
+  { id: "wifi", label: "إنترنت", icon: Wifi },
+  { id: "security", label: "حراسة أمنية", icon: Shield },
+  { id: "garden", label: "حديقة", icon: Trees },
+  { id: "gym", label: "صالة رياضية", icon: Dumbbell },
+  { id: "maid_room", label: "غرفة خادمة", icon: Users },
+  { id: "electricity", label: "عداد كهرباء مستقل", icon: Zap },
+  { id: "water", label: "عداد ماء مستقل", icon: Droplets },
+];
+
+const furnishingOptions = [
+  { value: "unfurnished", label: "غير مفروش" },
+  { value: "semi_furnished", label: "شبه مفروش" },
+  { value: "furnished", label: "مفروش" },
 ];
 
 export default function ProfilePage() {
@@ -239,7 +259,17 @@ export default function ProfilePage() {
   // Inline auto-save mutation for properties
   const inlineSavePropertyMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await apiRequest("PATCH", `/api/properties/${id}`, data);
+      // Determine which fields affect matching
+      const matchingFields = ["city", "district", "price", "propertyType", "rooms", "area", "status", "amenities"];
+      const updatedFields = Object.keys(data);
+      const affectsMatching = updatedFields.some(field => matchingFields.includes(field));
+      
+      const updatePayload = {
+        ...data,
+        _recalculateMatches: affectsMatching, // Flag to trigger match recalculation
+      };
+      
+      const response = await apiRequest("PATCH", `/api/properties/${id}`, updatePayload);
       return response.json();
     },
     onSuccess: () => {
@@ -285,10 +315,11 @@ export default function ProfilePage() {
 
     // Check if value actually changed
     let hasChanged = false;
-    if (fieldName === "districts") {
-      const oldDistricts = currentItem.districts || [];
-      const newDistricts = inlineEditData.districts || [];
-      hasChanged = JSON.stringify(oldDistricts) !== JSON.stringify(newDistricts);
+    if (fieldName === "districts" || fieldName === "images" || fieldName === "amenities") {
+      // Array fields - compare deeply
+      const oldValue = currentItem[fieldName] || [];
+      const newValue = inlineEditData[fieldName] || [];
+      hasChanged = JSON.stringify(Array.isArray(oldValue) ? oldValue.sort() : oldValue) !== JSON.stringify(Array.isArray(newValue) ? newValue.sort() : newValue);
     } else {
       hasChanged = currentItem[fieldName] !== inlineEditData[fieldName];
     }
@@ -1274,7 +1305,10 @@ export default function ProfilePage() {
 
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">المساحة (م²)</Label>
+                                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Ruler className="h-3 w-3" />
+                                  المساحة (م²)
+                                </Label>
                                 <Input
                                   value={inlineEditData.area || ""}
                                   onChange={(e) => handleInlineFieldChange("area", e.target.value, prop.id)}
@@ -1285,7 +1319,10 @@ export default function ProfilePage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">عدد الغرف</Label>
+                                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  عدد الغرف
+                                </Label>
                                 <Input
                                   value={inlineEditData.rooms || ""}
                                   onChange={(e) => handleInlineFieldChange("rooms", e.target.value, prop.id)}
@@ -1297,23 +1334,164 @@ export default function ProfilePage() {
                               </div>
                             </div>
 
-                            {/* Property Images Preview */}
-                            {inlineEditData.images && inlineEditData.images.length > 0 && (
+                            <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label className="text-xs text-muted-foreground">صور العقار</Label>
-                                <div className="flex flex-wrap gap-2">
+                                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Bath className="h-3 w-3" />
+                                  دورات المياه
+                                </Label>
+                                <Input
+                                  value={inlineEditData.bathrooms || ""}
+                                  onChange={(e) => handleInlineFieldChange("bathrooms", e.target.value, prop.id)}
+                                  onBlur={() => handleInlineFieldBlur("bathrooms", prop.id)}
+                                  placeholder="مثال: 2"
+                                  dir="ltr"
+                                  data-testid={`inline-input-bathrooms-${prop.id}`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  سنة البناء
+                                </Label>
+                                <Input
+                                  value={inlineEditData.yearBuilt || ""}
+                                  onChange={(e) => handleInlineFieldChange("yearBuilt", e.target.value, prop.id)}
+                                  onBlur={() => handleInlineFieldBlur("yearBuilt", prop.id)}
+                                  placeholder="مثال: 2020"
+                                  dir="ltr"
+                                  data-testid={`inline-input-year-built-${prop.id}`}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">التأثيث</Label>
+                              <Select 
+                                value={inlineEditData.furnishing || "unfurnished"} 
+                                onValueChange={(v) => {
+                                  handleInlineFieldChange("furnishing", v, prop.id);
+                                  setTimeout(() => handleInlineFieldBlur("furnishing", prop.id), 100);
+                                }}
+                              >
+                                <SelectTrigger data-testid={`inline-select-furnishing-${prop.id}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {furnishingOptions.map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">الوصف التفصيلي</Label>
+                              <Textarea
+                                value={inlineEditData.description || ""}
+                                onChange={(e) => handleInlineFieldChange("description", e.target.value, prop.id)}
+                                onBlur={() => handleInlineFieldBlur("description", prop.id)}
+                                placeholder="اكتب وصفاً تفصيلياً للعقار..."
+                                rows={4}
+                                data-testid={`inline-textarea-description-${prop.id}`}
+                              />
+                            </div>
+
+                            {/* Property Images */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Image className="h-3 w-3" />
+                                صور العقار ({inlineEditData.images?.length || 0})
+                              </Label>
+                              {inlineEditData.images && inlineEditData.images.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-2">
                                   {inlineEditData.images.map((img: string, idx: number) => (
-                                    <div key={idx} className="relative">
+                                    <div key={idx} className="relative group">
                                       <img 
                                         src={img} 
                                         alt={`صورة ${idx + 1}`} 
-                                        className="h-16 w-16 object-cover rounded-md border"
+                                        className="h-20 w-20 object-cover rounded-md border"
                                       />
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="destructive"
+                                        className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => {
+                                          const newImages = (inlineEditData.images || []).filter((_: any, i: number) => i !== idx);
+                                          handleInlineFieldChange("images", newImages, prop.id);
+                                          setTimeout(() => handleInlineFieldBlur("images", prop.id), 100);
+                                        }}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
                                     </div>
                                   ))}
                                 </div>
+                              )}
+                              <FileUploadButton
+                                maxFiles={20}
+                                onFilesUploaded={(urls) => {
+                                  const currentImages = inlineEditData.images || [];
+                                  const newImages = [...currentImages, ...urls];
+                                  handleInlineFieldChange("images", newImages, prop.id);
+                                  setTimeout(() => handleInlineFieldBlur("images", prop.id), 100);
+                                }}
+                                buttonVariant="outline"
+                                buttonSize="sm"
+                              >
+                                <Upload className="h-3 w-3 ml-1" />
+                                {inlineEditData.images && inlineEditData.images.length > 0 ? "إضافة المزيد" : "رفع صور"}
+                              </FileUploadButton>
+                            </div>
+
+                            {/* Amenities */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Check className="h-3 w-3" />
+                                المزايا والخدمات
+                              </Label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {amenityOptions.map((amenity) => {
+                                  const Icon = amenity.icon;
+                                  const currentAmenities = inlineEditData.amenities || [];
+                                  const isSelected = Array.isArray(currentAmenities) && currentAmenities.includes(amenity.id);
+                                  return (
+                                    <div
+                                      key={amenity.id}
+                                      onClick={() => {
+                                        const newAmenities = isSelected
+                                          ? currentAmenities.filter((a: string) => a !== amenity.id)
+                                          : [...currentAmenities, amenity.id];
+                                        handleInlineFieldChange("amenities", newAmenities, prop.id);
+                                        setTimeout(() => handleInlineFieldBlur("amenities", prop.id), 100);
+                                      }}
+                                      className={`
+                                        flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all
+                                        ${isSelected
+                                          ? "border-primary bg-primary/10"
+                                          : "border-muted hover:border-primary/50"}
+                                      `}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => {
+                                          const newAmenities = isSelected
+                                            ? currentAmenities.filter((a: string) => a !== amenity.id)
+                                            : [...currentAmenities, amenity.id];
+                                          handleInlineFieldChange("amenities", newAmenities, prop.id);
+                                          setTimeout(() => handleInlineFieldBlur("amenities", prop.id), 100);
+                                        }}
+                                      />
+                                      <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                                      <span className={`text-xs ${isSelected ? "text-primary font-medium" : ""}`}>
+                                        {amenity.label}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            )}
+                            </div>
 
                             <div className="flex items-center gap-2 text-xs text-green-600">
                               <Check className="h-3 w-3" />
