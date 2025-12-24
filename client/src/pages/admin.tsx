@@ -6680,18 +6680,18 @@ export default function AdminDashboard() {
                       <CardDescription className="text-sm">معلومات البائع للعرض فقط</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label className="text-sm font-medium">الاسم</Label>
-                          <div className="text-sm text-muted-foreground mt-1">{seller.name}</div>
+                          <div className="text-sm font-medium mt-1">{seller.name}</div>
                         </div>
                         <div>
-                          <Label className="text-sm font-medium">الهاتف</Label>
-                          <div className="text-sm text-muted-foreground mt-1">{seller.phone || "غير محدد"}</div>
+                          <Label className="text-sm font-medium">الجوال</Label>
+                          <div className="text-sm font-medium mt-1" dir="ltr">{seller.phone || "غير محدد"}</div>
                         </div>
                         <div>
                           <Label className="text-sm font-medium">البريد الإلكتروني</Label>
-                          <div className="text-sm text-muted-foreground mt-1">{seller.email || "غير محدد"}</div>
+                          <div className="text-sm font-medium mt-1" dir="ltr">{seller.email || "غير محدد"}</div>
                         </div>
                       </div>
                     </CardContent>
@@ -6709,14 +6709,23 @@ export default function AdminDashboard() {
                     <CardContent className="space-y-6">
                       {/* الموقع */}
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="w-4 h-4 text-primary" />
-                          <h4 className="font-bold text-sm">الموقع</h4>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-primary" />
+                            <h4 className="font-bold text-sm">الموقع</h4>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            <Edit2 className="w-3 h-3 ml-1" />
+                            قابل للتعديل
+                          </Badge>
                         </div>
                         
                         {/* المدينة */}
                         <div className="space-y-2">
-                          <label className="block text-xs font-bold text-gray-700">المدينة</label>
+                          <label className="block text-xs font-bold text-gray-700 flex items-center gap-2">
+                            المدينة
+                            <Edit2 className="w-3 h-3 text-muted-foreground" />
+                          </label>
                           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
                             {saudiCities.map((city) => (
                               <button
@@ -6729,6 +6738,7 @@ export default function AdminDashboard() {
                                     : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"}
                                 `}
                               >
+                                {prop?.city === city.name && <Check className="inline-block w-3 h-3 ml-1" />}
                                 {city.name}
                               </button>
                             ))}
@@ -6737,7 +6747,10 @@ export default function AdminDashboard() {
 
                         {/* الحي */}
                         <div className="space-y-2">
-                          <label className="block text-xs font-bold text-gray-700">الحي</label>
+                          <label className="block text-xs font-bold text-gray-700 flex items-center gap-2">
+                            الحي
+                            <Edit2 className="w-3 h-3 text-muted-foreground" />
+                          </label>
                           <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
                             {(() => {
                               const selectedCity = saudiCities.find(c => c.name === prop?.city);
