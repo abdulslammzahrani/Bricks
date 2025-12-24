@@ -45,7 +45,7 @@ export default function StaticPageView() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">تطابق</span>
+              <span className="text-xl font-bold">بركس</span>
             </Link>
             <Link href="/">
               <Button variant="ghost" size="sm">
@@ -67,7 +67,7 @@ export default function StaticPageView() {
 
       <footer className="border-t bg-card mt-12 py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 تطابق. جميع الحقوق محفوظة.</p>
+          <p>© 2024 بركس. جميع الحقوق محفوظة.</p>
         </div>
       </footer>
     </div>

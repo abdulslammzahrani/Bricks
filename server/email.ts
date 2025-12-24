@@ -51,9 +51,9 @@ export async function sendPasswordResetEmail(toEmail: string, resetToken: string
   const resetUrl = `${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'http://localhost:5000'}/reset-password?token=${resetToken}`;
   
   const { data, error } = await client.emails.send({
-    from: fromEmail || 'تطابق <noreply@resend.dev>',
+    from: fromEmail || 'بركس <noreply@resend.dev>',
     to: toEmail,
-    subject: 'استعادة كلمة المرور - تطابق',
+    subject: 'استعادة كلمة المرور - بركس',
     html: `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -74,7 +74,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetToken: string
       </head>
       <body>
         <div class="container">
-          <div class="logo">تطابق</div>
+          <div class="logo">بركس</div>
           <div class="content">
             <h1>استعادة كلمة المرور</h1>
             <p>مرحباً ${userName}،</p>
@@ -86,7 +86,7 @@ export async function sendPasswordResetEmail(toEmail: string, resetToken: string
             </div>
           </div>
           <div class="footer">
-            <p>تطابق - منصة التطابق العقاري الذكي</p>
+            <p>بركس - منصة التطابق العقاري الذكي</p>
             <p>هذه رسالة آلية، يرجى عدم الرد عليها.</p>
           </div>
         </div>
@@ -108,9 +108,9 @@ export async function sendWelcomeEmail(toEmail: string, userName: string) {
   const { client, fromEmail } = await getUncachableResendClient();
   
   const { data, error } = await client.emails.send({
-    from: fromEmail || 'تطابق <noreply@resend.dev>',
+    from: fromEmail || 'بركس <noreply@resend.dev>',
     to: toEmail,
-    subject: 'مرحباً بك في تطابق',
+    subject: 'مرحباً بك في بركس',
     html: `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
@@ -130,11 +130,11 @@ export async function sendWelcomeEmail(toEmail: string, userName: string) {
       </head>
       <body>
         <div class="container">
-          <div class="logo">تطابق</div>
+          <div class="logo">بركس</div>
           <div class="content">
-            <h1>أهلاً بك في تطابق!</h1>
+            <h1>أهلاً بك في بركس!</h1>
             <p>مرحباً ${userName}،</p>
-            <p>شكراً لانضمامك إلى منصة تطابق - منصة التطابق العقاري الذكي في السعودية.</p>
+            <p>شكراً لانضمامك إلى منصة بركس - منصة التطابق العقاري الذكي في السعودية.</p>
             <div class="features">
               <ul>
                 <li>البحث الذكي عن العقارات المناسبة</li>
@@ -145,7 +145,7 @@ export async function sendWelcomeEmail(toEmail: string, userName: string) {
             </div>
           </div>
           <div class="footer">
-            <p>تطابق - منصة التطابق العقاري الذكي</p>
+            <p>بركس - منصة التطابق العقاري الذكي</p>
           </div>
         </div>
       </body>

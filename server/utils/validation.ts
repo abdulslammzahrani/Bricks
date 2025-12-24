@@ -6,10 +6,10 @@
 export function isValidEmail(email: string): boolean {
   if (!email || typeof email !== "string") return false;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // التأكد من أن الإيميل صحيح ولا يحتوي على @temp.com أو @temp.tatabuq.sa
+  // التأكد من أن الإيميل صحيح ولا يحتوي على @temp.com أو @temp.bricks.sa
   return emailRegex.test(email.trim()) && 
          !email.includes("@temp.com") && 
-         !email.includes("@temp.tatabuq.sa") &&
+         !email.includes("@temp.bricks.sa") &&
          email.length <= 255;
 }
 
@@ -59,7 +59,7 @@ export function generateTempEmail(phone: string, userId: string): string {
   const cleanPhone = normalizePhone(phone);
   // استخدام جزء من userId لضمان التفرد
   const uniqueId = userId.substring(0, 8).replace(/-/g, "");
-  return `user_${cleanPhone}_${uniqueId}@temp.tatabuq.sa`;
+  return `user_${cleanPhone}_${uniqueId}@temp.bricks.sa`;
 }
 
 // دالة للتحقق من صحة البيانات قبل الحفظ

@@ -897,7 +897,7 @@ export async function registerRoutes(
         // Generate email if not provided
         let finalEmail = cleanEmail;
         if (!finalEmail || !isValidEmail(finalEmail)) {
-          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+          finalEmail = `temp_${Date.now()}@temp.bricks.sa`;
         }
 
         user = await storage.createUser({
@@ -910,7 +910,7 @@ export async function registerRoutes(
         });
         
         // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
-        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+        if (finalEmail.includes("@temp.bricks.sa") && finalEmail.startsWith("temp_")) {
           const uniqueEmail = generateTempEmail(cleanPhone, user.id);
           user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
         }
@@ -1009,7 +1009,7 @@ export async function registerRoutes(
         // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
         let finalEmail = cleanEmail;
         if (!finalEmail || !isValidEmail(finalEmail)) {
-          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+          finalEmail = `temp_${Date.now()}@temp.bricks.sa`;
         }
         
         user = await storage.createUser({
@@ -1020,7 +1020,7 @@ export async function registerRoutes(
         });
         
         // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
-        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+        if (finalEmail.includes("@temp.bricks.sa") && finalEmail.startsWith("temp_")) {
           const uniqueEmail = generateTempEmail(cleanPhone, user.id);
           user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
         }
@@ -1340,7 +1340,7 @@ export async function registerRoutes(
         // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
         let finalEmail = cleanEmail;
         if (!finalEmail || !isValidEmail(finalEmail)) {
-          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+          finalEmail = `temp_${Date.now()}@temp.bricks.sa`;
         }
         
         user = await storage.createUser({
@@ -1353,7 +1353,7 @@ export async function registerRoutes(
         });
         
         // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
-        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+        if (finalEmail.includes("@temp.bricks.sa") && finalEmail.startsWith("temp_")) {
           const uniqueEmail = generateTempEmail(cleanPhone, user.id);
           user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
         }
@@ -1437,7 +1437,7 @@ export async function registerRoutes(
         // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
         let finalEmail = cleanEmail;
         if (!finalEmail || !isValidEmail(finalEmail)) {
-          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+          finalEmail = `temp_${Date.now()}@temp.bricks.sa`;
         }
         
         user = await storage.createUser({
@@ -1450,7 +1450,7 @@ export async function registerRoutes(
         });
         
         // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
-        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+        if (finalEmail.includes("@temp.bricks.sa") && finalEmail.startsWith("temp_")) {
           const uniqueEmail = generateTempEmail(cleanPhone, user.id);
           user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
         }

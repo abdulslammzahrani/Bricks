@@ -1186,24 +1186,24 @@ export default function AdminDashboard() {
     
     // رسالة للمشتري
     const buyerMessage = encodeURIComponent(
-      `تطابق - مطابقة عقارية جديدة\n\n` +
+      `بركس - مطابقة عقارية جديدة\n\n` +
       `مرحباً ${buyer?.name || 'عميلنا الكريم'},\n\n` +
       `تم إيجاد عقار يتوافق مع رغباتك بنسبة ${match.matchScore}%\n\n` +
       `الموقع: ${prop?.city || ''} - ${prop?.district || ''}\n` +
       `السعر: ${prop?.price ? formatCurrency(prop.price) + ' ريال' : 'غير محدد'}\n\n` +
       `الرجاء الدخول لصفحتك الخاصة لتأكيد طلبك ومشاهدة التفاصيل.\n\n` +
-      `منصة تطابق العقارية`
+      `منصة بركس العقارية`
     );
     
     // رسالة للبائع
     const sellerMessage = encodeURIComponent(
-      `تطابق - مشتري محتمل لعقارك\n\n` +
+      `بركس - مشتري محتمل لعقارك\n\n` +
       `مرحباً ${seller?.name || 'عميلنا الكريم'},\n\n` +
       `يوجد مشتري مهتم بعقارك بنسبة تطابق ${match.matchScore}%\n\n` +
       `النوع: ${prop?.propertyType ? propertyTypeLabels[prop.propertyType] : 'عقار'}\n` +
       `الموقع: ${prop?.city || ''} - ${prop?.district || ''}\n\n` +
       `الرجاء الدخول لصفحتك الخاصة لتأكيد العرض والتواصل مع المشتري.\n\n` +
-      `منصة تطابق العقارية`
+      `منصة بركس العقارية`
     );
     
     // فتح واتساب للمشتري
@@ -1269,7 +1269,7 @@ export default function AdminDashboard() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold group-data-[collapsible=icon]:hidden">تطابق</span>
+              <span className="text-lg font-bold group-data-[collapsible=icon]:hidden">بركس</span>
             </Link>
           </SidebarHeader>
 
@@ -8250,8 +8250,8 @@ function StaticPagesSection() {
   };
 
   const defaultContent: Record<string, string> = {
-    faq: `<h2>ما هي منصة تطابق؟</h2>
-<p>تطابق هي منصة مطابقة عقارية ذكية تربط بين المشترين والبائعين في السوق العقاري السعودي.</p>
+    faq: `<h2>ما هي منصة بركس؟</h2>
+<p>بركس هي منصة مطابقة عقارية ذكية تربط بين المشترين والبائعين في السوق العقاري السعودي.</p>
 
 <h2>كيف يمكنني تسجيل رغبتي العقارية؟</h2>
 <p>يمكنك تسجيل رغبتي العقارية من خلال الصفحة الرئيسية عبر المحادثة الذكية مع مساعدنا الآلي.</p>
@@ -8262,7 +8262,7 @@ function StaticPagesSection() {
 <h2>كيف سأعرف بالعقارات المطابقة؟</h2>
 <p>سنرسل لك إشعارات أسبوعية عبر الواتساب بالعقارات التي تتطابق مع متطلباتك.</p>`,
     privacy: `<h2>سياسة الخصوصية</h2>
-<p>نحن في تطابق نقدر خصوصيتك ونلتزم بحماية بياناتك الشخصية.</p>
+<p>نحن في بركس نقدر خصوصيتك ونلتزم بحماية بياناتك الشخصية.</p>
 
 <h3>البيانات التي نجمعها</h3>
 <ul>
@@ -8279,7 +8279,7 @@ function StaticPagesSection() {
     terms: `<h2>الشروط والأحكام</h2>
 
 <h3>القبول</h3>
-<p>باستخدامك لمنصة تطابق، فإنك توافق على هذه الشروط والأحكام.</p>
+<p>باستخدامك لمنصة بركس، فإنك توافق على هذه الشروط والأحكام.</p>
 
 <h3>الخدمات</h3>
 <p>نقدم خدمة مطابقة عقارية تربط بين الباحثين عن عقارات والبائعين.</p>

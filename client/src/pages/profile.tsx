@@ -598,7 +598,7 @@ export default function ProfilePage() {
 
         {/* Footer */}
         <p className="mt-8 text-xs text-muted-foreground">
-          تطابق - منصة التوفيق العقاري الذكية
+          بركس - منصة التوفيق العقاري الذكية
         </p>
       </div>
     );

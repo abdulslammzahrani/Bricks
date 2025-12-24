@@ -91,7 +91,7 @@ export default function RegisterPage() {
             إنشاء حساب جديد
           </CardTitle>
           <CardDescription>
-            انضم إلى تطابق للعثور على العقار المثالي
+            انضم إلى بركس للعثور على العقار المثالي
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

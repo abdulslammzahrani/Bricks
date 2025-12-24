@@ -12,7 +12,7 @@ export default function Footer() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                 <Building2 className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">تطابق</span>
+              <span className="text-xl font-bold">بركس</span>
             </div>
             <p className="text-muted-foreground text-sm">
               منصة المطابقة العقارية الذكية التي تربط بين المشترين والبائعين بسهولة وفعالية
@@ -75,14 +75,14 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="h-4 w-4 shrink-0" />
-                <span>info@tatabuq.sa</span>
+                <span>info@bricks.sa</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p data-testid="text-copyright">© 2024 تطابق. جميع الحقوق محفوظة.</p>
+          <p data-testid="text-copyright">© 2024 بركس. جميع الحقوق محفوظة.</p>
         </div>
       </div>
     </footer>

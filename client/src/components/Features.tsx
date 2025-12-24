@@ -107,7 +107,7 @@ export default function Features() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-2xl md:text-3xl font-bold mb-4" data-testid="text-features-title">
-            لماذا تختار تطابق؟
+            لماذا تختار بركس؟
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto" data-testid="text-features-description">
             نقدم لك تجربة عقارية فريدة تجمع بين التقنية والخبرة
