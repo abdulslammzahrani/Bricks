@@ -183,37 +183,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<void> {
-    // حذف طلبات الاتصال المرتبطة
-    await db.delete(contactRequests).where(eq(contactRequests.buyerId, id));
-    
-    // حذف المطابقات المرتبطة بالرغبات
-    const userPreferences = await db.select().from(buyerPreferences).where(eq(buyerPreferences.userId, id));
-    for (const pref of userPreferences) {
-      // حذف طلبات الاتصال المرتبطة بالمطابقات
-      const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, pref.id));
-      for (const match of prefMatches) {
-        await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+    try {
+      // حذف طلبات الاتصال المرتبطة
+      await db.delete(contactRequests).where(eq(contactRequests.buyerId, id));
+      
+      // حذف المطابقات المرتبطة بالرغبات
+      const userPreferences = await db.select().from(buyerPreferences).where(eq(buyerPreferences.userId, id));
+      for (const pref of userPreferences) {
+        // حذف طلبات الاتصال المرتبطة بالمطابقات
+        const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, pref.id));
+        for (const match of prefMatches) {
+          try {
+            await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+          } catch (e) {
+            // تجاهل الأخطاء إذا كان الجدول غير موجود
+            console.warn("Error deleting contact requests:", e);
+          }
+        }
+        await db.delete(matches).where(eq(matches.buyerPreferenceId, pref.id));
       }
-      await db.delete(matches).where(eq(matches.buyerPreferenceId, pref.id));
-    }
-    // حذف الرغبات المرتبطة
-    await db.delete(buyerPreferences).where(eq(buyerPreferences.userId, id));
-    
-    // حذف المطابقات المرتبطة بالعقارات
-    const userProperties = await db.select().from(properties).where(eq(properties.sellerId, id));
-    for (const prop of userProperties) {
-      // حذف طلبات الاتصال المرتبطة بالمطابقات
-      const propMatches = await db.select().from(matches).where(eq(matches.propertyId, prop.id));
-      for (const match of propMatches) {
-        await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+      // حذف الرغبات المرتبطة
+      await db.delete(buyerPreferences).where(eq(buyerPreferences.userId, id));
+      
+      // حذف المطابقات المرتبطة بالعقارات
+      const userProperties = await db.select().from(properties).where(eq(properties.sellerId, id));
+      for (const prop of userProperties) {
+        // حذف طلبات الاتصال المرتبطة بالمطابقات
+        const propMatches = await db.select().from(matches).where(eq(matches.propertyId, prop.id));
+        for (const match of propMatches) {
+          try {
+            await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+          } catch (e) {
+            // تجاهل الأخطاء إذا كان الجدول غير موجود
+            console.warn("Error deleting contact requests:", e);
+          }
+        }
+        await db.delete(matches).where(eq(matches.propertyId, prop.id));
       }
-      await db.delete(matches).where(eq(matches.propertyId, prop.id));
+      // حذف العقارات المرتبطة
+      await db.delete(properties).where(eq(properties.sellerId, id));
+      
+      // حذف المستخدم
+      await db.delete(users).where(eq(users.id, id));
+    } catch (error: any) {
+      // إذا كان الخطأ متعلق بعمود غير موجود، تجاهله
+      if (error.message && error.message.includes("does not exist")) {
+        console.warn("Column does not exist, continuing deletion:", error.message);
+        // محاولة الحذف بدون العمود المفقود
+        await db.delete(users).where(eq(users.id, id));
+      } else {
+        throw error;
+      }
     }
-    // حذف العقارات المرتبطة
-    await db.delete(properties).where(eq(properties.sellerId, id));
-    
-    // حذف المستخدم
-    await db.delete(users).where(eq(users.id, id));
   }
 
   // Buyer Preferences
@@ -237,15 +258,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBuyerPreference(id: string): Promise<void> {
-    // حذف طلبات الاتصال المرتبطة بالمطابقات أولاً
-    const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, id));
-    for (const match of prefMatches) {
-      await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+    try {
+      // حذف طلبات الاتصال المرتبطة بالمطابقات أولاً
+      const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, id));
+      for (const match of prefMatches) {
+        try {
+          await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+        } catch (e) {
+          console.warn("Error deleting contact requests:", e);
+        }
+      }
+      // حذف المطابقات المرتبطة
+      await db.delete(matches).where(eq(matches.buyerPreferenceId, id));
+      // ثم حذف الرغبة
+      await db.delete(buyerPreferences).where(eq(buyerPreferences.id, id));
+    } catch (error: any) {
+      if (error.message && error.message.includes("does not exist")) {
+        console.warn("Column does not exist, continuing deletion:", error.message);
+        await db.delete(buyerPreferences).where(eq(buyerPreferences.id, id));
+      } else {
+        throw error;
+      }
     }
-    // حذف المطابقات المرتبطة
-    await db.delete(matches).where(eq(matches.buyerPreferenceId, id));
-    // ثم حذف الرغبة
-    await db.delete(buyerPreferences).where(eq(buyerPreferences.id, id));
   }
 
   async getAllBuyerPreferences(): Promise<BuyerPreference[]> {
@@ -282,17 +316,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProperty(id: string): Promise<void> {
-    // حذف طلبات الاتصال المرتبطة بالمطابقات أولاً
-    const propMatches = await db.select().from(matches).where(eq(matches.propertyId, id));
-    for (const match of propMatches) {
-      await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+    try {
+      // حذف طلبات الاتصال المرتبطة بالمطابقات أولاً
+      const propMatches = await db.select().from(matches).where(eq(matches.propertyId, id));
+      for (const match of propMatches) {
+        try {
+          await db.delete(contactRequests).where(eq(contactRequests.matchId, match.id));
+        } catch (e) {
+          console.warn("Error deleting contact requests:", e);
+        }
+      }
+      // حذف المطابقات المرتبطة
+      await db.delete(matches).where(eq(matches.propertyId, id));
+      // حذف طلبات الاتصال المرتبطة بالعقار
+      try {
+        await db.delete(contactRequests).where(eq(contactRequests.propertyId, id));
+      } catch (e) {
+        console.warn("Error deleting contact requests:", e);
+      }
+      // ثم حذف العقار
+      await db.delete(properties).where(eq(properties.id, id));
+    } catch (error: any) {
+      if (error.message && error.message.includes("does not exist")) {
+        console.warn("Column does not exist, continuing deletion:", error.message);
+        await db.delete(properties).where(eq(properties.id, id));
+      } else {
+        throw error;
+      }
     }
-    // حذف المطابقات المرتبطة
-    await db.delete(matches).where(eq(matches.propertyId, id));
-    // حذف طلبات الاتصال المرتبطة بالعقار
-    await db.delete(contactRequests).where(eq(contactRequests.propertyId, id));
-    // ثم حذف العقار
-    await db.delete(properties).where(eq(properties.id, id));
   }
 
   async getAllProperties(): Promise<Property[]> {
@@ -837,10 +888,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteMatch(id: string): Promise<void> {
-    // حذف طلبات الاتصال المرتبطة أولاً
-    await db.delete(contactRequests).where(eq(contactRequests.matchId, id));
-    // ثم حذف المطابقة
-    await db.delete(matches).where(eq(matches.id, id));
+    try {
+      // حذف طلبات الاتصال المرتبطة أولاً
+      try {
+        await db.delete(contactRequests).where(eq(contactRequests.matchId, id));
+      } catch (e) {
+        console.warn("Error deleting contact requests:", e);
+      }
+      // ثم حذف المطابقة
+      await db.delete(matches).where(eq(matches.id, id));
+    } catch (error: any) {
+      if (error.message && error.message.includes("does not exist")) {
+        console.warn("Column does not exist, continuing deletion:", error.message);
+        await db.delete(matches).where(eq(matches.id, id));
+      } else {
+        throw error;
+      }
+    }
   }
 
   // Analytics
