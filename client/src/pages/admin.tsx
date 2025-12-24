@@ -3066,12 +3066,16 @@ export default function AdminDashboard() {
                                         return (
                                           <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                              <Badge className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5`}>
+                                              <button
+                                                type="button"
+                                                className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5 rounded-md whitespace-nowrap text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80`}
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
                                                 <StatusIcon className="w-3 h-3" />
                                                 {statusConfig.label}
-                                              </Badge>
+                                              </button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56">
+                                            <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
                                               <DropdownMenuLabel>تغيير حالة المهمة</DropdownMenuLabel>
                                               <DropdownMenuSeparator />
                                               {["new", "contacted", "confirmed", "viewing", "agreed", "vacated"].map((status) => {
@@ -3080,7 +3084,8 @@ export default function AdminDashboard() {
                                                 return (
                                                   <DropdownMenuItem
                                                     key={status}
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
                                                       // تحديث حالة جميع مطابقات المشتري
                                                       buyerMatchIds.forEach(id => {
                                                         updateMatchStatusMutation.mutate({ matchId: id, status });
