@@ -25,6 +25,14 @@ import {
   generateAuthenticationOptionsForUser,
   verifyAuthentication,
 } from "./webauthn";
+import {
+  isValidEmail,
+  isValidPhone,
+  normalizePhone,
+  normalizeEmail,
+  generateTempEmail,
+  validateUserData,
+} from "./utils/validation";
 
 // WhatsApp API Integration Point - Replace with actual implementation
 async function sendWhatsAppMessage(
@@ -71,18 +79,45 @@ export async function registerRoutes(
   app.post("/api/sellers/register", async (req, res) => {
     try {
       const data = req.body;
+      
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(data.phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      const cleanEmail = data.email ? normalizeEmail(data.email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+      
       let isNewUser = false;
       // نستخدم الـ Storage الأصلي الموجود في ملفك
-      let user = await storage.getUserByPhone(data.phone);
+      let user = await storage.getUserByPhone(cleanPhone);
       if (!user) {
         const passwordHash = await bcrypt.hash("password123", 10);
+        
+        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          // سنقوم بإنشاء إيميل مؤقت بعد إنشاء المستخدم
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
+        
         user = await storage.createUser({
-          name: data.name || "بائع جديد",
-          phone: data.phone.trim(),
-          email: data.email || `${data.phone.trim()}@temp.com`,
+          name: (data.name || "بائع جديد").trim(),
+          phone: cleanPhone,
+          email: finalEmail,
           role: "seller",
           passwordHash,
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
+        
         isNewUser = true;
       }
 
@@ -123,17 +158,44 @@ export async function registerRoutes(
   app.post("/api/buyers/register", async (req, res) => {
     try {
       const data = req.body;
+      
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(data.phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      const cleanEmail = data.email ? normalizeEmail(data.email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+      
       let isNewUser = false;
-      let user = await storage.getUserByPhone(data.phone);
+      let user = await storage.getUserByPhone(cleanPhone);
       if (!user) {
         const passwordHash = await bcrypt.hash("password123", 10);
+        
+        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          // سنقوم بإنشاء إيميل مؤقت بعد إنشاء المستخدم
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
+        
         user = await storage.createUser({
-          name: data.name || "مشتري جديد",
-          phone: data.phone.trim(),
-          email: data.email || `${data.phone.trim()}@temp.com`,
+          name: (data.name || "مشتري جديد").trim(),
+          phone: cleanPhone,
+          email: finalEmail,
           role: "buyer",
           passwordHash,
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
+        
         isNewUser = true;
       }
 
@@ -581,13 +643,25 @@ export async function registerRoutes(
           .json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
       }
 
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(phone);
+      const cleanEmail = normalizeEmail(email);
+      
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      if (!isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+
       // Check if user already exists
-      const existingByPhone = await storage.getUserByPhone(phone);
+      const existingByPhone = await storage.getUserByPhone(cleanPhone);
       if (existingByPhone) {
         return res.status(400).json({ error: "رقم الجوال مسجل مسبقاً" });
       }
 
-      const existingByEmail = await storage.getUserByEmail(email);
+      const existingByEmail = await storage.getUserByEmail(cleanEmail);
       if (existingByEmail) {
         return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
       }
@@ -597,9 +671,9 @@ export async function registerRoutes(
 
       // Create user
       const user = await storage.createUser({
-        name,
-        phone,
-        email,
+        name: name.trim(),
+        phone: cleanPhone,
+        email: cleanEmail,
         passwordHash,
         role: "buyer",
         requiresPasswordReset: false,
@@ -818,24 +892,44 @@ export async function registerRoutes(
         return res.status(400).json({ error: "البيانات المطلوبة ناقصة" });
       }
 
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      const cleanEmail = email ? normalizeEmail(email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+
       // Check if user exists by phone
-      let user = await storage.getUserByPhone(phone);
+      let user = await storage.getUserByPhone(cleanPhone);
 
       if (!user) {
         // Hash phone as temporary password
-        const passwordHash = await bcrypt.hash(phone, 10);
+        const passwordHash = await bcrypt.hash(cleanPhone, 10);
 
         // Generate email if not provided
-        const userEmail = email || `${phone}@tatabuk.sa`;
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
 
         user = await storage.createUser({
-          email: userEmail,
-          phone: phone.trim(),
+          email: finalEmail,
+          phone: cleanPhone,
           name: name.trim(),
           role: "buyer",
           passwordHash,
           requiresPasswordReset: true,
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
       }
 
       // Create buyer preference
@@ -902,12 +996,6 @@ export async function registerRoutes(
       if (!name || typeof name !== "string" || name.trim().length < 2) {
         return res.status(400).json({ error: "الاسم مطلوب" });
       }
-      if (!email || typeof email !== "string" || !email.includes("@")) {
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
-      }
-      if (!phone || typeof phone !== "string" || phone.length < 10) {
-        return res.status(400).json({ error: "رقم الجوال مطلوب" });
-      }
       if (!city || typeof city !== "string") {
         return res.status(400).json({ error: "المدينة مطلوبة" });
       }
@@ -915,16 +1003,44 @@ export async function registerRoutes(
         return res.status(400).json({ error: "نوع العقار مطلوب" });
       }
 
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      const cleanEmail = email ? normalizeEmail(email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+
       // Check if user exists
-      let user = await storage.getUserByEmail(email);
+      let user = cleanEmail ? await storage.getUserByEmail(cleanEmail) : null;
+      if (!user) {
+        user = await storage.getUserByPhone(cleanPhone);
+      }
+      
       let isNewUser = false;
       if (!user) {
+        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
+        
         user = await storage.createUser({
-          email: email.trim(),
-          phone: phone.trim(),
+          email: finalEmail,
+          phone: cleanPhone,
           name: name.trim(),
           role: "buyer",
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
+        
         isNewUser = true;
       }
 
@@ -1199,12 +1315,6 @@ export async function registerRoutes(
       if (!name || typeof name !== "string" || name.trim().length < 2) {
         return res.status(400).json({ error: "الاسم مطلوب" });
       }
-      if (!email || typeof email !== "string" || !email.includes("@")) {
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
-      }
-      if (!phone || typeof phone !== "string" || phone.length < 10) {
-        return res.status(400).json({ error: "رقم الجوال مطلوب" });
-      }
       if (!city || typeof city !== "string") {
         return res.status(400).json({ error: "المدينة مطلوبة" });
       }
@@ -1224,18 +1334,46 @@ export async function registerRoutes(
         return res.status(400).json({ error: "السعر غير صحيح" });
       }
 
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
+      }
+      
+      const cleanEmail = email ? normalizeEmail(email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
+      }
+
       // Check if user exists
-      let user = await storage.getUserByEmail(email);
+      let user = cleanEmail ? await storage.getUserByEmail(cleanEmail) : null;
+      if (!user) {
+        user = await storage.getUserByPhone(cleanPhone);
+      }
+      
       let isNewUser = false;
       if (!user) {
+        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
+        
         user = await storage.createUser({
-          email: email.trim(),
-          phone: phone.trim(),
+          email: finalEmail,
+          phone: cleanPhone,
           name: name.trim(),
           role: "seller",
           accountType: accountType || null,
           entityName: entityName || null,
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
+        
         isNewUser = true;
       }
 
@@ -1292,25 +1430,47 @@ export async function registerRoutes(
       if (!name || typeof name !== "string" || name.trim().length < 2) {
         return res.status(400).json({ error: "الاسم مطلوب" });
       }
-      if (!email || typeof email !== "string" || !email.includes("@")) {
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+
+      // تنظيف وvalidate البيانات
+      const cleanPhone = normalizePhone(phone || "");
+      if (!isValidPhone(cleanPhone)) {
+        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
       }
-      if (!phone || typeof phone !== "string" || phone.length < 10) {
-        return res.status(400).json({ error: "رقم الجوال مطلوب" });
+      
+      const cleanEmail = email ? normalizeEmail(email) : null;
+      if (cleanEmail && !isValidEmail(cleanEmail)) {
+        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
       }
 
       // Check if user exists
-      let user = await storage.getUserByEmail(email);
+      let user = cleanEmail ? await storage.getUserByEmail(cleanEmail) : null;
+      if (!user) {
+        user = await storage.getUserByPhone(cleanPhone);
+      }
+      
       let isNewUser = false;
       if (!user) {
+        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
+        let finalEmail = cleanEmail;
+        if (!finalEmail || !isValidEmail(finalEmail)) {
+          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
+        }
+        
         user = await storage.createUser({
-          email: email.trim(),
-          phone: phone.trim(),
+          email: finalEmail,
+          phone: cleanPhone,
           name: name.trim(),
           role: "investor",
           accountType: null,
           entityName: null,
         });
+        
+        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
+        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
+          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
+          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
+        }
+        
         isNewUser = true;
       }
 
@@ -1777,6 +1937,18 @@ export async function registerRoutes(
   });
 
   // Delete buyer preference
+  // Cleanup users data (admin only)
+  app.post("/api/admin/cleanup-users", async (req, res) => {
+    try {
+      const { cleanupUsers } = await import("./scripts/cleanup-users");
+      await cleanupUsers();
+      res.json({ success: true, message: "تم تنظيف بيانات المستخدمين بنجاح" });
+    } catch (error: any) {
+      console.error("Error cleaning up users:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/admin/preferences/:id", async (req, res) => {
     try {
       const { id } = req.params;

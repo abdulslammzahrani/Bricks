@@ -379,7 +379,7 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
         // وضع الإنشاء (الكود الأصلي)
         const response = await apiRequest("POST", "/api/sellers/register", {
           name: listingData.name,
-          email: listingData.email || `${listingData.phone}@temp.tatabuq.sa`,
+          email: listingData.email || undefined, // الـ backend سيتعامل مع إنشاء الإيميل المؤقت
           phone: listingData.phone,
           propertyType: listingData.propertyType || "villa",
           city: listingData.cities[0] || "",
