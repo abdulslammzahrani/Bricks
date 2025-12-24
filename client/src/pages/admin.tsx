@@ -5910,7 +5910,7 @@ export default function AdminDashboard() {
           setSelectedMatchForComparison(null);
         }
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
           {(() => {
             if (!selectedMatchForComparison) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
             
@@ -5923,6 +5923,22 @@ export default function AdminDashboard() {
             const buyer = pref ? users.find(u => u.id === pref.userId) : null;
             
             if (!prop || !seller || !pref || !buyer) return <div className="text-center py-8 text-muted-foreground">البيانات غير مكتملة</div>;
+            
+            // استخراج metadata من description للعقار
+            const extractMetadata = (description: string | null) => {
+              if (!description) return null;
+              try {
+                const jsonMatch = description.match(/<metadata>(.*?)<\/metadata>/s);
+                if (jsonMatch) {
+                  return JSON.parse(jsonMatch[1]);
+                }
+              } catch (e) {
+                console.warn("Error parsing metadata:", e);
+              }
+              return null;
+            };
+            
+            const propMetadata = extractMetadata(prop.description);
             
             const breakdown = calculateMatchBreakdown(prop, pref);
             const percentage = Math.round((match.matchScore / 105) * 100);
@@ -6014,68 +6030,119 @@ export default function AdminDashboard() {
                           بيانات المشتري
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
-                          <p className="text-sm font-medium mt-1">{buyer.name}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
-                          <p className="text-sm font-medium mt-1">{toArabicPhone(buyer.phone || '')}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">المدينة</Label>
-                          <p className="text-sm font-medium mt-1">{pref.city}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الأحياء</Label>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {pref.districts && pref.districts.length > 0 ? (
-                              pref.districts.map((district) => (
-                                <Badge key={district} variant="outline" className="text-xs">
-                                  {district}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-sm text-muted-foreground">غير محدد</span>
-                            )}
-                          </div>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">نوع العقار</Label>
-                          <p className="text-sm font-medium mt-1">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الغرف</Label>
-                          <p className="text-sm font-medium mt-1">{pref.rooms || "غير محدد"}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">المساحة</Label>
-                          <p className="text-sm font-medium mt-1">{pref.area ? `${pref.area} م²` : "غير محدد"}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الميزانية</Label>
-                          <p className="text-sm font-medium mt-1">
-                            {pref.budgetMin && pref.budgetMax 
-                              ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
-                              : "غير محدد"}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">نوع المعاملة</Label>
-                          <p className="text-sm font-medium mt-1">
-                            {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "تأجير" : "غير محدد"}
-                          </p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الغرض</Label>
-                          <p className="text-sm font-medium mt-1">
-                            {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : "غير محدد"}
-                          </p>
-                        </div>
+                      <CardContent>
+                        <Accordion type="multiple" className="w-full">
+                          {/* معلومات المشتري */}
+                          <AccordionItem value="buyer-info">
+                            <AccordionTrigger className="text-sm font-semibold">معلومات المشتري</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الاسم</Label>
+                                <p className="text-sm font-medium mt-1">{buyer.name}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الجوال</Label>
+                                <p className="text-sm font-medium mt-1">{toArabicPhone(buyer.phone || '')}</p>
+                              </div>
+                              {buyer.email && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">البريد الإلكتروني</Label>
+                                  <p className="text-sm font-medium mt-1">{buyer.email}</p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* الموقع */}
+                          <AccordionItem value="buyer-location">
+                            <AccordionTrigger className="text-sm font-semibold">الموقع</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">المدينة</Label>
+                                <p className="text-sm font-medium mt-1">{pref.city}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الأحياء</Label>
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {pref.districts && pref.districts.length > 0 ? (
+                                    pref.districts.map((district) => (
+                                      <Badge key={district} variant="outline" className="text-xs">
+                                        {district}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">غير محدد</span>
+                                  )}
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* نوع العقار والمواصفات */}
+                          <AccordionItem value="buyer-specs">
+                            <AccordionTrigger className="text-sm font-semibold">نوع العقار والمواصفات</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">نوع العقار</Label>
+                                <p className="text-sm font-medium mt-1">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الغرف</Label>
+                                <p className="text-sm font-medium mt-1">{pref.rooms || "غير محدد"}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">المساحة</Label>
+                                <p className="text-sm font-medium mt-1">{pref.area ? `${pref.area} م²` : "غير محدد"}</p>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* المالية */}
+                          <AccordionItem value="buyer-financial">
+                            <AccordionTrigger className="text-sm font-semibold">المالية</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الميزانية</Label>
+                                <p className="text-sm font-medium mt-1">
+                                  {pref.budgetMin && pref.budgetMax 
+                                    ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
+                                    : "غير محدد"}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">طريقة الدفع</Label>
+                                <p className="text-sm font-medium mt-1">
+                                  {pref.paymentMethod ? paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod : "غير محدد"}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">نوع المعاملة</Label>
+                                <p className="text-sm font-medium mt-1">
+                                  {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "تأجير" : "غير محدد"}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الغرض</Label>
+                                <p className="text-sm font-medium mt-1">
+                                  {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : "غير محدد"}
+                                </p>
+                              </div>
+                              {pref.purchaseTimeline && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الجدول الزمني</Label>
+                                  <p className="text-sm font-medium mt-1">
+                                    {pref.purchaseTimeline === "asap" ? "فوراً" :
+                                     pref.purchaseTimeline === "within_month" ? "خلال شهر" :
+                                     pref.purchaseTimeline === "within_3months" ? "خلال 3 أشهر" :
+                                     pref.purchaseTimeline === "within_6months" ? "خلال 6 أشهر" :
+                                     pref.purchaseTimeline === "within_year" ? "خلال سنة" :
+                                     pref.purchaseTimeline === "flexible" ? "مرن" : pref.purchaseTimeline}
+                                  </p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       </CardContent>
                     </Card>
 
@@ -6089,44 +6156,462 @@ export default function AdminDashboard() {
                           بيانات البائع والعقار
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
-                          <p className="text-sm font-medium mt-1">{seller.name}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
-                          <p className="text-sm font-medium mt-1">{toArabicPhone(seller.phone || '')}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">المدينة</Label>
-                          <p className="text-sm font-medium mt-1">{prop.city}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الحي</Label>
-                          <p className="text-sm font-medium mt-1">{prop.district || "غير محدد"}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">نوع العقار</Label>
-                          <p className="text-sm font-medium mt-1">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">الغرف</Label>
-                          <p className="text-sm font-medium mt-1">{prop.rooms || "غير محدد"}</p>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">المساحة</Label>
-                          <p className="text-sm font-medium mt-1">{prop.area ? `${prop.area} م²` : "غير محدد"}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                          <Label className="text-sm font-semibold text-muted-foreground">السعر</Label>
-                          <p className="text-lg font-bold text-primary mt-1">
-                            {prop.price ? formatCurrency(prop.price) : "غير محدد"}
-                          </p>
-                        </div>
+                      <CardContent>
+                        <Accordion type="multiple" className="w-full">
+                          {/* معلومات البائع */}
+                          <AccordionItem value="seller-info">
+                            <AccordionTrigger className="text-sm font-semibold">معلومات البائع</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الاسم</Label>
+                                <p className="text-sm font-medium mt-1">{seller.name}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الجوال</Label>
+                                <p className="text-sm font-medium mt-1">{toArabicPhone(seller.phone || '')}</p>
+                              </div>
+                              {seller.email && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">البريد الإلكتروني</Label>
+                                  <p className="text-sm font-medium mt-1">{seller.email}</p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* الموقع */}
+                          <AccordionItem value="seller-location">
+                            <AccordionTrigger className="text-sm font-semibold">الموقع</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">المدينة</Label>
+                                <p className="text-sm font-medium mt-1">{prop.city}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الحي</Label>
+                                <p className="text-sm font-medium mt-1">{prop.district || "غير محدد"}</p>
+                              </div>
+                              {prop.latitude && prop.longitude && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الإحداثيات</Label>
+                                  <p className="text-sm font-medium mt-1">{prop.latitude.toFixed(4)}, {prop.longitude.toFixed(4)}</p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* نوع العقار والمواصفات */}
+                          <AccordionItem value="seller-specs">
+                            <AccordionTrigger className="text-sm font-semibold">نوع العقار والمواصفات</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">نوع العقار</Label>
+                                <p className="text-sm font-medium mt-1">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</p>
+                              </div>
+                              {propMetadata?.propertyCategory && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">التصنيف</Label>
+                                  <p className="text-sm font-medium mt-1">
+                                    {propMetadata.propertyCategory === "residential" ? "سكني" : propMetadata.propertyCategory === "commercial" ? "تجاري" : propMetadata.propertyCategory}
+                                  </p>
+                                </div>
+                              )}
+                              {propMetadata?.propertyCondition && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">حالة العقار</Label>
+                                  <p className="text-sm font-medium mt-1">
+                                    {propMetadata.propertyCondition === "new" ? "جديد" :
+                                     propMetadata.propertyCondition === "used" ? "مستخدم" :
+                                     propMetadata.propertyCondition === "under_construction" ? "تحت الإنشاء" : propMetadata.propertyCondition}
+                                  </p>
+                                </div>
+                              )}
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">الغرف</Label>
+                                <p className="text-sm font-medium mt-1">{prop.rooms || "غير محدد"}</p>
+                              </div>
+                              {prop.bathrooms && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">دورات المياه</Label>
+                                  <p className="text-sm font-medium mt-1">{prop.bathrooms}</p>
+                                </div>
+                              )}
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">المساحة</Label>
+                                <p className="text-sm font-medium mt-1">{prop.area ? `${prop.area} م²` : "غير محدد"}</p>
+                              </div>
+                              {propMetadata?.livingRooms && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الصالات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.livingRooms}</p>
+                                </div>
+                              )}
+                              {propMetadata?.hasMaidRoom && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">غرفة خادمة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.hasMaidRoom ? "نعم" : "لا"}</p>
+                                </div>
+                              )}
+                              {propMetadata?.facade && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الواجهة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.facade}</p>
+                                </div>
+                              )}
+                              {propMetadata?.streetWidth && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عرض الشارع</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.streetWidth}</p>
+                                </div>
+                              )}
+                              {propMetadata?.floorsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الأدوار</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.floorsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.elevatorsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد المصاعد</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.elevatorsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.facadeWidth && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عرض الواجهة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.facadeWidth}</p>
+                                </div>
+                              )}
+                              {propMetadata?.ceilingHeight && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">ارتفاع السقف</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.ceilingHeight}</p>
+                                </div>
+                              )}
+                              {propMetadata?.hasMezzanine !== undefined && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">ميزانين</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.hasMezzanine ? "نعم" : "لا"}</p>
+                                </div>
+                              )}
+                              {propMetadata?.powerCapacity && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">القدرة الكهربائية</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.powerCapacity}</p>
+                                </div>
+                              )}
+                              {propMetadata?.floorNumber && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">رقم الطابق</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.floorNumber}</p>
+                                </div>
+                              )}
+                              {propMetadata?.finishingStatus && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">التشطيب</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.finishingStatus}</p>
+                                </div>
+                              )}
+                              {propMetadata?.acType && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نوع التكييف</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.acType}</p>
+                                </div>
+                              )}
+                              {propMetadata?.studentCapacity && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الطاقة الاستيعابية (طلاب)</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.studentCapacity}</p>
+                                </div>
+                              )}
+                              {propMetadata?.classroomsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الفصول</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.classroomsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.pumpsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد المضخات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.pumpsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.tanksCapacity && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">سعة الخزانات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.tanksCapacity}</p>
+                                </div>
+                              )}
+                              {propMetadata?.stationCategory && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">فئة المحطة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.stationCategory}</p>
+                                </div>
+                              )}
+                              {propMetadata?.shopsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد المعارض</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.shopsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.apartmentsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الشقق/المكاتب</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.apartmentsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.annualIncome && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الدخل السنوي</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.annualIncome}</p>
+                                </div>
+                              )}
+                              {propMetadata?.roi && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">العائد على الاستثمار</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.roi}</p>
+                                </div>
+                              )}
+                              {propMetadata?.unitsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الوحدات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.unitsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.buildingClass && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">التصنيف (Class)</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.buildingClass}</p>
+                                </div>
+                              )}
+                              {propMetadata?.parkingCapacity && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">سعة المواقف</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.parkingCapacity}</p>
+                                </div>
+                              )}
+                              {propMetadata?.hasCivilDefense && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">الدفاع المدني</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.hasCivilDefense}</p>
+                                </div>
+                              )}
+                              {propMetadata?.floorLoad && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">حمل الطابق</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.floorLoad}</p>
+                                </div>
+                              )}
+                              {propMetadata?.nla && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">المساحة الصافية القابلة للتأجير (NLA)</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.nla}</p>
+                                </div>
+                              )}
+                              {propMetadata?.bua && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">المساحة المبنية (BUA)</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.bua}</p>
+                                </div>
+                              )}
+                              {propMetadata?.groundArea && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">المساحة الأرضية</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.groundArea}</p>
+                                </div>
+                              )}
+                              {propMetadata?.mezzanineArea && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">مساحة الميزانين</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.mezzanineArea}</p>
+                                </div>
+                              )}
+                              {propMetadata?.labsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد المختبرات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.labsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.municipalityClass && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">تصنيف البلدية</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.municipalityClass}</p>
+                                </div>
+                              )}
+                              {propMetadata?.buildingsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد المباني</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.buildingsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.occupancyRate && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">معدل الإشغال</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.occupancyRate}</p>
+                                </div>
+                              )}
+                              {propMetadata?.zoning && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">التقسيم</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.zoning}</p>
+                                </div>
+                              )}
+                              {propMetadata?.activityType && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نوع النشاط</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.activityType}</p>
+                                </div>
+                              )}
+                              {propMetadata?.buildingRatio && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نسبة البناء</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.buildingRatio}</p>
+                                </div>
+                              )}
+                              {propMetadata?.wellsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الآبار</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.wellsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.waterType && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نوع المياه</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.waterType}</p>
+                                </div>
+                              )}
+                              {propMetadata?.treesCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد الأشجار</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.treesCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.farmFacade && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">واجهة المزرعة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.farmFacade}</p>
+                                </div>
+                              )}
+                              {propMetadata?.productionArea && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">مساحة الإنتاج</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.productionArea}</p>
+                                </div>
+                              )}
+                              {propMetadata?.licenseType && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نوع الرخصة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.licenseType}</p>
+                                </div>
+                              )}
+                              {propMetadata?.craneLoad && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">حمل الرافعة</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.craneLoad}</p>
+                                </div>
+                              )}
+                              {propMetadata?.clinicsCount && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">عدد العيادات</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.clinicsCount}</p>
+                                </div>
+                              )}
+                              {propMetadata?.waitingArea && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">منطقة الانتظار</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.waitingArea}</p>
+                                </div>
+                              )}
+                              {propMetadata?.healthLicense && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">رخصة صحية</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.healthLicense}</p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* المالية */}
+                          <AccordionItem value="seller-financial">
+                            <AccordionTrigger className="text-sm font-semibold">المالية</AccordionTrigger>
+                            <AccordionContent className="space-y-3 pt-2">
+                              <div>
+                                <Label className="text-xs font-semibold text-muted-foreground">السعر</Label>
+                                <p className="text-lg font-bold text-primary mt-1">
+                                  {prop.price ? formatCurrency(prop.price) : "غير محدد"}
+                                </p>
+                              </div>
+                              {propMetadata?.paymentPreference && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">طرق الدفع المقبولة</Label>
+                                  <p className="text-sm font-medium mt-1">
+                                    {propMetadata.paymentPreference === "cash" ? "كاش فقط" :
+                                     propMetadata.paymentPreference === "finance" ? "أقبل التمويل البنكي" : propMetadata.paymentPreference}
+                                  </p>
+                                </div>
+                              )}
+                              {propMetadata?.bankName && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">البنك</Label>
+                                  <p className="text-sm font-medium mt-1">{propMetadata.bankName}</p>
+                                </div>
+                              )}
+                              {propMetadata?.offerType && (
+                                <div>
+                                  <Label className="text-xs font-semibold text-muted-foreground">نوع العرض</Label>
+                                  <p className="text-sm font-medium mt-1">
+                                    {propMetadata.offerType === "sale" ? "عرض للبيع" :
+                                     propMetadata.offerType === "rent" ? "عرض للإيجار" : propMetadata.offerType}
+                                  </p>
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* المزايا الإضافية */}
+                          {prop.amenities && prop.amenities.length > 0 && (
+                            <AccordionItem value="seller-amenities">
+                              <AccordionTrigger className="text-sm font-semibold">المزايا</AccordionTrigger>
+                              <AccordionContent className="pt-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {prop.amenities.map((amenity) => (
+                                    <Badge key={amenity} variant="outline" className="text-xs">
+                                      {amenity}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* المميزات الذكية */}
+                          {propMetadata?.smartTags && Array.isArray(propMetadata.smartTags) && propMetadata.smartTags.length > 0 && (
+                            <AccordionItem value="seller-smart-tags">
+                              <AccordionTrigger className="text-sm font-semibold">المميزات الذكية</AccordionTrigger>
+                              <AccordionContent className="pt-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {propMetadata.smartTags.map((tag: string) => (
+                                    <Badge key={tag} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* الوصف */}
+                          {prop.description && (
+                            <AccordionItem value="seller-description">
+                              <AccordionTrigger className="text-sm font-semibold">الوصف</AccordionTrigger>
+                              <AccordionContent className="pt-2">
+                                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                  {prop.description.replace(/<metadata>.*?<\/metadata>/s, "").trim() || "لا يوجد وصف"}
+                                </p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                        </Accordion>
                       </CardContent>
                     </Card>
                   </div>
