@@ -2418,7 +2418,7 @@ export default function AdminDashboard() {
                   </Card>
                   {/* بانتظار الرد */}
                   <Card 
-                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "contacted" ? "ring-2 ring-purple-500" : ""}`}
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "contacted" ? "ring-2 ring-orange-500" : ""}`}
                     onClick={() => {
                       setSelectedMatchStatus("contacted");
                       setMatchFilters({ ...matchFilters, status: "contacted" });
@@ -2426,64 +2426,82 @@ export default function AdminDashboard() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
-                        <MessageSquare className="h-4 w-4 text-slate-500" />
+                        <Phone className="h-4 w-4 text-slate-500" />
                         <div>
-                          <p className="text-2xl font-bold text-purple-600">{matches.filter(m => ((m as any).status || "new") === "contacted").length}</p>
-                          <p className="text-xs text-muted-foreground">بانتظار الرد</p>
+                          <p className="text-2xl font-bold text-orange-600">{matches.filter(m => ((m as any).status || "new") === "contacted").length}</p>
+                          <p className="text-xs text-muted-foreground">تم التواصل</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  {/* مواعيد معاينة */}
+                  {/* تم التأكيد */}
                   <Card 
-                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "viewing_scheduled" ? "ring-2 ring-orange-500" : ""}`}
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "confirmed" ? "ring-2 ring-blue-500" : ""}`}
                     onClick={() => {
-                      setSelectedMatchStatus("viewing_scheduled");
-                      setMatchFilters({ ...matchFilters, status: "viewing_scheduled" });
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-4 w-4 text-slate-500" />
-                        <div>
-                          <p className="text-2xl font-bold text-orange-600">{matches.filter(m => ((m as any).status || "new") === "viewing_scheduled").length}</p>
-                          <p className="text-xs text-muted-foreground">مواعيد معاينة</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  {/* عالية الإمكانية (>85%) */}
-                  <Card 
-                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "high_potential" ? "ring-2 ring-emerald-500" : ""}`}
-                    onClick={() => {
-                      setSelectedMatchStatus("high_potential");
-                      setMatchFilters({ ...matchFilters, status: "all", minScore: 85, maxScore: 100 });
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <TrendingUp className="h-4 w-4 text-slate-500" />
-                        <div>
-                          <p className="text-2xl font-bold text-emerald-600">{matches.filter(m => m.matchScore >= 85).length}</p>
-                          <p className="text-xs text-muted-foreground">عالية الإمكانية (&gt;85%)</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  {/* صفقات مغلقة */}
-                  <Card 
-                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "closed" ? "ring-2 ring-green-500" : ""}`}
-                    onClick={() => {
-                      setSelectedMatchStatus("closed");
-                      setMatchFilters({ ...matchFilters, status: "closed" });
+                      setSelectedMatchStatus("confirmed");
+                      setMatchFilters({ ...matchFilters, status: "confirmed" });
                     }}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <CheckCircle className="h-4 w-4 text-slate-500" />
                         <div>
-                          <p className="text-2xl font-bold text-green-600">{matches.filter(m => ((m as any).status || "new") === "closed").length}</p>
-                          <p className="text-xs text-muted-foreground">صفقات مغلقة</p>
+                          <p className="text-2xl font-bold text-blue-600">{matches.filter(m => ((m as any).status || "new") === "confirmed").length}</p>
+                          <p className="text-xs text-muted-foreground">تم التأكيد</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* تم المعاينة */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "viewing" ? "ring-2 ring-purple-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("viewing");
+                      setMatchFilters({ ...matchFilters, status: "viewing" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Eye className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-purple-600">{matches.filter(m => ((m as any).status || "new") === "viewing").length}</p>
+                          <p className="text-xs text-muted-foreground">تم المعاينة</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* تم الاتفاق */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "agreed" ? "ring-2 ring-green-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("agreed");
+                      setMatchFilters({ ...matchFilters, status: "agreed" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Handshake className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-green-600">{matches.filter(m => ((m as any).status || "new") === "agreed").length}</p>
+                          <p className="text-xs text-muted-foreground">تم الاتفاق</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {/* تم الافراغ */}
+                  <Card 
+                    className={`cursor-pointer transition-all flex-shrink-0 ${selectedMatchStatus === "vacated" ? "ring-2 ring-green-500" : ""}`}
+                    onClick={() => {
+                      setSelectedMatchStatus("vacated");
+                      setMatchFilters({ ...matchFilters, status: "vacated" });
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Home className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-2xl font-bold text-green-600">{matches.filter(m => ((m as any).status || "new") === "vacated").length}</p>
+                          <p className="text-xs text-muted-foreground">تم الافراغ</p>
                         </div>
                       </div>
                     </CardContent>
