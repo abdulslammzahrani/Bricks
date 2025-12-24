@@ -1516,10 +1516,10 @@ export default function AdminDashboard() {
                               </div>
                             </TableCell>
                             <TableCell className="py-4 text-center">
-                              <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                              <p className="text-sm text-muted-foreground truncate" dir="ltr">{user.email || "غير محدد"}</p>
                             </TableCell>
-                            <TableCell className="py-4 text-center" dir="rtl">
-                              <p className="text-sm">{toArabicPhone(user.phone || '')}</p>
+                            <TableCell className="py-4 text-center">
+                              <p className="text-sm" dir="ltr">{user.phone || "غير محدد"}</p>
                             </TableCell>
                             <TableCell className="py-4 text-center">
                               <Badge variant={user.role === "buyer" ? "default" : "secondary"}>
