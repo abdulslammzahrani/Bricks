@@ -1696,11 +1696,13 @@ export default function AdminDashboard() {
                                                 value={userEditData.email || ''}
                                                 onChange={(e) => setUserEditData({ ...userEditData, email: e.target.value })}
                                                 className="h-10"
+                                                placeholder="example@email.com"
+                                                dir="ltr"
                                               />
                                             ) : (
                                               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                                                 <Mail className="h-4 w-4 text-muted-foreground" />
-                                                <p className="text-sm font-medium">{user.email}</p>
+                                                <p className="text-sm font-medium" dir="ltr">{user.email || '-'}</p>
                                               </div>
                                             )}
                                           </div>
@@ -1712,15 +1714,17 @@ export default function AdminDashboard() {
                                             </Label>
                                             {isEditingUser ? (
                                               <Input
+                                                type="tel"
                                                 value={userEditData.phone || ''}
                                                 onChange={(e) => setUserEditData({ ...userEditData, phone: e.target.value })}
-                                                dir="rtl"
+                                                dir="ltr"
                                                 className="h-10"
+                                                placeholder="05xxxxxxxx"
                                               />
                                             ) : (
-                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="ltr">
                                                 <Phone className="h-4 w-4 text-muted-foreground" />
-                                                <p className="text-sm font-medium">{toArabicPhone(user.phone || '')}</p>
+                                                <p className="text-sm font-medium">{user.phone || '-'}</p>
                                               </div>
                                             )}
                                           </div>
