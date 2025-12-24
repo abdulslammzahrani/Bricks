@@ -12,7 +12,8 @@ import {
   XCircle,
   AlertCircle,
   Info,
-  TrendingUp
+  TrendingUp,
+  Target
 } from "lucide-react";
 import { MatchScoreCard } from "./MatchScoreCard";
 import type { Match, Property, BuyerPreference } from "@shared/schema";
