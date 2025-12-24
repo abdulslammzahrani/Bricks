@@ -262,7 +262,7 @@
     const handleSubmit = () => onSubmit(listingData);
 
     const canProceed = () => {
-      if (activeCard === 0) return listingData.name && isPhoneValid && listingData.propertyCategory;
+      if (activeCard === 0) return listingData.name && isPhoneValid && listingData.email && listingData.propertyCategory;
       if (activeCard === 1) return listingData.offerType && listingData.propertyCondition;
       if (activeCard === 2) return listingData.cities.length > 0;
       if (activeCard === 3) return listingData.districts.length > 0;
@@ -435,7 +435,7 @@
                           <div><label className="text-sm font-medium mb-1.5 block">الاسم</label><Input placeholder="أدخل اسمك" value={listingData.name} onChange={(e) => setListingData(f => ({ ...f, name: e.target.value }))} className="h-12 text-center rounded-xl" /></div>
                           <div><label className="text-sm font-medium mb-1.5 block">رقم الجوال</label><Input type="tel" placeholder="05xxxxxxxx" value={listingData.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500' : ''}`} dir="ltr" /></div>
                         </div>
-                        <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label><Input type="email" placeholder="your@email.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" /></div>
+                        <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني <span className="text-red-500">*</span></label><Input type="email" placeholder="your@email.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" required /></div>
                         <div className="mt-4">
                           <label className="text-sm font-medium mb-3 block text-center">تصنيف العقار</label>
                           <div className="grid grid-cols-2 gap-4">
@@ -523,7 +523,7 @@
                     <div className="space-y-3 animate-in slide-in-from-right-4">
                       <Input placeholder="الاسم" value={listingData.name} onChange={(e) => setListingData(f => ({ ...f, name: e.target.value }))} className="h-10 text-center rounded-lg" />
                       <Input type="tel" placeholder="05xxxxxxxx" value={listingData.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-10 text-center rounded-lg ${phoneError ? 'border-red-500' : ''}`} dir="ltr" />
-                      <Input type="email" placeholder="email@example.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-10 text-center rounded-lg" dir="ltr" />
+                      <Input type="email" placeholder="email@example.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-10 text-center rounded-lg" dir="ltr" required />
                       <div className="mt-2">
                         <label className="text-xs font-medium mb-2 block text-center">تصنيف العقار المطلوب</label>
                         <div className="grid grid-cols-2 gap-3">

@@ -215,7 +215,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
   const handleSearch = () => onSearch(filters);
 
   const canProceed = () => {
-    if (activeCard === 0) return filters.name && isPhoneValid && filters.propertyCategory;
+    if (activeCard === 0) return filters.name && isPhoneValid && filters.email && filters.propertyCategory;
     if (activeCard === 1) return filters.transactionType && filters.propertyCondition;
     if (activeCard === 2) return filters.cities.length > 0;
     if (activeCard === 3) return filters.districts.length > 0;
@@ -403,7 +403,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                         <div><label className="text-sm font-medium mb-1.5 block">الاسم</label><Input placeholder="أدخل اسمك" value={filters.name} onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))} className="h-12 text-center rounded-xl" /></div>
                         <div><label className="text-sm font-medium mb-1.5 block">رقم الجوال</label><Input type="tel" placeholder="05xxxxxxxx" value={filters.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500' : ''}`} dir="ltr" /></div>
                       </div>
-                      <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label><Input type="email" placeholder="your@email.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" /></div>
+                      <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني <span className="text-red-500">*</span></label><Input type="email" placeholder="your@email.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" required /></div>
 
                       <div className="mt-4">
                         <label className="text-sm font-medium mb-3 block text-center">تصنيف العقار المطلوب</label>
@@ -618,7 +618,7 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                   <div className="space-y-3 animate-in slide-in-from-right-4">
                     <Input placeholder="الاسم" value={filters.name} onChange={(e) => setFilters(f => ({ ...f, name: e.target.value }))} className="h-10 text-center rounded-lg" />
                     <Input type="tel" placeholder="05xxxxxxxx" value={filters.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-10 text-center rounded-lg ${phoneError ? 'border-red-500' : ''}`} dir="ltr" />
-                    <Input type="email" placeholder="email@example.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-10 text-center rounded-lg" dir="ltr" />
+                    <Input type="email" placeholder="email@example.com" value={filters.email} onChange={(e) => setFilters(f => ({ ...f, email: e.target.value }))} className="h-10 text-center rounded-lg" dir="ltr" required />
 
                     <div className="mt-2">
                       <label className="text-xs font-medium mb-2 block text-center">تصنيف العقار المطلوب</label>

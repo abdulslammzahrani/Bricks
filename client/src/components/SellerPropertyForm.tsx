@@ -349,6 +349,16 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
   const handleSelection = (field: keyof ListingData, value: any) => setListingData(p => ({ ...p, [field]: value }));
   
   const handleSubmit = async () => {
+    // التحقق من الإيميل قبل الإرسال
+    if (!isEditMode && !listingData.email) {
+      toast({
+        title: "خطأ",
+        description: "البريد الإلكتروني مطلوب",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsRegistering(true);
     try {
       if (isEditMode && propertyId) {
@@ -379,7 +389,7 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
         // وضع الإنشاء (الكود الأصلي)
         const response = await apiRequest("POST", "/api/sellers/register", {
           name: listingData.name,
-          email: listingData.email || undefined, // الـ backend سيتعامل مع إنشاء الإيميل المؤقت
+          email: listingData.email, // الإيميل إلزامي الآن
           phone: listingData.phone,
           propertyType: listingData.propertyType || "villa",
           city: listingData.cities[0] || "",
@@ -596,7 +606,7 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
                       <div><label className="text-sm font-medium mb-1.5 block">الاسم</label><Input placeholder="أدخل اسمك" value={listingData.name} onChange={(e) => setListingData(f => ({ ...f, name: e.target.value }))} className="h-12 text-center rounded-xl" /></div>
                       <div><label className="text-sm font-medium mb-1.5 block">رقم الجوال</label><Input type="tel" placeholder="05xxxxxxxx" value={listingData.phone} onChange={(e) => handlePhoneChange(e.target.value)} className={`h-12 text-center rounded-xl ${phoneError ? 'border-red-500' : ''}`} dir="ltr" /></div>
                     </div>
-                    <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label><Input type="email" placeholder="your@email.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" /></div>
+                    <div><label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني <span className="text-red-500">*</span></label><Input type="email" placeholder="your@email.com" value={listingData.email} onChange={(e) => setListingData(f => ({ ...f, email: e.target.value }))} className="h-12 text-center rounded-xl" dir="ltr" required /></div>
                     <div className="mt-4">
                       <label className="text-sm font-medium mb-3 block text-center">تصنيف العقار</label>
                       <div className="grid grid-cols-2 gap-4">
