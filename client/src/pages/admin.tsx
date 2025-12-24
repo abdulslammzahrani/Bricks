@@ -32,7 +32,8 @@ import {
 import { 
   Users, 
   Building2, 
-  ClipboardList, 
+  ClipboardList,
+  ClipboardCheck, 
   TrendingUp,
   TrendingDown,
   MapPin,
@@ -350,6 +351,20 @@ export default function AdminDashboard() {
   // State لتعديل بيانات البائع
   const [selectedSellerMatchId, setSelectedSellerMatchId] = useState<string | null>(null);
   const [showSellerEditDialog, setShowSellerEditDialog] = useState(false);
+  // State لمقارنة طلب المشتري مع طلب البائع
+  const [selectedMatchForComparison, setSelectedMatchForComparison] = useState<string | null>(null);
+  const [showMatchComparisonDialog, setShowMatchComparisonDialog] = useState(false);
+  // State للتأكد من صحة رغبة المشتري
+  const [buyerVerificationChecks, setBuyerVerificationChecks] = useState({
+    city: false,
+    districts: false,
+    propertyType: false,
+    budget: false,
+    rooms: false,
+    area: false,
+    transactionType: false,
+    purpose: false,
+  });
   // State لتعديل بيانات المستخدم
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [userEditData, setUserEditData] = useState<Partial<User>>({});
@@ -1061,6 +1076,61 @@ export default function AdminDashboard() {
       }
     });
   }, [detailedVerifications, matches, updateMatchVerificationMutation]);
+
+  // useEffect لتحميل حالة buyerVerificationChecks من buyerVerified
+  useEffect(() => {
+    if (selectedBuyerPreferenceId) {
+      const buyerData = getSelectedBuyerMatches();
+      if (buyerData && buyerData.matches.length > 0) {
+        // إذا كانت جميع المطابقات لديها buyerVerified = true، نحدد جميع checkboxes
+        const allVerified = buyerData.matches.every(m => (m as any).buyerVerified === true);
+        if (allVerified) {
+          setBuyerVerificationChecks({
+            city: true,
+            districts: true,
+            propertyType: true,
+            budget: true,
+            rooms: true,
+            area: true,
+            transactionType: true,
+            purpose: true,
+          });
+        } else {
+          setBuyerVerificationChecks({
+            city: false,
+            districts: false,
+            propertyType: false,
+            budget: false,
+            rooms: false,
+            area: false,
+            transactionType: false,
+            purpose: false,
+          });
+        }
+      }
+    }
+  }, [selectedBuyerPreferenceId, matches, preferences, users, filteredMatches]);
+
+  // useEffect لتحديث buyerVerified عند تغيير checkboxes
+  useEffect(() => {
+    const allChecked = Object.values(buyerVerificationChecks).every(v => v === true);
+    if (selectedBuyerPreferenceId) {
+      const buyerData = getSelectedBuyerMatches();
+      if (buyerData && buyerData.matches.length > 0) {
+        // تحديث buyerVerified لجميع المطابقات
+        buyerData.matches.forEach(match => {
+          const currentVerified = (match as any).buyerVerified || false;
+          if (currentVerified !== allChecked) {
+            updateMatchVerificationMutation.mutate({
+              matchId: match.id,
+              verificationType: "buyer",
+              verified: allChecked,
+            });
+          }
+        });
+      }
+    }
+  }, [buyerVerificationChecks, selectedBuyerPreferenceId, preferences, users, filteredMatches, updateMatchVerificationMutation]);
 
   // Mutation لحفظ التأكيدات التفصيلية
   const updateDetailedVerificationsMutation = useMutation({
@@ -4859,8 +4929,8 @@ export default function AdminDashboard() {
                                   key={match.id} 
                                   className="hover:bg-slate-50/50 cursor-pointer"
                                   onClick={() => {
-                                    setSelectedSellerMatchId(match.id);
-                                    setShowSellerEditDialog(true);
+                                    setSelectedMatchForComparison(match.id);
+                                    setShowMatchComparisonDialog(true);
                                   }}
                                 >
                                   {/* البائع */}
@@ -5081,18 +5151,6 @@ export default function AdminDashboard() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        asChild
-                                        className="gap-1"
-                                        title="تفاصيل العقار"
-                                      >
-                                        <Link href={`/property/${match.propertyId}`}>
-                                          <Eye className="w-3 h-3" />
-                                          تفاصيل العقار
-                                        </Link>
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           setSelectedSellerMatchId(match.id);
@@ -5117,270 +5175,443 @@ export default function AdminDashboard() {
 
                   {/* تبويب التفاصيل */}
                   <TabsContent value="details" className="mt-4 overflow-y-auto flex-1">
-                    {bestMatch && bestProp && bestSeller && bestBreakdown ? (
+                    {pref && buyer ? (
                       <div className="space-y-4 pb-4">
-                        {/* أفضل مطابقة - Header with parties */}
+                        {/* معلومات المشتري */}
                         <Card>
                           <CardHeader className="pb-3">
                             <CardTitle className="text-lg flex items-center gap-2">
-                              <Target className="w-5 h-5 text-primary" />
-                              أفضل مطابقة - {Math.round((bestMatch.matchScore / 105) * 100)}%
+                              <div className="p-2 rounded-lg bg-blue-100">
+                                <UserIcon className="h-4 w-4 text-blue-600" />
+                              </div>
+                              معلومات المشتري
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border">
-                              <div className="text-center space-y-2">
-                                <div className="w-14 h-14 mx-auto bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shadow-sm">
-                                  <UserIcon className="w-7 h-7" />
-                                </div>
-                                <div>
-                                  <p className="font-bold text-base">{buyer?.name || "مشتري"}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">{buyer?.phone || "لا يوجد رقم"}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm font-medium">{buyer.name}</p>
                                 </div>
                               </div>
-                              
-                              <div className="flex items-center justify-center">
-                                <div className="flex items-center gap-2 text-primary">
-                                  <ArrowRightLeft className="w-8 h-8" />
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                  <Phone className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm font-medium">{toArabicPhone(buyer.phone || '')}</p>
                                 </div>
                               </div>
-                              
-                              <div className="text-center space-y-2">
-                                <div className="w-14 h-14 mx-auto bg-green-100 rounded-full flex items-center justify-center text-green-600 shadow-sm">
-                                  <Store className="w-7 h-7" />
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold text-muted-foreground">البريد الإلكتروني</Label>
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                  <Mail className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm font-medium">{buyer.email}</p>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-base">{bestSeller.name || "بائع"}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">{bestSeller.phone || "لا يوجد رقم"}</p>
+                              </div>
+                              {buyer.whatsappNumber && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold text-muted-foreground">واتساب</Label>
+                                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                    <p className="text-sm font-medium">{toArabicPhone(buyer.whatsappNumber)}</p>
+                                  </div>
                                 </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* تفاصيل الرغبة */}
+                        <div className="space-y-4">
+                          {/* الموقع والمنطقة */}
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-blue-100">
+                                  <MapPin className="h-4 w-4 text-blue-600" />
+                                </div>
+                                الموقع والمنطقة
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {/* المدينة */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold text-muted-foreground">المدينة المفضلة</Label>
+                                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                    {saudiCities.map((city) => (
+                                      <div
+                                        key={city.name}
+                                        className={`
+                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
+                                          ${pref.city === city.name 
+                                            ? "bg-primary text-white border-primary shadow-sm" 
+                                            : "bg-slate-50 border-gray-200 text-gray-500"}
+                                        `}
+                                      >
+                                        {pref.city === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                        {city.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* الأحياء */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold text-muted-foreground">
+                                    الأحياء المفضلة ({pref.districts?.length || 0})
+                                  </Label>
+                                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
+                                    {(() => {
+                                      const selectedCity = saudiCities.find(c => c.name === pref.city);
+                                      const districts = selectedCity?.neighborhoods || [];
+                                      const selectedDistricts = pref.districts || [];
+                                      
+                                      if (districts.length === 0) {
+                                        return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
+                                      }
+                                      
+                                      if (selectedDistricts.length === 0) {
+                                        return <p className="w-full text-center text-muted-foreground py-8 text-sm">لم يتم اختيار أي أحياء</p>;
+                                      }
+                                      
+                                      return districts.filter(d => selectedDistricts.includes(d.name)).map((district) => (
+                                        <div
+                                          key={district.name}
+                                          className="flex-shrink-0 px-4 py-2.5 rounded-lg border bg-primary text-white border-primary shadow-sm cursor-default text-sm font-bold whitespace-nowrap"
+                                        >
+                                          <Check className="inline-block w-3.5 h-3.5 ml-1.5" />
+                                          {district.name}
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* نوع العقار والمواصفات */}
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-green-100">
+                                  <Building2 className="h-4 w-4 text-green-600" />
+                                </div>
+                                نوع العقار والمواصفات
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {/* نوع العقار */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold text-muted-foreground">نوع العقار المطلوب</Label>
+                                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                                    {Object.entries(propertyTypeLabels).map(([key, label]) => (
+                                      <div
+                                        key={key}
+                                        className={`
+                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
+                                          ${pref.propertyType === key 
+                                            ? "bg-primary text-white border-primary shadow-sm" 
+                                            : "bg-slate-50 border-gray-200 text-gray-500"}
+                                        `}
+                                      >
+                                        {pref.propertyType === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
+                                        {label}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* المواصفات التفصيلية */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                  {/* الغرف */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                      <Bed className="h-4 w-4" />
+                                      عدد الغرف
+                                    </Label>
+                                    {pref.rooms ? (
+                                      <div className="p-3 rounded-lg bg-slate-50 border">
+                                        <p className="text-base font-bold text-primary">{pref.rooms} غرفة</p>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                        <p className="text-sm text-muted-foreground">غير محدد</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* المساحة */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                      <Ruler className="h-4 w-4" />
+                                      المساحة
+                                    </Label>
+                                    {pref.area ? (
+                                      <div className="p-3 rounded-lg bg-slate-50 border">
+                                        <p className="text-base font-bold text-primary">{pref.area} م²</p>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                        <p className="text-sm text-muted-foreground">غير محدد</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* نوع المعاملة */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                                      <Handshake className="h-4 w-4" />
+                                      نوع المعاملة
+                                    </Label>
+                                    <div className="p-3 rounded-lg bg-slate-50 border">
+                                      <Badge variant="outline" className="text-sm">
+                                        {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* الميزانية والدفع */}
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <div className="p-2 rounded-lg bg-orange-100">
+                                  <Wallet className="h-4 w-4 text-orange-600" />
+                                </div>
+                                الميزانية وطريقة الدفع
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {/* الميزانية */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-semibold text-muted-foreground">الميزانية المتاحة</Label>
+                                  {(pref.budgetMin || pref.budgetMax) ? (
+                                    <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
+                                      <p className="text-xl font-bold text-primary">{maskBudget(pref.budgetMin, pref.budgetMax)}</p>
+                                      {(pref.budgetMin || pref.budgetMax) && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {pref.budgetMin ? `من ${formatCurrency(pref.budgetMin)}` : ''} 
+                                          {pref.budgetMin && pref.budgetMax ? ' إلى ' : ''}
+                                          {pref.budgetMax ? `${formatCurrency(pref.budgetMax)}` : ''}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="p-4 rounded-lg bg-slate-50 border border-dashed">
+                                      <p className="text-sm text-muted-foreground">غير محدد</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* طريقة الدفع والغرض */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-semibold text-muted-foreground">طريقة الدفع</Label>
+                                    {pref.paymentMethod ? (
+                                      <div className="p-3 rounded-lg bg-slate-50 border">
+                                        <Badge variant="outline" className="text-sm">
+                                          {paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}
+                                        </Badge>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                        <p className="text-sm text-muted-foreground">غير محدد</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* الغرض */}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-semibold text-muted-foreground">الغرض من الشراء</Label>
+                                    {pref.purpose ? (
+                                      <div className="p-3 rounded-lg bg-slate-50 border">
+                                        <Badge variant="outline" className="text-sm">
+                                          {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}
+                                        </Badge>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
+                                        <p className="text-sm text-muted-foreground">غير محدد</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* التأكد من صحة الرغبة */}
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                              <div className="p-2 rounded-lg bg-green-100">
+                                <ClipboardCheck className="h-4 w-4 text-green-600" />
+                              </div>
+                              التأكد من صحة الرغبة
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-city"
+                                  checked={buyerVerificationChecks.city}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, city: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-city" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  المدينة صحيحة
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-districts"
+                                  checked={buyerVerificationChecks.districts}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, districts: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-districts" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  الأحياء صحيحة
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-propertyType"
+                                  checked={buyerVerificationChecks.propertyType}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, propertyType: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-propertyType" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  نوع العقار صحيح
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-budget"
+                                  checked={buyerVerificationChecks.budget}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, budget: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-budget" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  الميزانية صحيحة
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-rooms"
+                                  checked={buyerVerificationChecks.rooms}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, rooms: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-rooms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  الغرف صحيحة
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-area"
+                                  checked={buyerVerificationChecks.area}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, area: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-area" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  المساحة صحيحة
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-transactionType"
+                                  checked={buyerVerificationChecks.transactionType}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, transactionType: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-transactionType" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  نوع المعاملة صحيح
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Checkbox
+                                  id="check-purpose"
+                                  checked={buyerVerificationChecks.purpose}
+                                  onCheckedChange={(checked) => {
+                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, purpose: checked === true });
+                                  }}
+                                />
+                                <label htmlFor="check-purpose" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                  الغرض صحيح
+                                </label>
                               </div>
                             </div>
                           </CardContent>
                         </Card>
 
                         {/* تفصيل النتيجة */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <BarChart3 className="w-5 h-5 text-primary" />
-                              تفصيل النتيجة (100 نقطة)
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                <span className="text-sm font-medium flex items-center gap-2">
-                                  <MapPin className="w-5 h-5 text-blue-500" /> الموقع
-                                </span>
-                                <div className="flex items-center gap-3">
-                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}></div>
+                        {bestMatch && bestBreakdown && (
+                          <Card>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <BarChart3 className="w-5 h-5 text-primary" />
+                                تفصيل النتيجة (100 نقطة)
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <span className="text-sm font-medium flex items-center gap-2">
+                                    <MapPin className="w-5 h-5 text-blue-500" /> الموقع
+                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}></div>
+                                    </div>
+                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.location}/35</span>
                                   </div>
-                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.location}/35</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <span className="text-sm font-medium flex items-center gap-2">
+                                    <Wallet className="w-5 h-5 text-green-500" /> السعر
+                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                      <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}></div>
+                                    </div>
+                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.price}/30</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <span className="text-sm font-medium flex items-center gap-2">
+                                    <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
+                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                                      <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}></div>
+                                    </div>
+                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.specifications}/25</span>
+                                  </div>
                                 </div>
                               </div>
-                              
-                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                <span className="text-sm font-medium flex items-center gap-2">
-                                  <Wallet className="w-5 h-5 text-green-500" /> السعر
-                                </span>
-                                <div className="flex items-center gap-3">
-                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}></div>
-                                  </div>
-                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.price}/30</span>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                <span className="text-sm font-medium flex items-center gap-2">
-                                  <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
-                                </span>
-                                <div className="flex items-center gap-3">
-                                  <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                    <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}></div>
-                                  </div>
-                                  <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.specifications}/25</span>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        {/* مقارنة تفصيلية */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <FileText className="w-5 h-5 text-primary" />
-                              مقارنة تفصيلية
-                            </CardTitle>
-                            <CardDescription className="text-sm mt-2">
-                              عرض تفصيلي لبيانات المشتري والبائعين. للتعديل، استخدم زر "تعديل" في جدول المطابقات.
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent className="pt-4">
-                            {(() => {
-                              // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
-                              const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
-
-                              // تم إزالة دوال التعديل - القسم الآن للعرض فقط
-
-                              return (
-                                <div className="w-full" dir="rtl">
-                                  {/* بيانات المشتري فقط */}
-                                  <div className="space-y-4">
-                                    <Accordion type="single" collapsible defaultValue="buyer-data" className="w-full">
-                                      <AccordionItem value="buyer-data">
-                                        <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
-                                          <UserIcon className="w-5 h-5 text-primary" />
-                                          <span className="font-bold text-lg">بيانات المشتري: {buyer?.name || "مشتري"}</span>
-                                        </AccordionTrigger>
-                                        <AccordionContent className="space-y-6 pt-4">
-                                          {/* الموقع */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <MapPin className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">الموقع</h4>
-                                            </div>
-                                            
-                                            {/* المدينة */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">المدينة</label>
-                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                                {saudiCities.map((city) => (
-                                                  <div
-                                                    key={city.name}
-                                                    className={`
-                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
-                                                      ${pref?.city === city.name 
-                                                        ? "bg-primary text-white border-primary" 
-                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                    `}
-                                                  >
-                                                    {city.name}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-
-                                            {/* الأحياء */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">الأحياء</label>
-                                              <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
-                                                {(() => {
-                                                  const selectedCity = saudiCities.find(c => c.name === pref?.city);
-                                                  const districts = selectedCity?.neighborhoods || [];
-                                                  return districts.length > 0 ? districts.map((district) => (
-                                                    <div
-                                                      key={district.name}
-                                                      className={`
-                                                        py-3 px-2 rounded-lg border text-sm font-bold cursor-default
-                                                        ${pref?.districts?.includes(district.name)
-                                                          ? "bg-primary text-white border-primary" 
-                                                          : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                      `}
-                                                    >
-                                                      {pref?.districts?.includes(district.name) && <Check className="inline-block w-3 h-3 ml-1" />}
-                                                      {district.name}
-                                                    </div>
-                                                  )) : <p className="col-span-3 text-center text-muted-foreground py-10">لا توجد أحياء</p>;
-                                                })()}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* المواصفات */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Building2 className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">المواصفات</h4>
-                                            </div>
-                                            
-                                            {/* النوع */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">نوع العقار</label>
-                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
-                                                  <div
-                                                    key={key}
-                                                    className={`
-                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
-                                                      ${pref?.propertyType === key 
-                                                        ? "bg-primary text-white border-primary" 
-                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                    `}
-                                                  >
-                                                    {label}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-
-                                            {/* الغرف */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">عدد الغرف</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.rooms || "غير محدد"}
-                                              </div>
-                                            </div>
-
-                                            {/* المساحة */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">المساحة (م²)</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.area || "غير محدد"} م²
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* المالية */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Wallet className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">المالية</h4>
-                                            </div>
-                                            
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">الميزانية</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.budgetMin && pref?.budgetMax 
-                                                  ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
-                                                  : "غير محدد"}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* إضافية */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Settings2 className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">إضافية</h4>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-2 gap-4">
-                                              <div className="space-y-2">
-                                                <Label className="text-sm font-medium">نوع المعاملة</Label>
-                                                <div className="text-sm text-muted-foreground">
-                                                  {pref?.transactionType === "buy" ? "شراء" : pref?.transactionType === "rent" ? "تأجير" : "غير محدد"}
-                                                </div>
-                                              </div>
-                                              <div className="space-y-2">
-                                                <Label className="text-sm font-medium">الغرض</Label>
-                                                <div className="text-sm text-muted-foreground">
-                                                  {pref?.purpose === "residence" ? "سكن" : pref?.purpose === "investment" ? "استثمار" : "غير محدد"}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </Accordion>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </CardContent>
-                        </Card>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">لا توجد تفاصيل متاحة</div>
@@ -5664,6 +5895,240 @@ export default function AdminDashboard() {
                   >
                     إغلاق
                   </Button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog مقارنة طلب المشتري مع طلب البائع */}
+      <Dialog open={showMatchComparisonDialog} onOpenChange={(open) => {
+        setShowMatchComparisonDialog(open);
+        if (!open) {
+          setSelectedMatchForComparison(null);
+        }
+      }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
+          {(() => {
+            if (!selectedMatchForComparison) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            
+            const match = filteredMatches.find(m => m.id === selectedMatchForComparison);
+            if (!match) return <div className="text-center py-8 text-muted-foreground">المطابقة غير موجودة</div>;
+            
+            const prop = properties.find(p => p.id === match.propertyId);
+            const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+            const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+            const buyer = pref ? users.find(u => u.id === pref.userId) : null;
+            
+            if (!prop || !seller || !pref || !buyer) return <div className="text-center py-8 text-muted-foreground">البيانات غير مكتملة</div>;
+            
+            const breakdown = calculateMatchBreakdown(prop, pref);
+            const percentage = Math.round((match.matchScore / 105) * 100);
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-green-100 rounded-full flex items-center justify-center">
+                      <ArrowRightLeft className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <div>مقارنة طلب المشتري مع طلب البائع</div>
+                      <DialogDescription className="mt-1">
+                        نسبة التطابق: {percentage}%
+                      </DialogDescription>
+                    </div>
+                  </DialogTitle>
+                </DialogHeader>
+                
+                <div className="mt-4 overflow-y-auto flex-1 space-y-4 pb-4">
+                  {/* النسب الموزونة */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-primary" />
+                        النسب الموزونة
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-blue-500" /> الموقع
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(breakdown.location / 35) * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.location}/35</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            <Wallet className="w-5 h-5 text-green-500" /> السعر
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(breakdown.price / 30) * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.price}/30</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
+                              <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(breakdown.specifications / 25) * 100}%` }}></div>
+                            </div>
+                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.specifications}/25</span>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border-2 border-primary">
+                          <span className="text-base font-bold flex items-center gap-2">
+                            <Target className="w-5 h-5 text-primary" /> النتيجة الإجمالية
+                          </span>
+                          <span className="text-2xl font-bold text-primary">{match.matchScore}/105</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* مقارنة تفصيلية */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* بيانات المشتري */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-blue-100">
+                            <UserIcon className="h-4 w-4 text-blue-600" />
+                          </div>
+                          بيانات المشتري
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
+                          <p className="text-sm font-medium mt-1">{buyer.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
+                          <p className="text-sm font-medium mt-1">{toArabicPhone(buyer.phone || '')}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">المدينة</Label>
+                          <p className="text-sm font-medium mt-1">{pref.city}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الأحياء</Label>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {pref.districts && pref.districts.length > 0 ? (
+                              pref.districts.map((district) => (
+                                <Badge key={district} variant="outline" className="text-xs">
+                                  {district}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-sm text-muted-foreground">غير محدد</span>
+                            )}
+                          </div>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">نوع العقار</Label>
+                          <p className="text-sm font-medium mt-1">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الغرف</Label>
+                          <p className="text-sm font-medium mt-1">{pref.rooms || "غير محدد"}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">المساحة</Label>
+                          <p className="text-sm font-medium mt-1">{pref.area ? `${pref.area} م²` : "غير محدد"}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الميزانية</Label>
+                          <p className="text-sm font-medium mt-1">
+                            {pref.budgetMin && pref.budgetMax 
+                              ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
+                              : "غير محدد"}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">نوع المعاملة</Label>
+                          <p className="text-sm font-medium mt-1">
+                            {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "تأجير" : "غير محدد"}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الغرض</Label>
+                          <p className="text-sm font-medium mt-1">
+                            {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : "غير محدد"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* بيانات البائع */}
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-green-100">
+                            <Store className="h-4 w-4 text-green-600" />
+                          </div>
+                          بيانات البائع والعقار
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
+                          <p className="text-sm font-medium mt-1">{seller.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
+                          <p className="text-sm font-medium mt-1">{toArabicPhone(seller.phone || '')}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">المدينة</Label>
+                          <p className="text-sm font-medium mt-1">{prop.city}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الحي</Label>
+                          <p className="text-sm font-medium mt-1">{prop.district || "غير محدد"}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">نوع العقار</Label>
+                          <p className="text-sm font-medium mt-1">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">الغرف</Label>
+                          <p className="text-sm font-medium mt-1">{prop.rooms || "غير محدد"}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">المساحة</Label>
+                          <p className="text-sm font-medium mt-1">{prop.area ? `${prop.area} م²` : "غير محدد"}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">السعر</Label>
+                          <p className="text-lg font-bold text-primary mt-1">
+                            {prop.price ? formatCurrency(prop.price) : "غير محدد"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </>
             );
