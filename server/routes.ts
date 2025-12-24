@@ -86,8 +86,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "رقم الجوال غير صحيح" });
       }
       
-      const cleanEmail = data.email ? normalizeEmail(data.email) : null;
-      if (cleanEmail && !isValidEmail(cleanEmail)) {
+      // الإيميل إلزامي الآن
+      if (!data.email) {
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
+      }
+      
+      const cleanEmail = normalizeEmail(data.email);
+      if (!isValidEmail(cleanEmail)) {
         return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
       }
       
@@ -97,26 +102,13 @@ export async function registerRoutes(
       if (!user) {
         const passwordHash = await bcrypt.hash("password123", 10);
         
-        // إنشاء إيميل مؤقت إذا لم يتم توفير إيميل صحيح
-        let finalEmail = cleanEmail;
-        if (!finalEmail || !isValidEmail(finalEmail)) {
-          // سنقوم بإنشاء إيميل مؤقت بعد إنشاء المستخدم
-          finalEmail = `temp_${Date.now()}@temp.tatabuq.sa`;
-        }
-        
         user = await storage.createUser({
           name: (data.name || "بائع جديد").trim(),
           phone: cleanPhone,
-          email: finalEmail,
+          email: cleanEmail,
           role: "seller",
           passwordHash,
         });
-        
-        // إذا كان الإيميل مؤقت، قم بإنشاء إيميل فريد بناءً على userId
-        if (finalEmail.includes("@temp.tatabuq.sa") && finalEmail.startsWith("temp_")) {
-          const uniqueEmail = generateTempEmail(cleanPhone, user.id);
-          user = await storage.updateUser(user.id, { email: uniqueEmail }) || user;
-        }
         
         isNewUser = true;
       }
