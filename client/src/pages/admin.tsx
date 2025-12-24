@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -940,6 +941,76 @@ export default function AdminDashboard() {
     },
   });
 
+  // Delete mutations
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    open: boolean;
+    type: "user" | "preference" | "property" | "match" | null;
+    id: string | null;
+    name: string;
+  }>({ open: false, type: null, id: null, name: "" });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم الحذف", description: "تم حذف المستخدم بنجاح" });
+      setDeleteConfirmDialog({ open: false, type: null, id: null, name: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في حذف المستخدم", variant: "destructive" });
+    },
+  });
+
+  const deletePreferenceMutation = useMutation({
+    mutationFn: async (preferenceId: string) => {
+      return apiRequest("DELETE", `/api/admin/preferences/${preferenceId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/preferences"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم الحذف", description: "تم حذف الرغبة بنجاح" });
+      setDeleteConfirmDialog({ open: false, type: null, id: null, name: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في حذف الرغبة", variant: "destructive" });
+    },
+  });
+
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      return apiRequest("DELETE", `/api/admin/properties/${propertyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم الحذف", description: "تم حذف العقار بنجاح" });
+      setDeleteConfirmDialog({ open: false, type: null, id: null, name: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في حذف العقار", variant: "destructive" });
+    },
+  });
+
+  const deleteMatchMutation = useMutation({
+    mutationFn: async (matchId: string) => {
+      return apiRequest("DELETE", `/api/admin/matches/${matchId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      toast({ title: "تم الحذف", description: "تم حذف المطابقة بنجاح" });
+      setDeleteConfirmDialog({ open: false, type: null, id: null, name: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "خطأ", description: error.message || "فشل في حذف المطابقة", variant: "destructive" });
+    },
+  });
+
   const updateMatchVerificationMutation = useMutation({
     mutationFn: async ({ matchId, verificationType, verified }: { matchId: string; verificationType: "property" | "buyer" | "specs" | "financial"; verified: boolean }) => {
       return apiRequest("PATCH", `/api/admin/matches/${matchId}/verify`, { verificationType, verified });
@@ -1433,17 +1504,18 @@ export default function AdminDashboard() {
                               </div>
                             </TableCell>
                             <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm" variant="outline" onClick={() => {
-                                    setSelectedUser(user);
-                                    setIsEditingUser(false);
-                                    setUserEditData({});
-                                  }}>
-                                    <Eye className="w-3 h-3 ml-1" />
-                                    عرض
-                                  </Button>
-                                </DialogTrigger>
+                              <div className="flex items-center justify-center gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm" variant="outline" onClick={() => {
+                                      setSelectedUser(user);
+                                      setIsEditingUser(false);
+                                      setUserEditData({});
+                                    }}>
+                                      <Eye className="w-3 h-3 ml-1" />
+                                      عرض
+                                    </Button>
+                                  </DialogTrigger>
                                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
                                   <DialogHeader className="pb-4 border-b">
                                     <div className="flex items-center justify-between">
@@ -1809,8 +1881,26 @@ export default function AdminDashboard() {
                                       </div>
                                     )}
                                   </div>
-                                </DialogContent>
-                              </Dialog>
+                                  </DialogContent>
+                                </Dialog>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmDialog({
+                                      open: true,
+                                      type: "user",
+                                      id: user.id,
+                                      name: user.name || "المستخدم",
+                                    });
+                                  }}
+                                  title="حذف"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -1951,14 +2041,33 @@ export default function AdminDashboard() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => handleShowPreferenceDetails(pref.id)}
-                                >
-                                  <Eye className="w-3 h-3 ml-1" />
-                                  عرض
-                                </Button>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleShowPreferenceDetails(pref.id)}
+                                  >
+                                    <Eye className="w-3 h-3 ml-1" />
+                                    عرض
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmDialog({
+                                        open: true,
+                                        type: "preference",
+                                        id: pref.id,
+                                        name: `رغبة ${user?.name || pref.id}`,
+                                      });
+                                    }}
+                                    title="حذف"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
@@ -2127,6 +2236,18 @@ export default function AdminDashboard() {
                                 <div className="flex items-center justify-center gap-1">
                                   <Button
                                     size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPropertyId(prop.id);
+                                      setShowPropertyDetailsDialog(true);
+                                    }}
+                                  >
+                                    <Eye className="w-3 h-3 ml-1" />
+                                    عرض
+                                  </Button>
+                                  <Button
+                                    size="sm"
                                     variant={prop.isActive ? "destructive" : "default"}
                                     onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
                                     disabled={togglePropertyMutation.isPending}
@@ -2146,14 +2267,20 @@ export default function AdminDashboard() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedPropertyId(prop.id);
-                                      setShowPropertyDetailsDialog(true);
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmDialog({
+                                        open: true,
+                                        type: "property",
+                                        id: prop.id,
+                                        name: `عقار في ${prop.city} - ${prop.district}`,
+                                      });
                                     }}
+                                    title="حذف"
                                   >
-                                    <Eye className="w-3 h-3 ml-1" />
-                                    عرض
+                                    <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -2898,19 +3025,41 @@ export default function AdminDashboard() {
                                     </div>
                                   </TableCell>
                                   {/* زر عرض المطابقات */}
-                                  <TableCell className="w-[110px] py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleShowBuyerMatches(buyerPreferenceId);
-                                      }}
-                                      className="gap-1"
-                                    >
-                                      <Eye className="w-3 h-3" />
-                                      عرض
-                                    </Button>
+                                  <TableCell className="w-[150px] py-4 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleShowBuyerMatches(buyerPreferenceId);
+                                        }}
+                                        className="gap-1"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        عرض
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // حذف جميع مطابقات المشتري
+                                          buyerMatchIds.forEach(id => {
+                                            setDeleteConfirmDialog({
+                                              open: true,
+                                              type: "match",
+                                              id: id,
+                                              name: `مطابقة ${buyer.name}`,
+                                            });
+                                          });
+                                        }}
+                                        title="حذف جميع المطابقات"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               );
@@ -7004,6 +7153,58 @@ export default function AdminDashboard() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setDeleteConfirmDialog({ open: false, type: null, id: null, name: "" });
+        }
+      }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف {deleteConfirmDialog.type === "user" ? "المستخدم" : deleteConfirmDialog.type === "preference" ? "الرغبة" : deleteConfirmDialog.type === "property" ? "العقار" : "المطابقة"}؟
+              <br />
+              <span className="font-semibold text-foreground">{deleteConfirmDialog.name}</span>
+              <br />
+              <span className="text-red-600">لا يمكن التراجع عن هذا الإجراء.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!deleteConfirmDialog.id || !deleteConfirmDialog.type) return;
+                
+                if (deleteConfirmDialog.type === "user") {
+                  deleteUserMutation.mutate(deleteConfirmDialog.id);
+                } else if (deleteConfirmDialog.type === "preference") {
+                  deletePreferenceMutation.mutate(deleteConfirmDialog.id);
+                } else if (deleteConfirmDialog.type === "property") {
+                  deletePropertyMutation.mutate(deleteConfirmDialog.id);
+                } else if (deleteConfirmDialog.type === "match") {
+                  deleteMatchMutation.mutate(deleteConfirmDialog.id);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={
+                deleteUserMutation.isPending ||
+                deletePreferenceMutation.isPending ||
+                deletePropertyMutation.isPending ||
+                deleteMatchMutation.isPending
+              }
+            >
+              {deleteUserMutation.isPending ||
+              deletePreferenceMutation.isPending ||
+              deletePropertyMutation.isPending ||
+              deleteMatchMutation.isPending
+                ? "جاري الحذف..."
+                : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 }

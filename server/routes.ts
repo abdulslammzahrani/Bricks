@@ -1740,6 +1740,18 @@ export async function registerRoutes(
     }
   });
 
+  // Delete user
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all buyer preferences
   app.get("/api/admin/preferences", async (req, res) => {
     try {
@@ -1764,6 +1776,18 @@ export async function registerRoutes(
     }
   });
 
+  // Delete buyer preference
+  app.delete("/api/admin/preferences/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteBuyerPreference(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting preference:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/admin/properties/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -1780,6 +1804,18 @@ export async function registerRoutes(
       res.json(updatedProperty);
     } catch (error: any) {
       console.error("Error updating property:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete property from admin
+  app.delete("/api/admin/properties/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteProperty(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting property:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1904,6 +1940,18 @@ export async function registerRoutes(
       const matches = await storage.getAllMatches();
       res.json(matches);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete match
+  app.delete("/api/admin/matches/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMatch(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting match:", error);
       res.status(500).json({ error: error.message });
     }
   });

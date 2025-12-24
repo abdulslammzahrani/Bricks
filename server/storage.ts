@@ -24,6 +24,7 @@ export interface IStorage {
   getUserByPhone(phone: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
   getUsers(role?: string): Promise<User[]>;
 
   // Buyer Preferences
@@ -68,6 +69,7 @@ export interface IStorage {
 
   // Matches - additional
   getAllMatches(): Promise<Match[]>;
+  deleteMatch(id: string): Promise<void>;
 
   // Contact Requests
   createContactRequest(req: InsertContactRequest): Promise<ContactRequest>;
@@ -178,6 +180,10 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
     const [user] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return user || undefined;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 
   // Buyer Preferences
@@ -780,6 +786,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllMatches(): Promise<Match[]> {
     return db.select().from(matches).orderBy(desc(matches.matchScore));
+  }
+
+  async deleteMatch(id: string): Promise<void> {
+    await db.delete(matches).where(eq(matches.id, id));
   }
 
   // Analytics
