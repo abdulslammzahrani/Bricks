@@ -110,6 +110,7 @@ import {
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp, SiWhatsapp } from "react-icons/si";
 // ✅ استيراد المكون البياني باسمه الأصلي
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend } from "recharts";
+import { MatchBreakdownView } from "@/components/MatchBreakdownView";
 import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, StaticPage } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -735,6 +736,50 @@ export default function AdminDashboard() {
   // --- نهاية كود الإصلاح ---
 
   // دالة لحساب Match Breakdown (للعرض في Tooltip)
+  // خريطة الأحياء المجاورة (مبسطة للاستخدام في Frontend)
+  const adjacencyMap: Record<string, Record<string, string[]>> = {
+    "الرياض": {
+      "العليا": ["الملك فهد", "النرجس", "الملز"],
+      "الملك فهد": ["العليا", "النرجس", "الملز"],
+      "النرجس": ["العليا", "الملك فهد", "الملز"],
+      "الملز": ["العليا", "الملك فهد", "النرجس"],
+      "السليمانية": ["العليا", "الملك فهد"],
+      "المرقب": ["العليا", "الملك فهد"],
+    },
+    "جدة": {
+      "البحر": ["الكورنيش", "الروابي"],
+      "الكورنيش": ["البحر", "الروابي", "الزهراء"],
+      "الروابي": ["البحر", "الكورنيش", "الزهراء"],
+      "الزهراء": ["الكورنيش", "الروابي"],
+    },
+    "الدمام": {
+      "الشاطئ": ["الفيصلية", "الروضة"],
+      "الفيصلية": ["الشاطئ", "الروضة", "النزهة"],
+      "الروضة": ["الشاطئ", "الفيصلية", "المزروعية"],
+    },
+  };
+
+  // دالة للتحقق من الأحياء المجاورة
+  const isAdjacentDistrict = (city: string, propertyDistrict: string, buyerDistricts: string[]): boolean => {
+    const cityAdjacency = adjacencyMap[city];
+    if (!cityAdjacency) return false;
+    
+    const propertyNeighbors = cityAdjacency[propertyDistrict];
+    if (!propertyNeighbors) return false;
+    
+    for (const buyerDistrict of buyerDistricts) {
+      if (propertyNeighbors.includes(buyerDistrict)) {
+        return true;
+      }
+      const buyerNeighbors = cityAdjacency[buyerDistrict];
+      if (buyerNeighbors && buyerNeighbors.includes(propertyDistrict)) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
   const calculateMatchBreakdown = useMemo(() => {
     return (property: Property, preference: BuyerPreference) => {
       let locationScore = 0;
@@ -743,56 +788,230 @@ export default function AdminDashboard() {
       let detailsScore = 0;
       let bonusScore = 0;
 
-      // 1. الموقع (35 نقطة)
-      if (property.city === preference.city) {
+      // ===== 1. الموقع الجغرافي (35 نقطة كحد أقصى) =====
+      if (property.city !== preference.city) {
+        locationScore = 0; // لا توجد مطابقة إذا كانت المدينة مختلفة
+      } else {
         if (preference.districts && preference.districts.length > 0) {
           if (preference.districts.includes(property.district)) {
-            locationScore = 35;
+            locationScore = 35; // مطابقة الحي تماماً
+          } else if (isAdjacentDistrict(preference.city, property.district, preference.districts)) {
+            locationScore = 22; // حي مجاور
           } else {
-            locationScore = 22; // حي مجاور أو نفس المدينة
+            locationScore = 12; // نفس المدينة لكن حي بعيد
           }
         } else {
-          locationScore = 18;
+          locationScore = 18; // لم يحدد أحياء معينة
         }
       }
 
-      // 2. السعر (30 نقطة)
+      // ===== 2. التوافق السعري (30 نقطة كحد أقصى) =====
       if (preference.budgetMax) {
+        const budgetFlexThreshold = preference.budgetMax * 1.05; // 5% مرونة
+        
         if (property.price <= preference.budgetMax) {
-          priceScore = preference.budgetMin && property.price >= preference.budgetMin ? 30 : 25;
-        } else if (property.price <= preference.budgetMax * 1.05) {
-          priceScore = 20;
+          if (preference.budgetMin && property.price >= preference.budgetMin) {
+            priceScore = 30; // ضمن النطاق تماماً
+          } else {
+            priceScore = 25; // أقل من الحد الأدنى لكن ضمن الأعلى
+          }
+        } else if (property.price <= budgetFlexThreshold) {
+          priceScore = 20; // أعلى بنسبة تصل إلى 5%
         } else if (property.price <= preference.budgetMax * 1.15) {
-          priceScore = 10;
+          priceScore = 10; // أعلى بـ 15%
+        } else {
+          priceScore = 0; // أكثر من 15% فوق الميزانية
         }
       } else {
-        priceScore = 15;
+        priceScore = 15; // لم يحدد ميزانية - نقاط جزئية
       }
 
-      // 3. المواصفات (25 نقطة)
-      let propertyTypeScore = property.propertyType === preference.propertyType ? 12 : 6;
+      // ===== 3. المواصفات الفنية (25 نقطة كحد أقصى) =====
+      let propertyTypeScore = 0;
       let roomsAreaScore = 0;
+      
+      // نوع العقار (12 نقطة كحد أقصى)
+      if (property.propertyType === preference.propertyType) {
+        propertyTypeScore = 12; // تطابق تام
+      } else {
+        const similarTypes: Record<string, string[]> = {
+          villa: ["duplex", "townhouse"],
+          duplex: ["villa", "townhouse"],
+          apartment: ["studio"],
+          studio: ["apartment"],
+        };
+        if (similarTypes[preference.propertyType]?.includes(property.propertyType)) {
+          propertyTypeScore = 6; // نوع مشابه
+        } else {
+          propertyTypeScore = 0; // نوع مختلف تماماً
+        }
+      }
+
+      // الغرف والمساحة (13 نقطة كحد أقصى: 6.5 لكل منهما)
+      let roomsScore = 0;
+      let areaScore = 0;
+      
       if (preference.rooms && property.rooms) {
-        const prefRooms = parseInt(String(preference.rooms).match(/\d+/)?.[0] || "0");
-        const propRooms = parseInt(String(property.rooms).match(/\d+/)?.[0] || "0");
-        if (propRooms === prefRooms) roomsAreaScore += 6.5;
-        else if (Math.abs(propRooms - prefRooms) === 1) roomsAreaScore += 4.5;
+        const prefRoomsStr = String(preference.rooms).trim();
+        const propRoomsStr = String(property.rooms).trim();
+        
+        const prefRoomsMatch = prefRoomsStr.match(/\d+/);
+        const propRoomsMatch = propRoomsStr.match(/\d+/);
+        
+        if (prefRoomsMatch && propRoomsMatch) {
+          const prefRooms = parseInt(prefRoomsMatch[0]) || 0;
+          const propRooms = parseInt(propRoomsMatch[0]) || 0;
+          
+          if (propRooms === prefRooms) {
+            roomsScore = 6.5;
+          } else if (Math.abs(propRooms - prefRooms) === 1) {
+            roomsScore = 4.5;
+          } else if (Math.abs(propRooms - prefRooms) <= 2) {
+            roomsScore = 2;
+          }
+        }
       }
+
       if (preference.area && property.area) {
-        roomsAreaScore += 6.5; // تبسيط
+        const prefAreaStr = String(preference.area).trim().replace(/[^\d-]/g, '');
+        const propAreaStr = String(property.area).trim().replace(/[^\d-]/g, '');
+        
+        const prefAreaMatch = prefAreaStr.match(/(\d+)(?:-(\d+))?/);
+        const propAreaMatch = propAreaStr.match(/(\d+)(?:-(\d+))?/);
+        
+        if (prefAreaMatch && propAreaMatch) {
+          const prefAreaMin = parseInt(prefAreaMatch[1]) || 0;
+          const prefAreaMax = prefAreaMatch[2] ? parseInt(prefAreaMatch[2]) : prefAreaMin;
+          const prefArea = (prefAreaMin + prefAreaMax) / 2;
+          
+          const propAreaMin = parseInt(propAreaMatch[1]) || 0;
+          const propAreaMax = propAreaMatch[2] ? parseInt(propAreaMatch[2]) : propAreaMin;
+          const propArea = (propAreaMin + propAreaMax) / 2;
+          
+          if (prefArea > 0 && propArea > 0) {
+            const ratio = propArea / prefArea;
+            if (ratio >= 0.9 && ratio <= 1.1) {
+              areaScore = 6.5; // ضمن 10%
+            } else if (ratio >= 0.8 && ratio <= 1.2) {
+              areaScore = 4.5; // ضمن 20%
+            } else if (ratio >= 0.7 && ratio <= 1.3) {
+              areaScore = 2; // ضمن 30%
+            }
+          }
+        }
       }
-      specsScore = propertyTypeScore + Math.min(13, roomsAreaScore);
 
-      // 4. التفاصيل (10 نقطة) - تبسيط
-      detailsScore = 8;
+      roomsAreaScore = roomsScore + areaScore;
+      specsScore = propertyTypeScore + roomsAreaScore;
+      specsScore = Math.min(25, specsScore);
 
-      // 5. البونص (5 نقاط) - تبسيط
+      // ===== 4. التفاصيل الإضافية (10 نقطة كحد أقصى) =====
+      
+      // transactionType + status (3 نقاط)
+      if (preference.transactionType) {
+        if (preference.transactionType === "buy") {
+          detailsScore += 3; // الشراء متاح لأي عقار
+        } else if (preference.transactionType === "rent") {
+          if (property.status === "ready") {
+            detailsScore += 3; // الإيجار يتطلب عقار جاهز
+          } else {
+            detailsScore += 0; // عقار تحت الإنشاء لا يمكن إيجاره
+          }
+        }
+      } else {
+        detailsScore += 1.5; // لم يحدد - نقاط جزئية
+      }
+
+      // purpose (2 نقطة)
+      if (preference.purpose) {
+        detailsScore += 2; // جميع العقارات مناسبة للسكن والاستثمار
+      } else {
+        detailsScore += 1;
+      }
+
+      // paymentMethod (2 نقطة)
+      if (preference.paymentMethod) {
+        detailsScore += 2; // جميع العقارات تقبل كلا الطريقتين
+      } else {
+        detailsScore += 1;
+      }
+
+      // amenities + description matching (3 نقاط)
+      let amenitiesMatchScore = 0;
+      
+      if (property.amenities && property.amenities.length > 0) {
+        amenitiesMatchScore += 1; // أساسي: وجود مرافق
+        
+        if (property.amenities.length >= 5) {
+          amenitiesMatchScore += 1.5; // مرافق ممتازة
+        } else if (property.amenities.length >= 3) {
+          amenitiesMatchScore += 1; // مرافق جيدة
+        }
+      }
+
+      if (property.description) {
+        const descLower = property.description.toLowerCase();
+        const amenityKeywords = [
+          "مسبح", "سباحة", "pool",
+          "مصعد", "elevator", "lift",
+          "موقف", "parking", "garage",
+          "حديقة", "garden", "yard",
+          "نادي", "gym", "fitness",
+          "أمن", "security", "حراسة",
+          "تكييف", "ac", "air conditioning",
+          "إنترنت", "wifi", "internet",
+          "مطبخ", "kitchen",
+          "غرفة خادمة", "maid room",
+          "بلكونة", "balcony", "terrace"
+        ];
+        
+        let foundKeywords = 0;
+        for (const keyword of amenityKeywords) {
+          if (descLower.includes(keyword.toLowerCase())) {
+            foundKeywords++;
+          }
+        }
+        
+        if (foundKeywords >= 3) {
+          amenitiesMatchScore += 0.5; // وصف غني بالمرافق
+        }
+      }
+
+      detailsScore += Math.min(3, amenitiesMatchScore);
+      detailsScore = Math.min(10, detailsScore);
+
+      // ===== 5. عوامل ديناميكية (بونص يصل إلى 5 نقاط) =====
+      
+      // recency bonus (2 نقطة)
       if (property.createdAt) {
         const daysSinceCreation = Math.floor((Date.now() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-        if (daysSinceCreation <= 7) bonusScore += 2;
-        else if (daysSinceCreation <= 30) bonusScore += 1;
+        if (daysSinceCreation <= 7) {
+          bonusScore += 2; // أقل من أسبوع
+        } else if (daysSinceCreation <= 30) {
+          bonusScore += 1; // أقل من شهر
+        } else if (daysSinceCreation <= 90) {
+          bonusScore += 0.5; // أقل من 3 أشهر
+        }
       }
-      if (property.isActive) bonusScore += 1;
+
+      // popularity bonus (2 نقطة)
+      if (property.viewsCount && property.viewsCount > 0) {
+        if (property.viewsCount >= 100) {
+          bonusScore += 2; // أكثر من 100 مشاهدة
+        } else if (property.viewsCount >= 50) {
+          bonusScore += 1.5; // أكثر من 50 مشاهدة
+        } else if (property.viewsCount >= 20) {
+          bonusScore += 1; // أكثر من 20 مشاهدة
+        } else {
+          bonusScore += 0.5; // أي مشاهدة
+        }
+      }
+
+      // active status bonus (1 نقطة)
+      if (property.isActive) {
+        bonusScore += 1;
+      }
+
       bonusScore = Math.min(5, bonusScore);
 
       return {
@@ -5591,54 +5810,13 @@ export default function AdminDashboard() {
                         </Card>
 
                         {/* تفصيل النتيجة */}
-                        {bestMatch && bestBreakdown && (
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5 text-primary" />
-                                تفصيل النتيجة (100 نقطة)
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                  <span className="text-sm font-medium flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-blue-500" /> الموقع
-                                  </span>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                      <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}></div>
-                                    </div>
-                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.location}/35</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                  <span className="text-sm font-medium flex items-center gap-2">
-                                    <Wallet className="w-5 h-5 text-green-500" /> السعر
-                                  </span>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                      <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}></div>
-                                    </div>
-                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.price}/30</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                  <span className="text-sm font-medium flex items-center gap-2">
-                                    <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
-                                  </span>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                                      <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}></div>
-                                    </div>
-                                    <span className="text-sm font-bold w-16 text-left font-mono">{bestBreakdown.specifications}/25</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
+                        {bestMatch && bestProp && bestBreakdown && (
+                          <MatchBreakdownView
+                            match={bestMatch}
+                            property={bestProp}
+                            preference={pref}
+                            breakdown={bestBreakdown}
+                          />
                         )}
                       </div>
                     ) : (
@@ -5987,63 +6165,13 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 
                 <div className="mt-4 overflow-y-auto flex-1 space-y-4 pb-4">
-                  {/* النسب الموزونة */}
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-primary" />
-                        النسب الموزونة
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium flex items-center gap-2">
-                            <MapPin className="w-5 h-5 text-blue-500" /> الموقع
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${(breakdown.location / 35) * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.location}/35</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium flex items-center gap-2">
-                            <Wallet className="w-5 h-5 text-green-500" /> السعر
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(breakdown.price / 30) * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.price}/30</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm font-medium flex items-center gap-2">
-                            <Building2 className="w-5 h-5 text-purple-500" /> المواصفات
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <div className="w-40 h-3 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500 rounded-full transition-all" style={{ width: `${(breakdown.specifications / 25) * 100}%` }}></div>
-                            </div>
-                            <span className="text-sm font-bold w-16 text-left font-mono">{breakdown.specifications}/25</span>
-                          </div>
-                        </div>
-                        
-                        <Separator />
-                        
-                        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border-2 border-primary">
-                          <span className="text-base font-bold flex items-center gap-2">
-                            <Target className="w-5 h-5 text-primary" /> النتيجة الإجمالية
-                          </span>
-                          <span className="text-2xl font-bold text-primary">{match.matchScore}/105</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* تفصيل المطابقة */}
+                  <MatchBreakdownView
+                    match={match}
+                    property={prop}
+                    preference={pref}
+                    breakdown={breakdown}
+                  />
 
                   {/* مقارنة تفصيلية */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
