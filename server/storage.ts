@@ -259,7 +259,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBuyerPreference(id: string): Promise<void> {
     try {
-      // حذف طلبات الاتصال المرتبطة بالمطابقات أولاً
+      // حذف send_logs المرتبطة أولاً
+      await db.delete(sendLogs).where(eq(sendLogs.preferenceId, id));
+      
+      // حذف طلبات الاتصال المرتبطة بالمطابقات
       const prefMatches = await db.select().from(matches).where(eq(matches.buyerPreferenceId, id));
       for (const match of prefMatches) {
         try {
