@@ -2114,7 +2114,7 @@ export async function registerRoutes(
   app.patch("/api/admin/matches/:id/status", async (req, res) => {
     try {
       const { status } = req.body;
-      const validStatuses = ["new", "contacted", "confirmed", "viewing", "agreed", "vacated"];
+      const validStatuses = ["new", "contacted", "confirmed", "viewing", "agreed", "vacated", "preliminary_approval", "negotiation"];
       
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: "حالة غير صالحة" });

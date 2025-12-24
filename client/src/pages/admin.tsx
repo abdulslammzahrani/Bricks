@@ -106,6 +106,8 @@ import {
   Link2,
   // ✅ هنا الإصلاح: استيراد الأيقونة باسم مستعار لتجنب التعارض
   PieChart as PieChartIcon,
+  ThumbsUp,
+  CheckCircle2,
 } from "lucide-react";
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp, SiWhatsapp } from "react-icons/si";
 // ✅ استيراد المكون البياني باسمه الأصلي
@@ -224,6 +226,8 @@ const getStatusBadgeConfig = (status: string) => {
     viewing: { label: "تم المعاينة", className: "bg-purple-100 text-purple-700 border-purple-200", icon: Eye }, // بنفسجي فاتح
     agreed: { label: "تم الاتفاق", className: "bg-green-100 text-green-700 border-green-200", icon: Handshake }, // أخضر فاتح
     vacated: { label: "تم الافراغ", className: "bg-green-200 text-green-800 border-green-300", icon: Home }, // أخضر
+    preliminary_approval: { label: "موافقة مبدئية", className: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: ThumbsUp }, // أخضر فاتح
+    negotiation: { label: "تفاوض", className: "bg-orange-100 text-orange-700 border-orange-200", icon: Handshake }, // برتقالي
     // حالات قديمة للتوافق مع البيانات الموجودة
     handover_scheduled: { label: "تم تحديد موعد الافراغ", className: "bg-green-100 text-green-700 border-green-200", icon: Calendar },
     sold: { label: "تم البيع", className: "bg-green-200 text-green-800 border-green-300", icon: CheckCircle },
@@ -301,6 +305,7 @@ const menuItems = [
   { id: "preferences", label: "الرغبات", icon: ClipboardList },
   { id: "properties", label: "العقارات", icon: Building2 },
   { id: "matches", label: "المطابقات", icon: Handshake },
+  { id: "deals", label: "الصفقات العقارية", icon: ShoppingBag },
   { id: "analytics", label: "التحليلات", icon: TrendingUp },
   { id: "sending", label: "الإرسال", icon: Send },
   { id: "marketing", label: "التسويق", icon: Megaphone },
@@ -355,6 +360,8 @@ export default function AdminDashboard() {
   // State لمقارنة طلب المشتري مع طلب البائع
   const [selectedMatchForComparison, setSelectedMatchForComparison] = useState<string | null>(null);
   const [showMatchComparisonDialog, setShowMatchComparisonDialog] = useState(false);
+  // State للمطابقة المحددة في تبويب المطابقات
+  const [selectedMatchTab, setSelectedMatchTab] = useState<string | null>(null);
   // State للتأكد من صحة رغبة المشتري
   const [buyerVerificationChecks, setBuyerVerificationChecks] = useState({
     city: false,
@@ -734,6 +741,14 @@ export default function AdminDashboard() {
     return filtered;
   }, [matches, preferences, properties, users, matchFilters, matchSearchQuery, matchSortBy]);
   // --- نهاية كود الإصلاح ---
+
+  // تصفية المطابقات للصفقات العقارية (فقط التي لديها موافقة مبدئية أو مراحل متقدمة)
+  const dealsMatches = useMemo(() => {
+    return (matches || []).filter(match => {
+      const matchStatus = (match as any).status || "new";
+      return ["preliminary_approval", "viewing", "negotiation", "agreed", "vacated"].includes(matchStatus);
+    });
+  }, [matches]);
 
   // دالة لحساب Match Breakdown (للعرض في Tooltip)
   // خريطة الأحياء المجاورة (مبسطة للاستخدام في Frontend)
@@ -1350,6 +1365,25 @@ export default function AdminDashboard() {
       }
     }
   }, [buyerVerificationChecks, selectedBuyerPreferenceId, preferences, users, filteredMatches, updateMatchVerificationMutation]);
+
+  // تهيئة selectedMatchTab عند فتح Dialog
+  useEffect(() => {
+    if (showMatchDetailsDialog && selectedBuyerPreferenceId) {
+      const pref = preferences.find(p => p.id === selectedBuyerPreferenceId);
+      if (pref) {
+        const buyerMatches = filteredMatches.filter(m => m.buyerPreferenceId === selectedBuyerPreferenceId);
+        if (buyerMatches.length > 0) {
+          // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
+          const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
+          // تحديد أول مطابقة كافتراضية
+          setSelectedMatchTab(sortedMatches[0]?.id || null);
+        }
+      }
+    } else if (!showMatchDetailsDialog) {
+      // إعادة تعيين عند إغلاق Dialog
+      setSelectedMatchTab(null);
+    }
+  }, [showMatchDetailsDialog, selectedBuyerPreferenceId, filteredMatches, preferences]);
 
   // Mutation لحفظ التأكيدات التفصيلية
   const updateDetailedVerificationsMutation = useMutation({
@@ -3722,6 +3756,200 @@ export default function AdminDashboard() {
                   {/* Side Drawer - Checklist */}
                 </div>
               )}
+
+            {/* قسم الصفقات العقارية */}
+            {activeSection === "deals" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">الصفقات العقارية</h2>
+                    <p className="text-muted-foreground mt-1">إدارة الصفقات التي حصلت على موافقة مبدئية</p>
+                  </div>
+                </div>
+
+                {/* فانل الصفقات */}
+                <div className="space-y-4">
+                  {/* مراحل الفانل */}
+                  <div className="grid grid-cols-5 gap-4 mb-6">
+                    {[
+                      { id: "preliminary_approval", label: "موافقة مبدئية", icon: ThumbsUp, color: "emerald" },
+                      { id: "viewing", label: "معاينة", icon: Eye, color: "purple" },
+                      { id: "negotiation", label: "تفاوض", icon: Handshake, color: "orange" },
+                      { id: "agreed", label: "اتفاق", icon: CheckCircle, color: "green" },
+                      { id: "vacated", label: "إفراغ", icon: Home, color: "blue" },
+                    ].map((stage) => {
+                      const stageMatches = dealsMatches.filter(m => ((m as any).status || "new") === stage.id);
+                      return (
+                        <Card key={stage.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <stage.icon className={`w-4 h-4 text-${stage.color}-600`} />
+                              {stage.label}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">{stageMatches.length}</div>
+                            <div className="text-xs text-muted-foreground mt-1">صفقة</div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {/* عرض الصفقات حسب المرحلة */}
+                  <div className="space-y-6">
+                    {[
+                      { id: "preliminary_approval", label: "موافقة مبدئية", icon: ThumbsUp },
+                      { id: "viewing", label: "معاينة", icon: Eye },
+                      { id: "negotiation", label: "تفاوض", icon: Handshake },
+                      { id: "agreed", label: "اتفاق", icon: CheckCircle },
+                      { id: "vacated", label: "إفراغ", icon: Home },
+                    ].map((stage) => {
+                      const stageMatches = dealsMatches.filter(m => ((m as any).status || "new") === stage.id);
+                      if (stageMatches.length === 0) return null;
+
+                      return (
+                        <Card key={stage.id}>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <stage.icon className="w-5 h-5" />
+                              {stage.label} ({stageMatches.length})
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {stageMatches.map((match) => {
+                                const pref = preferences.find(p => p.id === match.buyerPreferenceId);
+                                const prop = properties.find(p => p.id === match.propertyId);
+                                const buyer = pref ? users.find(u => u.id === pref.userId) : null;
+                                const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+                                if (!pref || !prop || !buyer || !seller) return null;
+
+                                const breakdown = calculateMatchBreakdown(prop, pref);
+                                const percentage = Math.round((match.matchScore / 105) * 100);
+
+                                return (
+                                  <Card key={match.id} className="border-2">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-3 mb-3">
+                                            <div className="flex items-center gap-2">
+                                              <UserIcon className="w-4 h-4 text-blue-600" />
+                                              <span className="font-medium">{buyer.name}</span>
+                                            </div>
+                                            <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+                                            <div className="flex items-center gap-2">
+                                              <Store className="w-4 h-4 text-green-600" />
+                                              <span className="font-medium">{seller.name}</span>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-2 gap-4 mb-3">
+                                            <div>
+                                              <p className="text-xs text-muted-foreground">العقار</p>
+                                              <p className="font-medium">{prop.city} - {prop.district}</p>
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-muted-foreground">السعر</p>
+                                              <p className="font-medium">{formatCurrency(prop.price)}</p>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-2">
+                                            <div className="relative w-8 h-8">
+                                              <svg className="w-8 h-8 transform -rotate-90">
+                                                <circle stroke="#e2e8f0" strokeWidth="2" fill="white" r="10" cx="16" cy="16" />
+                                                <circle 
+                                                  stroke={percentage >= 70 ? "#10b981" : percentage >= 40 ? "#f59e0b" : "#ef4444"}
+                                                  strokeWidth="2"
+                                                  strokeDasharray={2 * Math.PI * 10}
+                                                  strokeDashoffset={2 * Math.PI * 10 * (1 - match.matchScore / 105)}
+                                                  strokeLinecap="round"
+                                                  fill="transparent"
+                                                  r="10"
+                                                  cx="16"
+                                                  cy="16"
+                                                />
+                                              </svg>
+                                              <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${
+                                                percentage >= 70 ? "text-emerald-600" : percentage >= 40 ? "text-amber-600" : "text-red-600"
+                                              }`}>
+                                                {percentage}%
+                                              </span>
+                                            </div>
+                                            <span className="text-sm text-muted-foreground">نسبة التطابق</span>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button variant="outline" size="sm">
+                                                تغيير المرحلة
+                                                <ChevronDown className="w-4 h-4 mr-2" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuLabel>اختر المرحلة التالية</DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              {[
+                                                { id: "preliminary_approval", label: "موافقة مبدئية", icon: ThumbsUp },
+                                                { id: "viewing", label: "معاينة", icon: Eye },
+                                                { id: "negotiation", label: "تفاوض", icon: Handshake },
+                                                { id: "agreed", label: "اتفاق", icon: CheckCircle },
+                                                { id: "vacated", label: "إفراغ", icon: Home },
+                                              ].map((nextStage) => {
+                                                const Icon = nextStage.icon;
+                                                return (
+                                                  <DropdownMenuItem
+                                                    key={nextStage.id}
+                                                    onClick={() => {
+                                                      updateMatchStatusMutation.mutate({ 
+                                                        matchId: match.id, 
+                                                        status: nextStage.id 
+                                                      });
+                                                    }}
+                                                    disabled={(match as any).status === nextStage.id}
+                                                  >
+                                                    <Icon className="w-4 h-4 ml-2" />
+                                                    {nextStage.label}
+                                                    {(match as any).status === nextStage.id && (
+                                                      <CheckCircle className="w-4 h-4 mr-auto" />
+                                                    )}
+                                                  </DropdownMenuItem>
+                                                );
+                                              })}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                          
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setSelectedMatchForComparison(match.id);
+                                              setShowMatchComparisonDialog(true);
+                                            }}
+                                          >
+                                            <Eye className="w-4 h-4 mr-2" />
+                                            عرض التفاصيل
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Analytics Section - Enhanced Dashboard */}
             {/* Analytics Section - Enhanced Dashboard */}
             {activeSection === "analytics" && (() => {
@@ -5145,279 +5373,150 @@ export default function AdminDashboard() {
 
                   {/* تبويب المطابقات */}
                   <TabsContent value="matches" className="mt-4 overflow-y-auto flex-1">
-                    <Card className="h-full flex flex-col">
-                    <CardHeader className="pb-2 flex-shrink-0">
-                      <CardTitle className="text-base">جميع المطابقات</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50/50 border-b border-gray-100">
-                              <TableHead className="min-w-[220px] text-center font-semibold">البائع</TableHead>
-                              <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
-                              <TableHead className="w-[130px] text-center font-semibold">نسبة التطابق</TableHead>
-                              <TableHead className="w-[140px] text-center font-semibold">التأكيدات</TableHead>
-                              <TableHead className="w-[200px] text-center font-semibold">الحالة</TableHead>
-                              <TableHead className="w-[200px] text-center font-semibold">إجراءات</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sortedMatches.map((match) => {
+                    {sortedMatches.length > 0 ? (
+                      <div className="flex gap-4 h-full" dir="rtl">
+                        {/* التبويبات الجانبية */}
+                        <div className="w-64 flex-shrink-0 border-r pr-4">
+                          <div className="space-y-2">
+                            {sortedMatches.map((match, index) => {
                               const prop = properties.find(p => p.id === match.propertyId);
                               const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
                               if (!prop || !seller) return null;
 
-                              const matchStatus = (match as any).status || "new";
                               const percentage = Math.round((match.matchScore / 105) * 100);
+                              const isSelected = selectedMatchTab === match.id || (!selectedMatchTab && index === 0);
 
                               return (
-                                <TableRow 
-                                  key={match.id} 
-                                  className="hover:bg-slate-50/50 cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedMatchForComparison(match.id);
-                                    setShowMatchComparisonDialog(true);
-                                  }}
+                                <button
+                                  key={match.id}
+                                  onClick={() => setSelectedMatchTab(match.id)}
+                                  className={`w-full text-right p-3 rounded-lg border-2 transition-all ${
+                                    isSelected
+                                      ? "border-primary bg-primary/5 shadow-sm"
+                                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                  }`}
                                 >
-                                  {/* البائع */}
-                                  <TableCell className="min-w-[220px] py-2" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center gap-2">
-                                      <Store className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-sm truncate">{seller.name}</p>
-                                        <p className="text-xs text-muted-foreground truncate">{seller.phone || "-"}</p>
-                                      </div>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Store className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm truncate">{seller.name}</p>
+                                      <p className="text-xs text-muted-foreground truncate">{seller.phone || "-"}</p>
                                     </div>
-                                  </TableCell>
-                                  {/* وسائل التواصل */}
-                                  <TableCell className="w-[140px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-center gap-2">
-                                      {seller.email && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            window.location.href = `mailto:${seller.email}`;
-                                          }}
-                                          title="بريد إلكتروني"
-                                        >
-                                          <Mail className="w-3.5 h-3.5" />
-                                        </Button>
-                                      )}
-                                      {seller.phone && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const cleanedPhone = seller.phone!.replace(/\D/g, '');
-                                            window.location.href = `tel:${cleanedPhone}`;
-                                            logCallMutation.mutate(match.id);
-                                          }}
-                                          title="اتصال"
-                                        >
-                                          <Phone className="w-3.5 h-3.5" />
-                                        </Button>
-                                      )}
-                                      {seller.phone && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const whatsappLink = getWhatsAppLink(seller.phone!);
-                                            window.open(whatsappLink, '_blank');
-                                          }}
-                                          title="واتساب"
-                                        >
-                                          <MessageSquare className="w-3.5 h-3.5" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  {/* نسبة التطابق */}
-                                  <TableCell className="w-[130px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex flex-col items-center">
-                                      <div className="relative w-10 h-10">
-                                        <svg className="w-10 h-10 transform -rotate-90">
-                                          <circle stroke="#e2e8f0" strokeWidth="2.5" fill="white" r="13" cx="20" cy="20" />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1">
+                                      <div className="relative w-8 h-8">
+                                        <svg className="w-8 h-8 transform -rotate-90">
+                                          <circle stroke="#e2e8f0" strokeWidth="2" fill="white" r="10" cx="16" cy="16" />
                                           <circle 
                                             stroke={getScoreColor(match.matchScore)}
-                                            strokeWidth="2.5"
-                                            strokeDasharray={2 * Math.PI * 13}
-                                            strokeDashoffset={2 * Math.PI * 13 * (1 - match.matchScore / 105)}
+                                            strokeWidth="2"
+                                            strokeDasharray={2 * Math.PI * 10}
+                                            strokeDashoffset={2 * Math.PI * 10 * (1 - match.matchScore / 105)}
                                             strokeLinecap="round"
                                             fill="transparent"
-                                            r="13"
-                                            cx="20"
-                                            cy="20"
+                                            r="10"
+                                            cx="16"
+                                            cy="16"
                                           />
                                         </svg>
-                                        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                                        <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${
                                           percentage >= 70 ? "text-emerald-600" : percentage >= 40 ? "text-amber-600" : "text-red-600"
                                         }`}>
                                           {percentage}%
                                         </span>
                                       </div>
                                     </div>
-                                  </TableCell>
-                                  {/* التأكيدات */}
-                                  <TableCell className="w-[140px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-center gap-1.5">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                                              (match as any).propertyVerified 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "bg-slate-200 text-slate-400"
-                                            }`}>
-                                              <Building2 className="w-3.5 h-3.5" />
-                                              {(match as any).propertyVerified && (
-                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
-                                              )}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-xs">تأكيد حالة العقار</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                                              (match as any).buyerVerified 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "bg-slate-200 text-slate-400"
-                                            }`}>
-                                              <UserIcon className="w-3.5 h-3.5" />
-                                              {(match as any).buyerVerified && (
-                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
-                                              )}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-xs">تأكيد رغبة المشتري</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                                              (match as any).specsVerified 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "bg-slate-200 text-slate-400"
-                                            }`}>
-                                              <ClipboardList className="w-3.5 h-3.5" />
-                                              {(match as any).specsVerified && (
-                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
-                                              )}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-xs">تأكيد المواصفات</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div className={`relative w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                                              (match as any).financialVerified 
-                                                ? "bg-primary text-primary-foreground" 
-                                                : "bg-slate-200 text-slate-400"
-                                            }`}>
-                                              <Wallet className="w-3.5 h-3.5" />
-                                              {(match as any).financialVerified && (
-                                                <CheckCircle className="absolute -top-0.5 -right-0.5 w-3 h-3 text-primary bg-white rounded-full" />
-                                              )}
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p className="text-xs">تأكيد الملاءة المالية</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
-                                  </TableCell>
-                                  {/* الحالة */}
-                                  <TableCell className="w-[200px] py-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex justify-center items-center">
-                                      {(() => {
-                                        const statusConfig = getStatusBadgeConfig(matchStatus);
-                                        const StatusIcon = statusConfig.icon;
-                                        return (
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <button
-                                                type="button"
-                                                className={`${statusConfig.className} border cursor-pointer px-2.5 py-1 flex items-center gap-1.5 rounded-md whitespace-nowrap text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:opacity-80`}
-                                                onClick={(e) => e.stopPropagation()}
-                                              >
-                                                <StatusIcon className="w-3 h-3" />
-                                                {statusConfig.label}
-                                              </button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
-                                              <DropdownMenuLabel>تغيير حالة المهمة</DropdownMenuLabel>
-                                              <DropdownMenuSeparator />
-                                              {["new", "contacted", "confirmed", "viewing", "agreed", "vacated"].map((status) => {
-                                                const config = getStatusBadgeConfig(status);
-                                                const Icon = config.icon;
-                                                return (
-                                                  <DropdownMenuItem
-                                                    key={status}
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      updateMatchStatusMutation.mutate({ matchId: match.id, status });
-                                                    }}
-                                                    className={matchStatus === status ? "bg-slate-100" : ""}
-                                                  >
-                                                    <Icon className="w-4 h-4 ml-2" />
-                                                    {config.label}
-                                                    {matchStatus === status && <CheckCircle className="w-4 h-4 mr-auto" />}
-                                                  </DropdownMenuItem>
-                                                );
-                                              })}
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        );
-                                      })()}
-                                    </div>
-                                  </TableCell>
-                                  {/* إجراءات */}
-                                  <TableCell className="w-[200px] py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-center gap-1">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedSellerMatchId(match.id);
-                                          setShowSellerEditDialog(true);
-                                        }}
-                                        className="gap-1"
-                                        title="تعديل بيانات البائع"
-                                      >
-                                        <Edit2 className="w-3 h-3" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
+                                  </div>
+                                </button>
                               );
                             })}
-                          </TableBody>
-                        </Table>
+                          </div>
+                        </div>
+
+                        {/* محتوى التبويب المحدد */}
+                        <div className="flex-1 overflow-y-auto">
+                          {(() => {
+                            const selectedMatchId = selectedMatchTab || sortedMatches[0]?.id;
+                            const match = sortedMatches.find(m => m.id === selectedMatchId);
+                            if (!match) return <div className="text-center py-8 text-muted-foreground">لا توجد مطابقة محددة</div>;
+
+                            const prop = properties.find(p => p.id === match.propertyId);
+                            const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+                            if (!prop || !seller) return <div className="text-center py-8 text-muted-foreground">البيانات غير مكتملة</div>;
+
+                            const breakdown = calculateMatchBreakdown(prop, pref);
+
+                            return (
+                              <div className="space-y-4">
+                                {/* زر الموافقة المبدئية */}
+                                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-green-100">
+                                          <ThumbsUp className="w-5 h-5 text-green-600" />
+                                        </div>
+                                        <div>
+                                          <p className="font-bold text-lg">الموافقة المبدئية</p>
+                                          <p className="text-sm text-muted-foreground">الموافقة على هذه المطابقة ونقلها إلى الصفقات العقارية</p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        size="lg"
+                                        className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                                        onClick={() => {
+                                          updateMatchStatusMutation.mutate({ 
+                                            matchId: match.id, 
+                                            status: "preliminary_approval" 
+                                          });
+                                          toast({ 
+                                            title: "تمت الموافقة المبدئية", 
+                                            description: "تم نقل المطابقة إلى الصفقات العقارية" 
+                                          });
+                                        }}
+                                        disabled={updateMatchStatusMutation.isPending || (match as any).status === "preliminary_approval"}
+                                      >
+                                        {updateMatchStatusMutation.isPending ? (
+                                          <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            جاري المعالجة...
+                                          </>
+                                        ) : (match as any).status === "preliminary_approval" ? (
+                                          <>
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            تمت الموافقة
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ThumbsUp className="w-4 h-4" />
+                                            موافقة مبدئية
+                                          </>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* تفصيل المطابقة */}
+                                <MatchBreakdownView
+                                  match={match}
+                                  property={prop}
+                                  preference={pref}
+                                  breakdown={breakdown}
+                                />
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8">
+                          <div className="text-center text-muted-foreground">لا توجد مطابقات متاحة</div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </TabsContent>
 
                   {/* تبويب التفاصيل */}
