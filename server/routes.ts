@@ -126,6 +126,8 @@ export async function registerRoutes(
         status: data.status || "ready",
         isActive: true,
         images: Array.isArray(data.images) ? data.images : [],
+        smartTags: Array.isArray(data.smartTags) ? data.smartTags : [],
+        notes: data.notes || null,
       });
 
       // البحث عن المطابقات للعقار الجديد
@@ -205,6 +207,8 @@ export async function registerRoutes(
         purchaseTimeline: data.purchaseTimeline || null,
         transactionType: data.transactionType || "buy",
         clientType: data.clientType || "direct",
+        smartTags: Array.isArray(data.smartTags) ? data.smartTags : [],
+        notes: data.notes || null,
         isActive: true,
       });
 
@@ -974,6 +978,8 @@ export async function registerRoutes(
         budgetMax,
         paymentMethod,
         purpose,
+        smartTags,
+        notes,
       } = req.body;
 
       // Validate required fields
@@ -1048,6 +1054,8 @@ export async function registerRoutes(
         budgetMax: isNaN(parsedBudgetMax!) ? null : parsedBudgetMax,
         paymentMethod: paymentMethod || null,
         purpose: purpose || null,
+        smartTags: Array.isArray(smartTags) ? smartTags : [],
+        notes: notes || null,
         isActive: true,
       });
 
@@ -1293,6 +1301,8 @@ export async function registerRoutes(
         images,
         latitude,
         longitude,
+        smartTags,
+        notes,
       } = req.body;
 
       // Validate required fields
@@ -1373,6 +1383,8 @@ export async function registerRoutes(
         description: description || null,
         status: status || "ready",
         images: Array.isArray(images) ? images : [],
+        smartTags: Array.isArray(smartTags) ? smartTags : [],
+        notes: notes || null,
         isActive: true,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,

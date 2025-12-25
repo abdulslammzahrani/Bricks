@@ -20,3 +20,7 @@ WHERE "property_verified" IS NULL
 
 
 
+
+
+
+

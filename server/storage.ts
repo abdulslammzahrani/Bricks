@@ -597,8 +597,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * خوارزمية المطابقة الذكية v3.1 - محسّنة وعملية
-   * نظام النقاط الموزونة: 100 نقطة أساسية + 5 نقاط بونص = 105 نقطة كحد أقصى
+   * خوارزمية المطابقة الذكية v3.2 - محسّنة وعملية
+   * نظام النقاط الموزونة: 100 نقطة أساسية + 5 نقاط بونص + 5 نقاط smartTags + 3 نقاط notes = 113 نقطة كحد أقصى
    * 
    * النقاط الأساسية (100 نقطة):
    * - الموقع الجغرافي (35 نقطة): مطابقة الحي = 35، حي مجاور = 22، نفس المدينة فقط = 12
@@ -611,11 +611,21 @@ export class DatabaseStorage implements IStorage {
    * - الشعبية (2 نقطة): ≥ 100 مشاهدة = 2، ≥ 50 = 1.5، ≥ 20 = 1، أي مشاهدة = 0.5
    * - الحالة النشطة (1 نقطة): isActive = true
    * 
+   * مطابقة smartTags (5 نقاط):
+   * - مقارنة smartTags بين الرغبة والعقار
+   * - حساب نسبة المطابقة: (عدد التطابقات / إجمالي العلامات الفريدة) × 5
+   * 
+   * مطابقة notes (3 نقاط):
+   * - البحث عن كلمات مفتاحية مشتركة بين notes الرغبة والعقار
+   * - البحث أيضاً في property.description إذا كانت notes موجودة في preference
+   * - حساب نسبة المطابقة: (عدد الكلمات المطابقة / إجمالي الكلمات) × 3
+   * 
    * تحسينات عملية:
    * - معالجة ذكية للنصوص (rooms: "4+", area: "300-400")
    * - مطابقة المرافق من array + البحث في description
    * - ربط transactionType مع status العقار
    * - عوامل ديناميكية حسب الشعبية وحداثة الإعلان
+   * - مطابقة اللمسات الأخيرة (smartTags و notes) لتحسين دقة المطابقة
    */
   private calculateMatchScore(property: Property, preference: BuyerPreference): number {
     let locationScore = 0;
@@ -840,7 +850,64 @@ export class DatabaseStorage implements IStorage {
     // المجموع الأساسي (100 نقطة كحد أقصى)
     const baseScore = Math.min(35, locationScore) + Math.min(30, priceScore) + Math.min(25, specsScore) + Math.min(10, detailsScore);
 
-    // ===== 5. عوامل ديناميكية (بونص يصل إلى 5 نقاط) =====
+    // ===== 5. مطابقة smartTags (بونص يصل إلى 5 نقاط) =====
+    let smartTagsScore = 0;
+    
+    if (preference.smartTags && Array.isArray(preference.smartTags) && preference.smartTags.length > 0 &&
+        property.smartTags && Array.isArray(property.smartTags) && property.smartTags.length > 0) {
+      
+      // حساب عدد التطابقات بين smartTags
+      const prefTags = preference.smartTags.map(tag => tag.toLowerCase().trim());
+      const propTags = property.smartTags.map(tag => tag.toLowerCase().trim());
+      
+      const matchingTags = prefTags.filter(tag => propTags.includes(tag));
+      const totalUniqueTags = new Set([...prefTags, ...propTags]).size;
+      
+      if (totalUniqueTags > 0) {
+        // نسبة المطابقة = (عدد التطابقات / إجمالي العلامات الفريدة) × 5
+        const matchRatio = matchingTags.length / totalUniqueTags;
+        smartTagsScore = matchRatio * 5;
+      }
+    }
+
+    // ===== 6. مطابقة notes (بونص يصل إلى 3 نقاط) =====
+    let notesScore = 0;
+    
+    if (preference.notes && property.notes) {
+      const prefNotes = preference.notes.toLowerCase().trim();
+      const propNotes = property.notes.toLowerCase().trim();
+      
+      if (prefNotes && propNotes) {
+        // استخراج الكلمات المفتاحية (تجاهل الكلمات القصيرة جداً)
+        const prefWords = prefNotes.split(/\s+/).filter(w => w.length > 2);
+        const propWords = propNotes.split(/\s+/).filter(w => w.length > 2);
+        
+        if (prefWords.length > 0 && propWords.length > 0) {
+          const matchingWords = prefWords.filter(word => propWords.includes(word));
+          const matchRatio = matchingWords.length / Math.max(prefWords.length, propWords.length);
+          notesScore = matchRatio * 3;
+        }
+      }
+    }
+    
+    // البحث أيضاً في property.description إذا كانت notes موجودة في preference
+    if (preference.notes && property.description && !property.notes) {
+      const prefNotes = preference.notes.toLowerCase().trim();
+      const propDesc = property.description.toLowerCase().trim();
+      
+      if (prefNotes && propDesc) {
+        const prefWords = prefNotes.split(/\s+/).filter(w => w.length > 2);
+        const descWords = propDesc.split(/\s+/).filter(w => w.length > 2);
+        
+        if (prefWords.length > 0 && descWords.length > 0) {
+          const matchingWords = prefWords.filter(word => descWords.includes(word));
+          const matchRatio = matchingWords.length / Math.max(prefWords.length, descWords.length);
+          notesScore = Math.max(notesScore, matchRatio * 2); // نقاط أقل لأنها في description وليس notes مباشرة
+        }
+      }
+    }
+
+    // ===== 7. عوامل ديناميكية (بونص يصل إلى 5 نقاط) =====
     let bonusScore = 0;
 
     // recency bonus (2 نقطة): العقارات الحديثة أفضل
@@ -875,11 +942,17 @@ export class DatabaseStorage implements IStorage {
 
     // الحد الأقصى للبونص 5 نقاط
     bonusScore = Math.min(5, bonusScore);
+    
+    // الحد الأقصى لـ smartTags 5 نقاط
+    smartTagsScore = Math.min(5, smartTagsScore);
+    
+    // الحد الأقصى لـ notes 3 نقاط
+    notesScore = Math.min(3, notesScore);
 
-    // المجموع النهائي (105 نقطة كحد أقصى: 100 أساسية + 5 بونص)
-    const totalScore = baseScore + bonusScore;
+    // المجموع النهائي (113 نقطة كحد أقصى: 100 أساسية + 5 بونص + 5 smartTags + 3 notes)
+    const totalScore = baseScore + bonusScore + smartTagsScore + notesScore;
 
-    return Math.min(105, Math.round(totalScore));
+    return Math.min(113, Math.round(totalScore));
   }
 
   // Contact Requests

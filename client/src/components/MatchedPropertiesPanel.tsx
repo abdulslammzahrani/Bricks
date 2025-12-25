@@ -31,6 +31,8 @@ interface MatchedProperty {
     rooms: string | null;
     images: string[] | null;
     status: string | null;
+    smartTags?: string[];
+    notes?: string | null;
   } | null;
 }
 
@@ -41,6 +43,8 @@ interface BuyerPreference {
   propertyType: string;
   budgetMin: number | null;
   budgetMax: number | null;
+  smartTags?: string[];
+  notes?: string | null;
 }
 
 const propertyTypeNames: Record<string, string> = {
@@ -133,6 +137,31 @@ function PreferenceMatches({ preference }: { preference: BuyerPreference }) {
           </Badge>
         )}
       </div>
+      
+      {/* Smart Tags and Notes from preference */}
+      {((preference.smartTags && Array.isArray(preference.smartTags) && preference.smartTags.length > 0) || 
+        ((preference as any).smart_tags && Array.isArray((preference as any).smart_tags) && (preference as any).smart_tags.length > 0) ||
+        (preference.notes && preference.notes.trim()) || 
+        ((preference as any).notes && String((preference as any).notes).trim())) ? (
+        <div className="mb-4 space-y-2">
+          {((preference.smartTags && Array.isArray(preference.smartTags) && preference.smartTags.length > 0) || 
+            ((preference as any).smart_tags && Array.isArray((preference as any).smart_tags) && (preference as any).smart_tags.length > 0)) && (
+            <div className="flex flex-wrap gap-1.5">
+              {((preference.smartTags && Array.isArray(preference.smartTags)) ? preference.smartTags : ((preference as any).smart_tags || [])).map((tag: string, idx: number) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+          {((preference.notes && preference.notes.trim()) || ((preference as any).notes && String((preference as any).notes).trim())) && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
+              <p className="font-medium mb-1">ملاحظات:</p>
+              <p className="whitespace-pre-wrap">{preference.notes || (preference as any).notes || ""}</p>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -221,6 +250,26 @@ function MatchCard({ match }: { match: MatchedProperty }) {
             </span>
           )}
         </div>
+        
+        {/* Smart Tags from property */}
+        {((property.smartTags && Array.isArray(property.smartTags) && property.smartTags.length > 0) || 
+          ((property as any).smart_tags && Array.isArray((property as any).smart_tags) && (property as any).smart_tags.length > 0)) && (
+          <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+            {((property.smartTags && Array.isArray(property.smartTags)) ? property.smartTags : ((property as any).smart_tags || [])).map((tag: string, idx: number) => (
+              <Badge key={idx} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+        
+        {/* Notes from property */}
+        {((property.notes && property.notes.trim()) || ((property as any).notes && String((property as any).notes).trim())) && (
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات:</p>
+            <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-2">{property.notes || (property as any).notes || ""}</p>
+          </div>
+        )}
 
         <Link href={`/property/${property.id}`}>
           <Button variant="outline" className="w-full gap-2" data-testid={`button-view-property-${property.id}`}>

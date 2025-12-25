@@ -212,7 +212,10 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
   const advance = () => { setIsAnimating(true); setTimeout(() => { setActiveCard(p => p + 1); setIsAnimating(false); }, 200); };
   const goBack = (idx: number) => { if (idx < activeCard && !isAnimating) { setIsAnimating(true); setTimeout(() => { setActiveCard(idx); setIsAnimating(false); }, 200); }};
   const handleSelection = (field: keyof SearchFilters, value: any) => setFilters(p => ({ ...p, [field]: value }));
-  const handleSearch = () => onSearch(filters);
+  const handleSearch = () => {
+    console.log("handleSearch called with filters:", filters);
+    onSearch(filters);
+  };
 
   const canProceed = () => {
     if (activeCard === 0) return filters.name && isPhoneValid && filters.email && filters.propertyCategory;
@@ -576,7 +579,17 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                         </div>
                       </div>
                       <Textarea value={filters.notes} onChange={e => setFilters(f => ({ ...f, notes: e.target.value }))} className="h-24 resize-none rounded-xl" placeholder="أو اكتب أي تفاصيل أخرى هنا..." />
-                      <Button onClick={handleSearch} className="w-full h-12 rounded-xl text-lg bg-gradient-to-r from-emerald-600 to-green-500 shadow-lg text-white">إرسال الطلب</Button>
+                      <Button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSearch();
+                        }}
+                        className="w-full h-12 rounded-xl text-lg bg-gradient-to-r from-emerald-600 to-green-500 shadow-lg text-white hover:from-emerald-700 hover:to-green-600"
+                        type="button"
+                      >
+                        إرسال الطلب
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -755,7 +768,19 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                     {filters.smartTags.includes(tag) ? <Check className="w-3.5 h-3.5 flex-shrink-0" /> : <Plus className="w-3.5 h-3.5 flex-shrink-0" />} <span>{tag}</span>
                   </button>
                 ))}</div>
-                <Textarea value={filters.notes} onChange={e => setFilters(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" /><Button onClick={handleSearch} className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white">إرسال الطلب</Button></div>}
+                <Textarea value={filters.notes} onChange={e => setFilters(f => ({ ...f, notes: e.target.value }))} className="h-16 rounded-lg text-xs" />
+                <Button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSearch();
+                  }}
+                  className="w-full h-10 rounded-lg bg-green-600 shadow-md text-white hover:bg-green-700"
+                  type="button"
+                >
+                  إرسال الطلب
+                </Button>
+              </div>}
               </div>
             </div>
             )}

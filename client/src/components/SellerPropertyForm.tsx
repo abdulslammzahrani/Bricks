@@ -400,6 +400,8 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
           description: listingData.notes || null,
           status: listingData.propertyCondition === "new" ? "ready" : listingData.propertyCondition === "under_construction" ? "under_construction" : "ready",
           images: [],
+          smartTags: listingData.smartTags || [],
+          notes: listingData.notes || null,
         });
         const result = await response.json();
         

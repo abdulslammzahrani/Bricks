@@ -29,6 +29,8 @@ interface BuyerPreference {
   budgetMax: number | null;
   paymentMethod: string | null;
   isActive: boolean;
+  smartTags?: string[];
+  notes?: string | null;
 }
 
 export default function Dashboard() {
@@ -324,6 +326,25 @@ export default function Dashboard() {
                           </div>
                         )}
                       </div>
+                      
+                      {/* Smart Tags */}
+                      {(pref.smartTags && Array.isArray(pref.smartTags) && pref.smartTags.length > 0) || (pref as any).smart_tags ? (
+                        <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+                          {((pref.smartTags && Array.isArray(pref.smartTags)) ? pref.smartTags : ((pref as any).smart_tags || [])).map((tag: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : null}
+                      
+                      {/* Notes */}
+                      {(pref.notes && pref.notes.trim()) || (pref as any).notes ? (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات:</p>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{pref.notes || (pref as any).notes || ""}</p>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

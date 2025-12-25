@@ -3,3 +3,7 @@ ALTER TABLE matches
 ADD COLUMN IF NOT EXISTS detailed_verifications JSONB;
 
 
+
+
+
+

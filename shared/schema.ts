@@ -50,6 +50,8 @@ export const buyerPreferences = pgTable("buyer_preferences", {
   purpose: text("purpose"), // residence, investment
   purchaseTimeline: text("purchase_timeline"), // asap, within_month, within_3months, within_6months, within_year, flexible
   clientType: text("client_type").notNull().default("direct"), // direct, broker (مباشر أو وسيط)
+  smartTags: text("smart_tags").array().default(sql`'{}'::text[]`),
+  notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
 });
 
@@ -74,6 +76,8 @@ export const properties = pgTable("properties", {
   yearBuilt: text("year_built"),
   amenities: text("amenities").array().default(sql`'{}'::text[]`), // parking, ac, wifi, security, garden, gym, maid_room, electricity, water
   images: text("images").array().default(sql`'{}'::text[]`),
+  smartTags: text("smart_tags").array().default(sql`'{}'::text[]`),
+  notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
   viewsCount: integer("views_count").notNull().default(0),
   latitude: doublePrecision("latitude"),

@@ -108,6 +108,19 @@ import {
   PieChart as PieChartIcon,
   ThumbsUp,
   CheckCircle2,
+  Briefcase,
+  Sparkles,
+  Hammer,
+  FileText as FileTextIcon,
+  LandPlot,
+  Hotel,
+  Waves,
+  Trees,
+  Factory,
+  Warehouse,
+  School,
+  Stethoscope,
+  Fuel,
 } from "lucide-react";
 import { SiFacebook, SiSnapchat, SiTiktok, SiGoogle, SiMailchimp, SiWhatsapp } from "react-icons/si";
 // ✅ استيراد المكون البياني باسمه الأصلي
@@ -125,6 +138,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import SellerPropertyForm from "@/components/SellerPropertyForm";
+import { MatchScoreCircle } from "@/components/MatchScoreCircle";
+import { ComparisonSection } from "@/components/ComparisonSection";
+import { TagsSection } from "@/components/TagsSection";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -135,6 +151,26 @@ const propertyTypeLabels: Record<string, string> = {
   land: "أرض",
   duplex: "دوبلكس",
   studio: "استوديو",
+  floor: "دور",
+  townhouse: "تاون هاوس",
+  residential_building: "عمارة سكنية",
+  residential_land: "أرض سكنية",
+  rest_house: "استراحة",
+  chalet: "شاليه",
+  room: "غرفة",
+  commercial_building: "عمارة تجارية",
+  tower: "برج",
+  complex: "مجمع",
+  commercial_land: "أرض تجارية",
+  industrial_land: "أرض صناعية",
+  farm: "مزرعة",
+  warehouse: "مستودع",
+  factory: "مصنع",
+  school: "مدرسة",
+  health_center: "مركز صحي",
+  gas_station: "محطة",
+  showroom: "معرض",
+  office: "مكتب",
 };
 
 const paymentMethodLabels: Record<string, string> = {
@@ -145,6 +181,26 @@ const paymentMethodLabels: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   ready: "جاهز",
   under_construction: "تحت الإنشاء",
+};
+
+// المميزات الذكية حسب نوع العقار (من AdvancedSearchForm)
+const SPECIFIC_TAGS: Record<string, string[]> = {
+  "villa": ["مسبح", "قبو", "مصعد", "تكييف مركزي", "ملحق خارجي", "مسطحات خضراء", "واجهة مودرن", "شقة استثمارية", "غرفة كبار سن", "درج داخلي", "نظام سمارت هوم", "عوازل حرارية", "إشراف هندسي", "ضمانات هيكل", "غرفة غسيل", "غرفة سينما"],
+  "apartment": ["مدخل خاص", "سطح خاص", "موقف خاص", "غرفة سائق", "غرفة خادمة", "دخول ذكي", "بلكونة", "مطبخ راكب", "مكيفات راكبة", "خزان مستقل", "قريبة من مسجد", "ألياف بصرية", "تشطيب فاخر"],
+  "residential_building": ["موقع زاوية", "واجهة كلادينج", "مصعد (ماركة عالمية)", "عدادات مستقلة", "تمديدات سبليت", "مدخل فندقي", "غرفة حارس", "أنظمة دفاع مدني", "خزان مياه كبير", "مواقف مرصوفة", "نظام انتركوم", "سطح معزول", "قريب من الخدمات", "صك إلكتروني", "عقود إلكترونية"],
+  "tower": ["مهبط طائرات (Helipad)", "نظام إدارة مباني (BMS)", "مصاعد ذكية (Destination Control)", "واجهات زجاجية (Double Glazed)", "ردهة استقبال فندقية", "نادي صحي وسبا", "قاعة مؤتمرات مشتركة", "مصلى مركزي", "مواقف ذكية/Valet", "مولدات احتياطية كاملة", "تكييف مركزي (Chiller)", "أنظمة مراقبة CCTV", "ألياف بصرية (Fiber)", "نظام تنظيف واجهات", "حدائق معلقة (Roof Garden)", "كافتيريا داخلية"],
+  "showroom": ["ارتفاع سقف مضاعف", "واجهة زجاجية (Curtain Wall)", "رخصة مطعم/كافيه", "جلسات خارجية مرخصة", "مواقف أمامية واسعة", "مدخل خدمة خلفي", "تمديدات غاز مركزية", "نظام تهوية (Ventilation)", "إمكانية التجزئة", "موقع زاوية", "مساحة إعلانية", "مدخل ذوي همم (Ramp)", "عداد كهرباء مستقل", "تكييف مركزي مستقل", "أرضيات فاخرة", "نظام صوتي مدمج"],
+  "office": ["أرضيات مرتفعة (Raised Floors)", "إطلالة بانورامية", "دخول ذكي (Access Control)", "غرفة خوادم (Server Room)", "مطبخ تحضيري (Pantry)", "عوازل صوتية", "تصميم مرن (Open Plan)", "دورة مياه خاصة", "غرفة أرشيف", "إضاءة LED", "نظام سلامة (Sprinklers)", "ستائر ذكية", "أثاث مكتبي", "قاعة اجتماعات زجاجية", "خدمة نظافة", "واي فاي مركزي"],
+  "commercial_building": ["على شارع تجاري", "معارض مؤجرة", "مكاتب جاهزة", "رخصة دفاع مدني", "عدادات مستقلة", "كاميرات مراقبة", "مصعد", "قبو مواقف"],
+  "complex": ["سور وبوابات (Gated)", "حراسة 24/7", "مسبح مشترك", "نادي رياضي (Gym)", "حدائق (Landscape)", "ألعاب أطفال", "ميني ماركت", "قاعة مناسبات", "صيانة ونظافة دائمة", "مواقف مظللة", "دخول ذكي", "مسجد/مصلى", "محطة معالجة مياه", "مولد احتياطي", "مكافحة حريق مركزية", "كافيه لاونج"],
+  "commercial_land": ["رخصة بناء جاهزة", "موقع حيوي", "أرض مستوية", "خدمات واصلة", "شارع مسفلت", "قريبة من معالم", "سهولة الوصول", "خالية من العوائق", "مصرحة متعدد", "إمكانية الدمج", "تقرير مساحي", "واجهة تجارية", "منطقة نمو", "بعيدة عن السيول", "مسموح القبو", "سور مؤقت"],
+  "school": ["معامل حاسب آلي", "مختبرات علوم", "مكتبة شاملة", "مسرح مدرسي", "مسبح داخلي", "ملاعب رياضية", "عيادة طبية", "مقصف/كافيتيريا", "غرف معلمين مؤثثة", "مصلى واسع", "ساحات مظللة", "نظام مراقبة", "بوابات آمنة", "منطقة حافلات (Drop-off)", "تسهيلات لأصحاب الهمم", "غرف فنون/مرسم"],
+  "warehouse": ["رصيف تحميل (Dock Levelers)", "أرضية إيبوكسي", "نظام رفوف (Racking Ready)", "عزل حراري (Sandwich Panel)", "إضاءة طبيعية", "مكتب إداري داخلي", "مرافق للعمال", "غرفة حارس", "سور خرساني", "كهرباء 3 فاز", "نظام إطفاء متطور", "ساحة مناورة شاحنات", "تهوية صناعية", "كاميرات مراقبة", "مخارج طوارئ", "غرف تبريد"],
+  "gas_station": ["عقود Anchor Tenants", "سوبر ماركت (C-Store)", "طلبات سيارة (Drive-thru)", "منطقة مطاعم", "مغسلة أوتوماتيكية", "مغسلة يدوية", "مركز خدمة سيارات", "صراف آلي (ATM)", "مصلى ودورات مياه", "سكن عمال", "مضخات ديزل للشاحنات", "استرجاع أبخرة", "مظلة LED حديثة", "خدمات مجانية (هواء/ماء)", "ربط أمني (شموس)", "خزانات مزدوجة (Double Wall)"],
+  "factory": ["رافعات علوية (Cranes)", "أرضيات صناعية", "نظام إطفاء آلي", "رصيف تحميل", "مبنى إداري", "مختبر جودة", "مستودع مواد", "شبكة هواء مضغوط", "نظام تهوية", "ميزان شاحنات", "غرفة مولدات", "سكن عمال", "خزانات وقود", "تصريف صناعي", "ورشة صيانة", "شهادات أيزو"],
+  "health_center": ["غرفة أشعة (X-Ray)", "مختبر تحاليل", "صيدلية داخلية", "غرفة تعقيم", "مداخل ذوي همم", "غرفة نفايات طبية", "مولد طوارئ UPS", "غرفة طوارئ", "نظام استدعاء تمريض", "أرضيات فينيل طبي", "تكييف HEPA", "مواقف إسعاف", "استراحة أطباء", "دورات مياه خاصة", "شاشات انتظار", "دفاع مدني طبي"],
+  "industrial_land": ["داخل مدينة صناعية", "طرق شاحنات", "قرب ميناء", "محطة كهرباء", "شبكة غاز صناعي", "تصريف صناعي", "تصريح سكن عمال", "أرضية صلبة", "خدمات لوجستية", "أمن صناعي", "مخططات معتمدة", "إمكانية التجزئة", "إعفاءات جمركية", "شبكة اتصال", "تخزين خارجي", "مسورة بالكامل"],
+  "farm": ["فيلا/استراحة", "مجالس خارجية", "مسبح", "شبكة ري حديثة", "خزانات ضخمة", "بيوت محمية", "حظائر مواشي", "سكن عمال", "طرق مرصوفة", "مستودع أعلاف", "أشجار مثمرة", "مسطحات خضراء", "منطقة شواء", "سور كامل", "غطاسات ومضخات", "بوابة إلكترونية"]
 };
 
 const formatCurrency = (value: number) => {
@@ -165,6 +221,14 @@ const toArabicPhone = (phone: string) => {
     return arabicPhone.slice(0, -3) + '***';
   }
   return arabicPhone;
+};
+
+const maskPhone = (phone: string) => {
+  if (!phone) return '';
+  if (phone.length > 3) {
+    return phone.slice(0, -3) + '***';
+  }
+  return phone;
 };
 
 const maskBudget = (min?: number | null, max?: number | null) => {
@@ -386,6 +450,8 @@ export default function AdminDashboard() {
   const [showPropertyDetailsDialog, setShowPropertyDetailsDialog] = useState(false);
   const [isEditingProperty, setIsEditingProperty] = useState(false);
   const [propertyEditData, setPropertyEditData] = useState<Partial<Property>>({});
+  // State للتعديلات في قائمة المقارنة
+  const [comparisonEdits, setComparisonEdits] = useState<Record<string, { buyer?: string; seller?: string }>>({});
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
@@ -1345,6 +1411,20 @@ export default function AdminDashboard() {
     }
   }, [selectedBuyerPreferenceId, matches, preferences, users, filteredMatches]);
 
+  // useEffect لإعادة تعيين state التعديل عند تغيير المشتري المحدد
+  useEffect(() => {
+    if (!showMatchDetailsDialog) {
+      setIsEditingUser(false);
+      setUserEditData({});
+      setComparisonEdits({});
+    }
+  }, [selectedBuyerPreferenceId, showMatchDetailsDialog]);
+  
+  // إعادة تعيين التعديلات عند تغيير المطابقة المحددة
+  useEffect(() => {
+    setComparisonEdits({});
+  }, [selectedMatchTab]);
+
   // useEffect لتحديث buyerVerified عند تغيير checkboxes
   useEffect(() => {
     const allChecked = Object.values(buyerVerificationChecks).every(v => v === true);
@@ -2283,7 +2363,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div className="flex flex-col items-start text-right">
                                       <p className="font-medium text-sm">{user.name}</p>
-                                      <p className="text-xs text-muted-foreground">{toArabicPhone(user.phone || '')}</p>
+                                      <p className="text-xs text-muted-foreground">{maskPhone(user.phone || '')}</p>
                                     </div>
                                   </div>
                                 ) : (
@@ -5294,6 +5374,8 @@ export default function AdminDashboard() {
         if (!open) {
           setSelectedBuyerPreferenceId(null);
           setSelectedMatchId(null);
+          setIsEditingUser(false);
+          setUserEditData({});
         }
       }}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" dir="rtl">
@@ -5356,18 +5438,10 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 
                 <Tabs defaultValue="matches" className="mt-4 flex flex-col flex-1 min-h-0" dir="rtl">
-                  <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+                  <TabsList className="grid w-full grid-cols-1 flex-shrink-0">
                     <TabsTrigger value="matches" className="flex items-center gap-2">
                       <Building2 className="w-4 h-4" />
                       المطابقات
-                    </TabsTrigger>
-                    <TabsTrigger value="details" className="flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      التفاصيل
-                    </TabsTrigger>
-                    <TabsTrigger value="verifications" className="flex items-center gap-2">
-                      <ClipboardList className="w-4 h-4" />
-                      التأكيدات
                     </TabsTrigger>
                   </TabsList>
 
@@ -5446,11 +5520,461 @@ export default function AdminDashboard() {
                             if (!prop || !seller) return <div className="text-center py-8 text-muted-foreground">البيانات غير مكتملة</div>;
 
                             const breakdown = calculateMatchBreakdown(prop, pref);
+                            
+                            // دالة لتحديث القيم
+                            const handleBuyerValueChange = (sectionKey: string, index: number, newValue: string) => {
+                              const key = `${match.id}-${sectionKey}-${index}`;
+                              setComparisonEdits(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key], buyer: newValue }
+                              }));
+                            };
+                            
+                            const handleSellerValueChange = (sectionKey: string, index: number, newValue: string) => {
+                              const key = `${match.id}-${sectionKey}-${index}`;
+                              setComparisonEdits(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key], seller: newValue }
+                              }));
+                            };
+                            
+                            // دالة للحصول على القيمة (المعدلة أو الأصلية)
+                            const getValue = (sectionKey: string, index: number, field: 'buyer' | 'seller', originalValue: string | number) => {
+                              const key = `${match.id}-${sectionKey}-${index}`;
+                              return comparisonEdits[key]?.[field] ?? String(originalValue);
+                            };
+                            
+                            // استخراج metadata من description للعقار
+                            const extractMetadata = (description: string | null) => {
+                              if (!description) return null;
+                              try {
+                                const jsonMatch = description.match(/<metadata>(.*?)<\/metadata>/s);
+                                if (jsonMatch) {
+                                  return JSON.parse(jsonMatch[1]);
+                                }
+                              } catch (e) {
+                                console.warn("Error parsing metadata:", e);
+                              }
+                              return null;
+                            };
+                            
+                            const propMetadata = extractMetadata(prop.description);
+                            
+                            // دالة للتحقق من المطابقة
+                            const checkMatch = (type: string, buyerValue: any, sellerValue: any) => {
+                              if (type === 'city') return buyerValue === sellerValue;
+                              if (type === 'district') return Array.isArray(buyerValue) && buyerValue.includes(sellerValue);
+                              if (type === 'propertyType') return buyerValue === sellerValue;
+                              if (type === 'area') return buyerValue && sellerValue && Math.abs(buyerValue - sellerValue) <= (buyerValue * 0.2);
+                              if (type === 'rooms') return buyerValue === sellerValue;
+                              if (type === 'budget') {
+                                if (typeof buyerValue === 'object' && buyerValue.min && buyerValue.max) {
+                                  return sellerValue >= buyerValue.min && sellerValue <= buyerValue.max;
+                                }
+                                return false;
+                              }
+                              return buyerValue === sellerValue;
+                            };
+
+                            const getScoreLabel = (score: number) => {
+                              const scorePercentage = Math.round((score / 105) * 100);
+                              if (scorePercentage >= 80) return "ممتاز";
+                              if (scorePercentage >= 70) return "جيد جداً";
+                              if (scorePercentage >= 60) return "جيد";
+                              if (scorePercentage >= 50) return "مقبول";
+                              return "ضعيف";
+                            };
+
+                            // دالة لتحويل البيانات إلى تنسيق المقارنة
+                            const getMatchStatus = (buyerValue: any, sellerValue: any, type: string): 'full' | 'partial' | 'none' => {
+                              if (checkMatch(type, buyerValue, sellerValue)) return 'full';
+                              if (type === 'area' && buyerValue && sellerValue) {
+                                const diff = Math.abs(buyerValue - sellerValue);
+                                if (diff <= buyerValue * 0.3) return 'partial';
+                              }
+                              if (type === 'budget' && typeof buyerValue === 'object' && buyerValue.min && buyerValue.max) {
+                                const flexThreshold = buyerValue.max * 1.1;
+                                if (sellerValue >= buyerValue.min * 0.9 && sellerValue <= flexThreshold) return 'partial';
+                              }
+                              return 'none';
+                            };
+
+                            // تحويل البيانات إلى تنسيق المقارنة
+                            const commercialTypes = ["tower", "complex", "commercial_building", "showroom", "office", "warehouse", "gas_station", "school", "factory", "farm"];
+                            const residentialTypes = ["apartment", "villa", "floor", "townhouse", "residential_building", "residential_land", "rest_house", "chalet", "room"];
+                            const buyerCategory = commercialTypes.includes(pref.propertyType) ? "تجاري" : residentialTypes.includes(pref.propertyType) ? "سكني" : "غير محدد";
+                            const sellerCategory = commercialTypes.includes(prop.propertyType) ? "تجاري" : residentialTypes.includes(prop.propertyType) ? "سكني" : "غير محدد";
+
+                            // تحديد حالة العقار المطلوبة من المشتري (عادة المشترون يريدون "جاهز" عند الشراء)
+                            const buyerPropertyStatus = pref.transactionType === "buy" ? "ready" : "under_construction";
+                            const buyerPropertyStatusLabel = buyerPropertyStatus === "ready" ? "جاهز" : "تحت الإنشاء";
+                            const sellerPropertyStatusLabel = prop.status === "ready" ? "جاهز" : prop.status === "under_construction" ? "تحت الإنشاء" : "غير محدد";
+                            const propertyStatusMatch = buyerPropertyStatus === prop.status ? 'full' : 'none';
+
+                            const classificationDetailsBase = [
+                              { 
+                                label: 'تصنيف العقار', 
+                                buyerValue: buyerCategory, 
+                                sellerValue: sellerCategory, 
+                                match: buyerCategory === sellerCategory ? 'full' : 'none',
+                                fieldType: 'select' as const,
+                                options: [
+                                  { value: 'سكني', label: 'سكني' },
+                                  { value: 'تجاري', label: 'تجاري' },
+                                  { value: 'غير محدد', label: 'غير محدد' }
+                                ]
+                              },
+                              { 
+                                label: 'الغرض من الطلب', 
+                                buyerValue: pref.transactionType === "buy" ? "شراء" : "إيجار", 
+                                sellerValue: propMetadata?.offerType === "sale" ? "بيع" : propMetadata?.offerType === "rent" ? "إيجار" : "غير محدد", 
+                                match: (pref.transactionType === "buy" && propMetadata?.offerType === "sale") || (pref.transactionType === "rent" && propMetadata?.offerType === "rent") ? 'full' : 'none',
+                                fieldType: 'select' as const,
+                                options: [
+                                  { value: 'شراء', label: 'شراء' },
+                                  { value: 'إيجار', label: 'إيجار' },
+                                  { value: 'بيع', label: 'بيع' },
+                                  { value: 'غير محدد', label: 'غير محدد' }
+                                ]
+                              },
+                              { 
+                                label: 'حالة العقار', 
+                                buyerValue: buyerPropertyStatusLabel, 
+                                sellerValue: sellerPropertyStatusLabel, 
+                                match: propertyStatusMatch,
+                                fieldType: 'select' as const,
+                                options: [
+                                  { value: 'جاهز', label: 'جاهز' },
+                                  { value: 'تحت الإنشاء', label: 'تحت الإنشاء' },
+                                  { value: 'غير محدد', label: 'غير محدد' }
+                                ]
+                              },
+                            ];
+                            
+                            const classificationDetails = classificationDetailsBase.map((item, index) => {
+                              const buyerVal = getValue('classification', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('classification', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+
+                            const requestDetailsBase = [
+                              { label: 'السعر المطلوب', buyerValue: pref.budgetMin && pref.budgetMax ? `${formatCurrency(pref.budgetMin)} - ${formatCurrency(pref.budgetMax)}` : pref.budgetMax ? `حتى ${formatCurrency(pref.budgetMax)}` : "غير محدد", sellerValue: prop.price ? formatCurrency(prop.price) : "غير محدد", match: getMatchStatus({ min: pref.budgetMin, max: pref.budgetMax }, prop.price, 'budget') },
+                              { label: 'المساحة', buyerValue: pref.area ? `${pref.area} م²` : "غير محدد", sellerValue: prop.area ? `${prop.area} م²` : "غير محدد", match: getMatchStatus(pref.area, prop.area, 'area') },
+                            ];
+                            
+                            const requestDetails = requestDetailsBase.map((item, index) => {
+                              const buyerVal = getValue('request', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('request', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+
+                            const cityAndNeighborhoodBase = [
+                              { label: 'المدينة', buyerValue: pref.city || "غير محدد", sellerValue: prop.city || "غير محدد", match: checkMatch('city', pref.city, prop.city) ? 'full' : 'none' },
+                              { label: 'الحي', buyerValue: pref.districts && pref.districts.length > 0 ? pref.districts.join("، ") : "غير محدد", sellerValue: prop.district || "غير محدد", match: checkMatch('district', pref.districts, prop.district) ? 'full' : 'none' },
+                            ];
+                            
+                            const cityAndNeighborhood = cityAndNeighborhoodBase.map((item, index) => {
+                              const buyerVal = getValue('city', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('city', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+
+                            const propertyTypeOptions = Object.entries(propertyTypeLabels).map(([value, label]) => ({
+                              value: label,
+                              label: label
+                            }));
+                            propertyTypeOptions.push({ value: 'غير محدد', label: 'غير محدد' });
+                            
+                            const propertyTypeDataBase = [
+                              { 
+                                label: 'نوع العقار', 
+                                buyerValue: propertyTypeLabels[pref.propertyType] || pref.propertyType || "غير محدد", 
+                                sellerValue: propertyTypeLabels[prop.propertyType] || prop.propertyType || "غير محدد", 
+                                match: checkMatch('propertyType', pref.propertyType, prop.propertyType) ? 'full' : 'none',
+                                fieldType: 'select' as const,
+                                options: propertyTypeOptions
+                              },
+                            ];
+                            
+                            const propertyTypeData = propertyTypeDataBase.map((item, index) => {
+                              const buyerVal = getValue('propertyType', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('propertyType', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+
+                            const technicalSpecsBase = [
+                              { label: 'عدد الغرف', buyerValue: pref.rooms || "غير محدد", sellerValue: prop.rooms || "غير محدد", match: checkMatch('rooms', pref.rooms, prop.rooms) ? 'full' : 'none' },
+                              { label: 'عدد دورات المياه', buyerValue: pref.bathrooms || "غير محدد", sellerValue: prop.bathrooms || "غير محدد", match: pref.bathrooms === prop.bathrooms ? 'full' : (pref.bathrooms && prop.bathrooms && Math.abs(pref.bathrooms - prop.bathrooms) <= 1 ? 'partial' : 'none') },
+                            ];
+                            
+                            const technicalSpecs = technicalSpecsBase.map((item, index) => {
+                              const buyerVal = getValue('technical', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('technical', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+
+                            const budgetAndInvestmentBase = [
+                              { 
+                                label: 'الميزانية الإجمالية', 
+                                buyerValue: pref.budgetMax ? formatCurrency(pref.budgetMax) : "غير محدد", 
+                                sellerValue: prop.price ? formatCurrency(prop.price) : "غير محدد", 
+                                match: getMatchStatus({ min: pref.budgetMin, max: pref.budgetMax }, prop.price, 'budget'),
+                                fieldType: 'text' as const
+                              },
+                              { 
+                                label: 'طريقة الدفع', 
+                                buyerValue: paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod || "غير محدد", 
+                                sellerValue: propMetadata?.paymentPreference === "cash" ? "كاش" : propMetadata?.paymentPreference === "finance" ? "تمويل" : "غير محدد", 
+                                match: 'partial',
+                                fieldType: 'select' as const,
+                                options: [
+                                  { value: 'كاش', label: 'كاش' },
+                                  { value: 'تمويل', label: 'تمويل' },
+                                  { value: 'تمويل بنكي', label: 'تمويل بنكي' },
+                                  { value: 'غير محدد', label: 'غير محدد' }
+                                ]
+                              },
+                            ];
+                            
+                            const budgetAndInvestment = budgetAndInvestmentBase.map((item, index) => {
+                              const buyerVal = getValue('budget', index, 'buyer', item.buyerValue);
+                              const sellerVal = getValue('budget', index, 'seller', item.sellerValue);
+                              const newMatch = buyerVal === sellerVal ? 'full' : 'none';
+                              return {
+                                ...item,
+                                buyerValue: buyerVal,
+                                sellerValue: sellerVal,
+                                match: newMatch,
+                              };
+                            });
+                            
+                            // دالة لتحويل القيم المنسقة إلى قيم أصلية
+                            const parseValue = (formattedValue: string, originalValue: any, type: 'city' | 'district' | 'propertyType' | 'rooms' | 'bathrooms' | 'price' | 'area' | 'category' | 'transactionType' | 'status' | 'paymentMethod'): any => {
+                              if (!formattedValue || formattedValue === "غير محدد") {
+                                return originalValue;
+                              }
+                              
+                              // للمدينة والحي ونوع العقار: إرجاع النص مباشرة
+                              if (type === 'city' || type === 'district' || type === 'propertyType' || type === 'category' || type === 'transactionType' || type === 'status' || type === 'paymentMethod') {
+                                return formattedValue;
+                              }
+                              
+                              // للغرف ودورات المياه: استخراج الرقم
+                              if (type === 'rooms' || type === 'bathrooms') {
+                                const match = formattedValue.match(/\d+/);
+                                return match ? parseInt(match[0]) : originalValue;
+                              }
+                              
+                              // للمساحة: استخراج الرقم من "XXX م²"
+                              if (type === 'area') {
+                                const match = formattedValue.match(/(\d+)/);
+                                return match ? parseInt(match[1]) : originalValue;
+                              }
+                              
+                              // للسعر: استخراج الرقم من القيمة المنسقة (مثل "500 ألف" أو "1.5 مليون")
+                              if (type === 'price') {
+                                const numMatch = formattedValue.match(/([\d.]+)/);
+                                if (numMatch) {
+                                  const num = parseFloat(numMatch[1]);
+                                  if (formattedValue.includes('مليون')) {
+                                    return Math.round(num * 1000000);
+                                  } else if (formattedValue.includes('ألف')) {
+                                    return Math.round(num * 1000);
+                                  } else {
+                                    return Math.round(num);
+                                  }
+                                }
+                                return originalValue;
+                              }
+                              
+                              return originalValue;
+                            };
+                            
+                            // تحويل comparisonEdits إلى كائنات مؤقتة
+                            const updatedProperty = { ...prop };
+                            const updatedPreference = { ...pref };
+                            
+                            // تحديث المدينة (من cityAndNeighborhood)
+                            const cityKey = `${match.id}-city-0`;
+                            const cityBuyerVal = comparisonEdits[cityKey]?.buyer;
+                            const citySellerVal = comparisonEdits[cityKey]?.seller;
+                            if (cityBuyerVal) {
+                              updatedPreference.city = parseValue(cityBuyerVal, pref.city, 'city');
+                            }
+                            if (citySellerVal) {
+                              updatedProperty.city = parseValue(citySellerVal, prop.city, 'city');
+                            }
+                            
+                            // تحديث الحي (من cityAndNeighborhood)
+                            const districtKey = `${match.id}-city-1`;
+                            const districtBuyerVal = comparisonEdits[districtKey]?.buyer;
+                            const districtSellerVal = comparisonEdits[districtKey]?.seller;
+                            if (districtBuyerVal && districtBuyerVal !== "غير محدد") {
+                              updatedPreference.districts = [parseValue(districtBuyerVal, pref.districts?.[0], 'district')];
+                            }
+                            if (districtSellerVal && districtSellerVal !== "غير محدد") {
+                              updatedProperty.district = parseValue(districtSellerVal, prop.district, 'district');
+                            }
+                            
+                            // تحديث نوع العقار (من propertyTypeData)
+                            const propertyTypeKey = `${match.id}-propertyType-0`;
+                            const propertyTypeBuyerVal = comparisonEdits[propertyTypeKey]?.buyer;
+                            const propertyTypeSellerVal = comparisonEdits[propertyTypeKey]?.seller;
+                            if (propertyTypeBuyerVal) {
+                              // البحث عن المفتاح من propertyTypeLabels
+                              const buyerTypeKey = Object.entries(propertyTypeLabels).find(([_, label]) => label === propertyTypeBuyerVal)?.[0];
+                              if (buyerTypeKey) {
+                                updatedPreference.propertyType = buyerTypeKey;
+                              }
+                            }
+                            if (propertyTypeSellerVal) {
+                              const sellerTypeKey = Object.entries(propertyTypeLabels).find(([_, label]) => label === propertyTypeSellerVal)?.[0];
+                              if (sellerTypeKey) {
+                                updatedProperty.propertyType = sellerTypeKey;
+                              }
+                            }
+                            
+                            // تحديث الغرف (من technicalSpecs)
+                            const roomsKey = `${match.id}-technical-0`;
+                            const roomsBuyerVal = comparisonEdits[roomsKey]?.buyer;
+                            const roomsSellerVal = comparisonEdits[roomsKey]?.seller;
+                            if (roomsBuyerVal) {
+                              updatedPreference.rooms = parseValue(roomsBuyerVal, pref.rooms, 'rooms');
+                            }
+                            if (roomsSellerVal) {
+                              updatedProperty.rooms = parseValue(roomsSellerVal, prop.rooms, 'rooms');
+                            }
+                            
+                            // تحديث دورات المياه (من technicalSpecs)
+                            const bathroomsKey = `${match.id}-technical-1`;
+                            const bathroomsBuyerVal = comparisonEdits[bathroomsKey]?.buyer;
+                            const bathroomsSellerVal = comparisonEdits[bathroomsKey]?.seller;
+                            if (bathroomsBuyerVal) {
+                              updatedPreference.bathrooms = parseValue(bathroomsBuyerVal, pref.bathrooms, 'bathrooms');
+                            }
+                            if (bathroomsSellerVal) {
+                              updatedProperty.bathrooms = parseValue(bathroomsSellerVal, prop.bathrooms, 'bathrooms');
+                            }
+                            
+                            // تحديث السعر (من requestDetails أو budgetAndInvestment)
+                            const priceKey = `${match.id}-request-0`;
+                            const priceSellerVal = comparisonEdits[priceKey]?.seller;
+                            if (priceSellerVal) {
+                              updatedProperty.price = parseValue(priceSellerVal, prop.price, 'price');
+                            }
+                            
+                            // تحديث الميزانية (من requestDetails)
+                            const budgetKey = `${match.id}-request-0`;
+                            const budgetBuyerVal = comparisonEdits[budgetKey]?.buyer;
+                            if (budgetBuyerVal && budgetBuyerVal.includes('-')) {
+                              const parts = budgetBuyerVal.split('-');
+                              if (parts.length === 2) {
+                                const min = parseValue(parts[0].trim(), pref.budgetMin, 'price');
+                                const max = parseValue(parts[1].trim(), pref.budgetMax, 'price');
+                                updatedPreference.budgetMin = min;
+                                updatedPreference.budgetMax = max;
+                              }
+                            } else if (budgetBuyerVal && budgetBuyerVal.includes('حتى')) {
+                              const max = parseValue(budgetBuyerVal.replace('حتى', '').trim(), pref.budgetMax, 'price');
+                              updatedPreference.budgetMax = max;
+                            }
+                            
+                            // تحديث المساحة (من requestDetails)
+                            const areaKey = `${match.id}-request-1`;
+                            const areaBuyerVal = comparisonEdits[areaKey]?.buyer;
+                            const areaSellerVal = comparisonEdits[areaKey]?.seller;
+                            if (areaBuyerVal) {
+                              updatedPreference.area = parseValue(areaBuyerVal, pref.area, 'area');
+                            }
+                            if (areaSellerVal) {
+                              updatedProperty.area = parseValue(areaSellerVal, prop.area, 'area');
+                            }
+                            
+                            // تحديث حالة العقار (من classificationDetails)
+                            const statusKey = `${match.id}-classification-2`;
+                            const statusSellerVal = comparisonEdits[statusKey]?.seller;
+                            if (statusSellerVal === 'جاهز') {
+                              updatedProperty.status = 'ready';
+                            } else if (statusSellerVal === 'تحت الإنشاء') {
+                              updatedProperty.status = 'under_construction';
+                            }
+                            
+                            // تحديث transactionType (من classificationDetails)
+                            const transactionTypeKey = `${match.id}-classification-1`;
+                            const transactionTypeBuyerVal = comparisonEdits[transactionTypeKey]?.buyer;
+                            if (transactionTypeBuyerVal === 'شراء') {
+                              updatedPreference.transactionType = 'buy';
+                            } else if (transactionTypeBuyerVal === 'إيجار') {
+                              updatedPreference.transactionType = 'rent';
+                            }
+                            
+                            // حساب نسبة المطابقة المحدثة باستخدام calculateMatchBreakdown
+                            const updatedBreakdown = calculateMatchBreakdown(updatedProperty, updatedPreference);
+                            const localMatchScore = updatedBreakdown.total;
+                            const localPercentage = Math.round((localMatchScore / 105) * 100);
+
+                            // إنشاء key فريد للتأكد من إعادة render عند تغيير comparisonEdits
+                            const comparisonKey = Object.keys(comparisonEdits)
+                              .filter(key => key.startsWith(`${match.id}-`))
+                              .sort()
+                              .join('-') || 'empty';
+
+                            // Final Tags - تحويل القسمات الأخيرة إلى تاقات
+                            const finalTags = [
+                              // تاقات المشتري
+                              ...(pref.notes ? [{ label: pref.notes, type: 'buyer' as const }] : []),
+                              // تاقات البائع
+                              ...(propMetadata?.notes ? [{ label: propMetadata.notes, type: 'seller' as const }] : []),
+                              // مميزات عامة من smartTags
+                              ...(prop.smartTags && prop.smartTags.length > 0 
+                                ? prop.smartTags.slice(0, 8).map(tag => ({ label: tag }))
+                                : [
+                                    { label: "مدخل خاص" },
+                                    { label: "غرفة خادمة" },
+                                    { label: "سطح خاص" },
+                                    { label: "موقف خاص" },
+                                    { label: "دخول ذكي" },
+                                    { label: "بلكونة" },
+                                    { label: "تشطيب فاخر" },
+                                    { label: "خزان مستقل" },
+                                  ]
+                              ),
+                            ];
 
                             return (
-                              <div className="space-y-4">
+                              <div className="space-y-2">
                                 {/* زر الموافقة المبدئية */}
-                                <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-2">
                                   <CardContent className="p-4">
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-3">
@@ -5498,13 +6022,165 @@ export default function AdminDashboard() {
                                   </CardContent>
                                 </Card>
 
-                                {/* تفصيل المطابقة */}
-                                <MatchBreakdownView
-                                  match={match}
-                                  property={prop}
-                                  preference={pref}
-                                  breakdown={breakdown}
-                                />
+                                {/* Main Comparison - New Design */}
+                                <div className="bg-white rounded-lg shadow-sm p-3">
+                                  {/* User Cards and Match Score */}
+                                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-3">
+                                    {/* Buyer Card */}
+                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2 border-2 border-blue-200">
+                                      <div className="flex flex-col items-center text-center">
+                                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-1.5">
+                                          <UserIcon className="text-white" size={20} />
+                                        </div>
+                                        <span className="inline-block bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs mb-1">
+                                          مشتري
+                                        </span>
+                                        <h3 className="text-xs mb-1.5 font-semibold">{buyer?.name || "مشتري"}</h3>
+                                        
+                                        <div className="flex gap-1.5">
+                                          <button className="p-1 bg-white rounded-full hover:bg-blue-50 transition-colors">
+                                            <Mail size={14} className="text-gray-600" />
+                                          </button>
+                                          <button className="p-1 bg-white rounded-full hover:bg-blue-50 transition-colors">
+                                            <MessageSquare size={14} className="text-gray-600" />
+                                          </button>
+                                          <button className="p-1 bg-white rounded-full hover:bg-blue-50 transition-colors">
+                                            <Phone size={14} className="text-gray-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Match Score */}
+                                    <div className="flex items-center justify-center">
+                                      <MatchScoreCircle percentage={localPercentage} label={getScoreLabel(localMatchScore)} />
+                                    </div>
+
+                                    {/* Seller Card */}
+                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2 border-2 border-green-200">
+                                      <div className="flex flex-col items-center text-center">
+                                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-1.5">
+                                          <Store className="text-white" size={20} />
+                                        </div>
+                                        <span className="inline-block bg-green-600 text-white px-2 py-0.5 rounded-full text-xs mb-1">
+                                          بائع
+                                        </span>
+                                        <h3 className="text-xs mb-1.5 font-semibold">{seller.name}</h3>
+                                        
+                                        <div className="flex gap-1.5">
+                                          <button className="p-1 bg-white rounded-full hover:bg-green-50 transition-colors">
+                                            <Mail size={14} className="text-gray-600" />
+                                          </button>
+                                          <button className="p-1 bg-white rounded-full hover:bg-green-50 transition-colors">
+                                            <MessageSquare size={14} className="text-gray-600" />
+                                          </button>
+                                          <button className="p-1 bg-white rounded-full hover:bg-green-50 transition-colors">
+                                            <Phone size={14} className="text-gray-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Comparison Sections */}
+                                  <div className="space-y-2">
+                                    <ComparisonSection
+                                      key={`classification-${match.id}-${comparisonKey}`}
+                                      title="تصنيف العقار"
+                                      icon="🏘️"
+                                      items={classificationDetails}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('classification', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('classification', index, newValue)}
+                                    />
+                                    
+                                    <ComparisonSection
+                                      key={`request-${match.id}-${comparisonKey}`}
+                                      title="تفاصيل الطلب"
+                                      icon="📋"
+                                      items={requestDetails}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('request', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('request', index, newValue)}
+                                    />
+                                    
+                                    <ComparisonSection
+                                      key={`city-${match.id}-${comparisonKey}`}
+                                      title="المدينة والحي"
+                                      icon="📍"
+                                      items={cityAndNeighborhood}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('city', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('city', index, newValue)}
+                                    />
+                                    
+                                    <ComparisonSection
+                                      key={`propertyType-${match.id}-${comparisonKey}`}
+                                      title="نوع العقار"
+                                      icon="🏠"
+                                      items={propertyTypeData}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('propertyType', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('propertyType', index, newValue)}
+                                    />
+                                    
+                                    <ComparisonSection
+                                      key={`technical-${match.id}-${comparisonKey}`}
+                                      title="المواصفات الفنية"
+                                      icon="🔧"
+                                      items={technicalSpecs}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('technical', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('technical', index, newValue)}
+                                    />
+                                    
+                                    <ComparisonSection
+                                      key={`budget-${match.id}-${comparisonKey}`}
+                                      title="الميزانية والاستثمار"
+                                      icon="💰"
+                                      items={budgetAndInvestment}
+                                      onBuyerValueChange={(index, newValue) => handleBuyerValueChange('budget', index, newValue)}
+                                      onSellerValueChange={(index, newValue) => handleSellerValueChange('budget', index, newValue)}
+                                    />
+                                    
+                                    <TagsSection
+                                      title="اللمسات الأخيرة"
+                                      icon="📝"
+                                      tags={finalTags}
+                                    />
+                                  </div>
+
+                                  {/* Action Button */}
+                                  <div className="mt-3 flex justify-center">
+                                    <Button
+                                      variant="outline"
+                                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-1.5 rounded-lg transition-colors text-xs"
+                                      onClick={() => {
+                                        updateMatchStatusMutation.mutate({ 
+                                          matchId: match.id, 
+                                          status: "preliminary_approval" 
+                                        });
+                                        toast({ 
+                                          title: "تمت الموافقة المبدئية", 
+                                          description: "تم نقل المطابقة إلى الصفقات العقارية" 
+                                        });
+                                      }}
+                                      disabled={updateMatchStatusMutation.isPending || (match as any).status === "preliminary_approval"}
+                                    >
+                                      {updateMatchStatusMutation.isPending ? (
+                                        <>
+                                          <RefreshCw className="w-4 h-4 animate-spin" />
+                                          جاري المعالجة...
+                                        </>
+                                      ) : (match as any).status === "preliminary_approval" ? (
+                                        <>
+                                          <CheckCircle2 className="w-4 h-4" />
+                                          تمت الموافقة
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ThumbsUp className="w-4 h-4" />
+                                          موافقة مبدئية
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
                             );
                           })()}
@@ -5514,677 +6190,6 @@ export default function AdminDashboard() {
                       <Card>
                         <CardContent className="py-8">
                           <div className="text-center text-muted-foreground">لا توجد مطابقات متاحة</div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
-
-                  {/* تبويب التفاصيل */}
-                  <TabsContent value="details" className="mt-4 overflow-y-auto flex-1">
-                    {pref && buyer ? (
-                      <div className="space-y-4 pb-4">
-                        {/* معلومات المشتري */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <div className="p-2 rounded-lg bg-blue-100">
-                                <UserIcon className="h-4 w-4 text-blue-600" />
-                              </div>
-                              معلومات المشتري
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                                  <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                  <p className="text-sm font-medium">{buyer.name}</p>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
-                                  <Phone className="h-4 w-4 text-muted-foreground" />
-                                  <p className="text-sm font-medium">{toArabicPhone(buyer.phone || '')}</p>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="text-sm font-semibold text-muted-foreground">البريد الإلكتروني</Label>
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                                  <Mail className="h-4 w-4 text-muted-foreground" />
-                                  <p className="text-sm font-medium">{buyer.email}</p>
-                                </div>
-                              </div>
-                              {buyer.whatsappNumber && (
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-semibold text-muted-foreground">واتساب</Label>
-                                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
-                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                    <p className="text-sm font-medium">{toArabicPhone(buyer.whatsappNumber)}</p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* تفاصيل الرغبة */}
-                        <div className="space-y-4">
-                          {/* الموقع والمنطقة */}
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-blue-100">
-                                  <MapPin className="h-4 w-4 text-blue-600" />
-                                </div>
-                                الموقع والمنطقة
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                {/* المدينة */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-semibold text-muted-foreground">المدينة المفضلة</Label>
-                                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                    {saudiCities.map((city) => (
-                                      <div
-                                        key={city.name}
-                                        className={`
-                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
-                                          ${pref.city === city.name 
-                                            ? "bg-primary text-white border-primary shadow-sm" 
-                                            : "bg-slate-50 border-gray-200 text-gray-500"}
-                                        `}
-                                      >
-                                        {pref.city === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                        {city.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* الأحياء */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-semibold text-muted-foreground">
-                                    الأحياء المفضلة ({pref.districts?.length || 0})
-                                  </Label>
-                                  <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
-                                    {(() => {
-                                      const selectedCity = saudiCities.find(c => c.name === pref.city);
-                                      const districts = selectedCity?.neighborhoods || [];
-                                      const selectedDistricts = pref.districts || [];
-                                      
-                                      if (districts.length === 0) {
-                                        return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
-                                      }
-                                      
-                                      if (selectedDistricts.length === 0) {
-                                        return <p className="w-full text-center text-muted-foreground py-8 text-sm">لم يتم اختيار أي أحياء</p>;
-                                      }
-                                      
-                                      return districts.filter(d => selectedDistricts.includes(d.name)).map((district) => (
-                                        <div
-                                          key={district.name}
-                                          className="flex-shrink-0 px-4 py-2.5 rounded-lg border bg-primary text-white border-primary shadow-sm cursor-default text-sm font-bold whitespace-nowrap"
-                                        >
-                                          <Check className="inline-block w-3.5 h-3.5 ml-1.5" />
-                                          {district.name}
-                                        </div>
-                                      ));
-                                    })()}
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          {/* نوع العقار والمواصفات */}
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-green-100">
-                                  <Building2 className="h-4 w-4 text-green-600" />
-                                </div>
-                                نوع العقار والمواصفات
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                {/* نوع العقار */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-semibold text-muted-foreground">نوع العقار المطلوب</Label>
-                                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                    {Object.entries(propertyTypeLabels).map(([key, label]) => (
-                                      <div
-                                        key={key}
-                                        className={`
-                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
-                                          ${pref.propertyType === key 
-                                            ? "bg-primary text-white border-primary shadow-sm" 
-                                            : "bg-slate-50 border-gray-200 text-gray-500"}
-                                        `}
-                                      >
-                                        {pref.propertyType === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                        {label}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* المواصفات التفصيلية */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                                  {/* الغرف */}
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                      <Bed className="h-4 w-4" />
-                                      عدد الغرف
-                                    </Label>
-                                    {pref.rooms ? (
-                                      <div className="p-3 rounded-lg bg-slate-50 border">
-                                        <p className="text-base font-bold text-primary">{pref.rooms} غرفة</p>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                        <p className="text-sm text-muted-foreground">غير محدد</p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* المساحة */}
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                      <Ruler className="h-4 w-4" />
-                                      المساحة
-                                    </Label>
-                                    {pref.area ? (
-                                      <div className="p-3 rounded-lg bg-slate-50 border">
-                                        <p className="text-base font-bold text-primary">{pref.area} م²</p>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                        <p className="text-sm text-muted-foreground">غير محدد</p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* نوع المعاملة */}
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                      <Handshake className="h-4 w-4" />
-                                      نوع المعاملة
-                                    </Label>
-                                    <div className="p-3 rounded-lg bg-slate-50 border">
-                                      <Badge variant="outline" className="text-sm">
-                                        {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          {/* الميزانية والدفع */}
-                          <Card>
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-lg flex items-center gap-2">
-                                <div className="p-2 rounded-lg bg-orange-100">
-                                  <Wallet className="h-4 w-4 text-orange-600" />
-                                </div>
-                                الميزانية وطريقة الدفع
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="space-y-4">
-                                {/* الميزانية */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-semibold text-muted-foreground">الميزانية المتاحة</Label>
-                                  {(pref.budgetMin || pref.budgetMax) ? (
-                                    <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
-                                      <p className="text-xl font-bold text-primary">{maskBudget(pref.budgetMin, pref.budgetMax)}</p>
-                                      {(pref.budgetMin || pref.budgetMax) && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          {pref.budgetMin ? `من ${formatCurrency(pref.budgetMin)}` : ''} 
-                                          {pref.budgetMin && pref.budgetMax ? ' إلى ' : ''}
-                                          {pref.budgetMax ? `${formatCurrency(pref.budgetMax)}` : ''}
-                                        </p>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="p-4 rounded-lg bg-slate-50 border border-dashed">
-                                      <p className="text-sm text-muted-foreground">غير محدد</p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* طريقة الدفع والغرض */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-semibold text-muted-foreground">طريقة الدفع</Label>
-                                    {pref.paymentMethod ? (
-                                      <div className="p-3 rounded-lg bg-slate-50 border">
-                                        <Badge variant="outline" className="text-sm">
-                                          {paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}
-                                        </Badge>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                        <p className="text-sm text-muted-foreground">غير محدد</p>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* الغرض */}
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-semibold text-muted-foreground">الغرض من الشراء</Label>
-                                    {pref.purpose ? (
-                                      <div className="p-3 rounded-lg bg-slate-50 border">
-                                        <Badge variant="outline" className="text-sm">
-                                          {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}
-                                        </Badge>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                        <p className="text-sm text-muted-foreground">غير محدد</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {/* التأكد من صحة الرغبة */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <div className="p-2 rounded-lg bg-green-100">
-                                <ClipboardCheck className="h-4 w-4 text-green-600" />
-                              </div>
-                              التأكد من صحة الرغبة
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-city"
-                                  checked={buyerVerificationChecks.city}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, city: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-city" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  المدينة صحيحة
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-districts"
-                                  checked={buyerVerificationChecks.districts}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, districts: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-districts" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  الأحياء صحيحة
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-propertyType"
-                                  checked={buyerVerificationChecks.propertyType}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, propertyType: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-propertyType" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  نوع العقار صحيح
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-budget"
-                                  checked={buyerVerificationChecks.budget}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, budget: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-budget" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  الميزانية صحيحة
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-rooms"
-                                  checked={buyerVerificationChecks.rooms}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, rooms: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-rooms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  الغرف صحيحة
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-area"
-                                  checked={buyerVerificationChecks.area}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, area: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-area" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  المساحة صحيحة
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-transactionType"
-                                  checked={buyerVerificationChecks.transactionType}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, transactionType: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-transactionType" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  نوع المعاملة صحيح
-                                </label>
-                              </div>
-                              <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox
-                                  id="check-purpose"
-                                  checked={buyerVerificationChecks.purpose}
-                                  onCheckedChange={(checked) => {
-                                    setBuyerVerificationChecks({ ...buyerVerificationChecks, purpose: checked === true });
-                                  }}
-                                />
-                                <label htmlFor="check-purpose" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                  الغرض صحيح
-                                </label>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* تفصيل النتيجة */}
-                        {bestMatch && bestProp && bestBreakdown && (
-                          <MatchBreakdownView
-                            match={bestMatch}
-                            property={bestProp}
-                            preference={pref}
-                            breakdown={bestBreakdown}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">لا توجد تفاصيل متاحة</div>
-                    )}
-                  </TabsContent>
-
-                  {/* تبويب التأكيدات */}
-                  <TabsContent value="verifications" className="mt-4 overflow-y-auto flex-1">
-                    {bestMatch && bestProp && bestBreakdown ? (
-                      <div className="space-y-4 pb-4">
-                        {/* صف الموقع */}
-                        <div 
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedSellerMatchId(bestMatch.id);
-                            setShowSellerEditDialog(true);
-                          }}
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-5 h-5 text-blue-500" />
-                                <span className="font-medium text-sm">الموقع</span>
-                              </div>
-                              <span className="text-sm font-bold text-blue-600">
-                                {bestBreakdown.location}/35
-                              </span>
-                            </div>
-                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-blue-500 rounded-full transition-all"
-                                style={{ width: `${(bestBreakdown.location / 35) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* صف السعر */}
-                        <div 
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedSellerMatchId(bestMatch.id);
-                            setShowSellerEditDialog(true);
-                          }}
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Wallet className="w-5 h-5 text-green-500" />
-                                <span className="font-medium text-sm">السعر</span>
-                              </div>
-                              <span className="text-sm font-bold text-green-600">
-                                {bestBreakdown.price}/30
-                              </span>
-                            </div>
-                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-green-500 rounded-full transition-all"
-                                style={{ width: `${(bestBreakdown.price / 30) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* صف المواصفات */}
-                        <div 
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedSellerMatchId(bestMatch.id);
-                            setShowSellerEditDialog(true);
-                          }}
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-purple-500" />
-                                <span className="font-medium text-sm">المواصفات</span>
-                              </div>
-                              <span className="text-sm font-bold text-purple-600">
-                                {bestBreakdown.specifications}/25
-                              </span>
-                            </div>
-                            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className="h-full bg-purple-500 rounded-full transition-all"
-                                style={{ width: `${(bestBreakdown.specifications / 25) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* مقارنة تفصيلية */}
-                        <Card className="mt-6">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                              <FileText className="w-5 h-5 text-primary" />
-                              مقارنة تفصيلية
-                            </CardTitle>
-                            <CardDescription className="text-sm mt-2">
-                              عرض تفصيلي لبيانات المشتري والبائعين. للتعديل، استخدم زر "تعديل" في جدول المطابقات.
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent className="pt-4">
-                            {(() => {
-                              // ترتيب المطابقات حسب matchScore (الأفضل أولاً)
-                              const sortedMatches = [...buyerMatches].sort((a, b) => b.matchScore - a.matchScore);
-
-                              return (
-                                <div className="w-full" dir="rtl">
-                                  {/* بيانات المشتري فقط */}
-                                  <div className="space-y-4">
-                                    <Accordion type="single" collapsible defaultValue="buyer-data" className="w-full">
-                                      <AccordionItem value="buyer-data">
-                                        <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
-                                          <UserIcon className="w-5 h-5 text-primary" />
-                                          <span className="font-bold text-lg">بيانات المشتري: {buyer?.name || "مشتري"}</span>
-                                        </AccordionTrigger>
-                                        <AccordionContent className="space-y-6 pt-4">
-                                          {/* الموقع */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <MapPin className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">الموقع</h4>
-                                            </div>
-                                            
-                                            {/* المدينة */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">المدينة</label>
-                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                                {saudiCities.map((city) => (
-                                                  <div
-                                                    key={city.name}
-                                                    className={`
-                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
-                                                      ${pref?.city === city.name 
-                                                        ? "bg-primary text-white border-primary" 
-                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                    `}
-                                                  >
-                                                    {city.name}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-
-                                            {/* الأحياء */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">الأحياء</label>
-                                              <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
-                                                {(() => {
-                                                  const selectedCity = saudiCities.find(c => c.name === pref?.city);
-                                                  const districts = selectedCity?.neighborhoods || [];
-                                                  return districts.length > 0 ? districts.map((district) => (
-                                                    <div
-                                                      key={district.name}
-                                                      className={`
-                                                        py-3 px-2 rounded-lg border text-sm font-bold cursor-default
-                                                        ${pref?.districts?.includes(district.name)
-                                                          ? "bg-primary text-white border-primary" 
-                                                          : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                      `}
-                                                    >
-                                                      {pref?.districts?.includes(district.name) && <Check className="inline-block w-3 h-3 ml-1" />}
-                                                      {district.name}
-                                                    </div>
-                                                  )) : <p className="col-span-3 text-center text-muted-foreground py-10">لا توجد أحياء</p>;
-                                                })()}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* المواصفات */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Building2 className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">المواصفات</h4>
-                                            </div>
-                                            
-                                            {/* النوع */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">نوع العقار</label>
-                                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
-                                                  <div
-                                                    key={key}
-                                                    className={`
-                                                      flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap cursor-default
-                                                      ${pref?.propertyType === key 
-                                                        ? "bg-primary text-white border-primary" 
-                                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                                    `}
-                                                  >
-                                                    {label}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-
-                                            {/* الغرف */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">عدد الغرف</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.rooms || "غير محدد"}
-                                              </div>
-                                            </div>
-
-                                            {/* المساحة */}
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">المساحة (م²)</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.area || "غير محدد"} م²
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* المالية */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Wallet className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">المالية</h4>
-                                            </div>
-                                            
-                                            <div className="space-y-2">
-                                              <label className="block text-xs font-bold text-gray-700">الميزانية</label>
-                                              <div className="text-sm text-muted-foreground">
-                                                {pref?.budgetMin && pref?.budgetMax 
-                                                  ? `${(pref.budgetMin / 1000000).toFixed(1)} - ${(pref.budgetMax / 1000000).toFixed(1)} مليون`
-                                                  : "غير محدد"}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* إضافية */}
-                                          <div className="space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Settings2 className="w-4 h-4 text-primary" />
-                                              <h4 className="font-bold text-sm">إضافية</h4>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-2 gap-4">
-                                              <div className="space-y-2">
-                                                <Label className="text-sm font-medium">نوع المعاملة</Label>
-                                                <div className="text-sm text-muted-foreground">
-                                                  {pref?.transactionType === "buy" ? "شراء" : pref?.transactionType === "rent" ? "تأجير" : "غير محدد"}
-                                                </div>
-                                              </div>
-                                              <div className="space-y-2">
-                                                <Label className="text-sm font-medium">الغرض</Label>
-                                                <div className="text-sm text-muted-foreground">
-                                                  {pref?.purpose === "residence" ? "سكن" : pref?.purpose === "investment" ? "استثمار" : "غير محدد"}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </AccordionContent>
-                                      </AccordionItem>
-                                    </Accordion>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : (
-                      <Card>
-                        <CardContent className="py-8">
-                          <div className="text-center text-muted-foreground">لا توجد بيانات متاحة</div>
                         </CardContent>
                       </Card>
                     )}
@@ -6202,6 +6207,43 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة تعديل بيانات البائع */}
+      <Dialog open={showSellerEditDialog} onOpenChange={setShowSellerEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          {(() => {
+            if (!selectedSellerMatchId) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
+            
+            const match = matches.find(m => m.id === selectedSellerMatchId);
+            if (!match) return <div className="text-center py-8 text-muted-foreground">المطابقة غير موجودة</div>;
+            
+            const prop = properties.find(p => p.id === match.propertyId);
+            const seller = prop ? users.find(u => u.id === prop.sellerId) : null;
+            if (!prop || !seller) return <div className="text-center py-8 text-muted-foreground">البيانات غير متوفرة</div>;
+
+            return (
+              <SellerPropertyForm
+                property={prop}
+                seller={seller}
+                onSave={async (updatedProperty) => {
+                  try {
+                    await apiRequest(`/api/properties/${prop.id}`, {
+                      method: "PUT",
+                      body: JSON.stringify(updatedProperty),
+                    });
+                    queryClient.invalidateQueries({ queryKey: ["properties"] });
+                    queryClient.invalidateQueries({ queryKey: ["matches"] });
+                    toast({ title: "تم التحديث", description: "تم تحديث بيانات العقار بنجاح" });
+                    setShowSellerEditDialog(false);
+                  } catch (error: any) {
+                    toast({ title: "خطأ", description: error.message || "فشل في تحديث البيانات", variant: "destructive" });
+                  }
+                }}
+              />
             );
           })()}
         </DialogContent>
@@ -7185,7 +7227,7 @@ export default function AdminDashboard() {
           setPreferenceEditData({});
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
           {(() => {
             if (!selectedPreferenceId) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
             
@@ -7195,71 +7237,18 @@ export default function AdminDashboard() {
             const buyer = users.find(u => u.id === pref.userId);
             if (!buyer) return <div className="text-center py-8 text-muted-foreground">المشتري غير موجود</div>;
 
-            const currentData = isEditingPreference ? preferenceEditData : pref;
-            const currentCity = currentData.city || pref.city;
-            const currentDistricts = currentData.districts || pref.districts || [];
-
             return (
               <>
                 <DialogHeader className="pb-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                        <ClipboardList className="w-6 h-6 text-purple-600" />
-                      </div>
-                      <div>
-                        <DialogTitle className="text-xl">تفاصيل الرغبة</DialogTitle>
-                        <DialogDescription className="mt-1">
-                          {buyer.name} - {pref.city}
-                        </DialogDescription>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={isEditingPreference ? "outline" : "default"}
-                      className="gap-2"
-                      onClick={() => {
-                        if (isEditingPreference) {
-                          setIsEditingPreference(false);
-                          setPreferenceEditData({});
-                        } else {
-                          setIsEditingPreference(true);
-                          setPreferenceEditData({
-                            city: pref.city,
-                            districts: pref.districts || [],
-                            propertyType: pref.propertyType,
-                            transactionType: pref.transactionType,
-                            rooms: pref.rooms,
-                            area: pref.area,
-                            budgetMin: pref.budgetMin,
-                            budgetMax: pref.budgetMax,
-                            paymentMethod: pref.paymentMethod,
-                            purpose: pref.purpose,
-                            purchaseTimeline: pref.purchaseTimeline,
-                            clientType: pref.clientType,
-                            isActive: pref.isActive,
-                          });
-                        }
-                      }}
-                    >
-                      {isEditingPreference ? (
-                        <>
-                          <XCircle className="w-4 h-4" />
-                          إلغاء التعديل
-                        </>
-                      ) : (
-                        <>
-                          <Edit2 className="w-4 h-4" />
-                          تعديل الرغبة
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  <DialogTitle className="text-xl">تفاصيل الرغبة</DialogTitle>
+                  <DialogDescription className="mt-1">
+                    {buyer.name} - {pref.city}
+                  </DialogDescription>
                 </DialogHeader>
                 
-                <div className="max-w-4xl mx-auto space-y-6 mt-6">
-                  {/* معلومات المشتري - للعرض فقط */}
-                  {!isEditingPreference && (
+                <div className="flex justify-center pb-4">
+                  <div className="w-full max-w-3xl space-y-4" dir="rtl">
+                    {/* معلومات المشتري */}
                     <Card>
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -7270,68 +7259,32 @@ export default function AdminDashboard() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">الاسم</Label>
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <p className="text-sm font-medium">{buyer.name}</p>
-                            </div>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الاسم:</Label>
+                            <p className="text-sm font-medium">{buyer.name}</p>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">الجوال</Label>
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <p className="text-sm font-medium">{toArabicPhone(buyer.phone || '')}</p>
-                            </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الجوال:</Label>
+                            <p className="text-sm font-medium">{maskPhone(buyer.phone || '')}</p>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">البريد الإلكتروني</Label>
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <p className="text-sm font-medium">{buyer.email}</p>
-                            </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">البريد الإلكتروني:</Label>
+                            <p className="text-sm font-medium">{buyer.email}</p>
                           </div>
                           {buyer.whatsappNumber && (
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground">واتساب</Label>
-                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
-                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                <p className="text-sm font-medium">{toArabicPhone(buyer.whatsappNumber)}</p>
-                              </div>
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50" dir="rtl">
+                              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">واتساب:</Label>
+                              <p className="text-sm font-medium">{maskPhone(buyer.whatsappNumber)}</p>
                             </div>
                           )}
-                          {buyer.websiteUrl && (
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground">الموقع الإلكتروني</Label>
-                              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                                <a href={buyer.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline">
-                                  {buyer.websiteUrl}
-                                </a>
-                              </div>
-                            </div>
-                          )}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">الحالة</Label>
-                            <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
-                              {pref.isActive ? "نشط" : "غير نشط"}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">عدد المطابقات</Label>
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Link2 className="h-4 w-4 text-muted-foreground" />
-                              <p className="text-sm font-medium">{matches.filter(m => m.buyerPreferenceId === pref.id).length} مطابقة</p>
-                            </div>
-                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                  )}
-
-                  {/* تفاصيل الرغبة */}
-                  <div className="space-y-4">
                     {/* الموقع والمنطقة */}
                     <Card>
                       <CardHeader className="pb-3">
@@ -7343,125 +7296,26 @@ export default function AdminDashboard() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          {/* المدينة */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">المدينة المفضلة</Label>
-                            {isEditingPreference ? (
-                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                {saudiCities.map((city) => (
-                                  <button
-                                    key={city.name}
-                                    type="button"
-                                    onClick={() => {
-                                      setPreferenceEditData({
-                                        ...preferenceEditData,
-                                        city: city.name,
-                                        districts: [], // إعادة تعيين الأحياء عند تغيير المدينة
-                                      });
-                                    }}
-                                    className={`
-                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
-                                      ${currentCity === city.name 
-                                        ? "bg-primary text-white border-primary shadow-sm" 
-                                        : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
-                                    `}
-                                  >
-                                    {currentCity === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                    {city.name}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                {saudiCities.map((city) => (
-                                  <div
-                                    key={city.name}
-                                    className={`
-                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
-                                      ${pref.city === city.name 
-                                        ? "bg-primary text-white border-primary shadow-sm" 
-                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                    `}
-                                  >
-                                    {pref.city === city.name && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                    {city.name}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">المدينة المفضلة:</Label>
+                            <p className="text-sm font-medium">{pref.city || "غير محدد"}</p>
                           </div>
-
-                          {/* الأحياء */}
                           <div className="space-y-2">
                             <Label className="text-sm font-semibold text-muted-foreground">
-                              الأحياء المفضلة ({currentDistricts.length})
+                              الأحياء المفضلة ({pref.districts?.length || 0})
                             </Label>
-                            {isEditingPreference ? (
-                              <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
-                                {(() => {
-                                  const selectedCity = saudiCities.find(c => c.name === currentCity);
-                                  const districts = selectedCity?.neighborhoods || [];
-                                  
-                                  if (districts.length === 0) {
-                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
-                                  }
-                                  
-                                  return districts.map((district) => {
-                                    const isSelected = currentDistricts.includes(district.name);
-                                    return (
-                                      <button
-                                        key={district.name}
-                                        type="button"
-                                        onClick={() => {
-                                          const newDistricts = isSelected
-                                            ? currentDistricts.filter(d => d !== district.name)
-                                            : [...currentDistricts, district.name];
-                                          setPreferenceEditData({
-                                            ...preferenceEditData,
-                                            districts: newDistricts,
-                                          });
-                                        }}
-                                        className={`
-                                          flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
-                                          ${isSelected
-                                            ? "bg-primary text-white border-primary shadow-sm"
-                                            : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
-                                        `}
-                                      >
-                                        {isSelected && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                        {district.name}
-                                      </button>
-                                    );
-                                  });
-                                })()}
+                            {pref.districts && pref.districts.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {pref.districts.map((district) => (
+                                  <Badge key={district} variant="outline" className="text-sm">
+                                    {district}
+                                  </Badge>
+                                ))}
                               </div>
                             ) : (
-                              <div className="flex flex-wrap gap-2 overflow-y-auto max-h-[200px] pb-2 scrollbar-hide -mx-1 px-1">
-                                {(() => {
-                                  const selectedCity = saudiCities.find(c => c.name === pref.city);
-                                  const districts = selectedCity?.neighborhoods || [];
-                                  const selectedDistricts = pref.districts || [];
-                                  
-                                  if (districts.length === 0) {
-                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لا توجد أحياء متاحة</p>;
-                                  }
-                                  
-                                  if (selectedDistricts.length === 0) {
-                                    return <p className="w-full text-center text-muted-foreground py-8 text-sm">لم يتم اختيار أي أحياء</p>;
-                                  }
-                                  
-                                  return districts.filter(d => selectedDistricts.includes(d.name)).map((district) => (
-                                    <div
-                                      key={district.name}
-                                      className="flex-shrink-0 px-4 py-2.5 rounded-lg border bg-primary text-white border-primary shadow-sm cursor-default text-sm font-bold whitespace-nowrap"
-                                    >
-                                      <Check className="inline-block w-3.5 h-3.5 ml-1.5" />
-                                      {district.name}
-                                    </div>
-                                  ));
-                                })()}
-                              </div>
+                              <p className="text-sm text-muted-foreground">غير محدد</p>
                             )}
                           </div>
                         </div>
@@ -7479,147 +7333,31 @@ export default function AdminDashboard() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          {/* نوع العقار */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">نوع العقار المطلوب</Label>
-                            {isEditingPreference ? (
-                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    onClick={() => {
-                                      setPreferenceEditData({ ...preferenceEditData, propertyType: key });
-                                    }}
-                                    className={`
-                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap transition-colors
-                                      ${(preferenceEditData.propertyType || pref.propertyType) === key 
-                                        ? "bg-primary text-white border-primary shadow-sm" 
-                                        : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
-                                    `}
-                                  >
-                                    {(preferenceEditData.propertyType || pref.propertyType) === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                {Object.entries(propertyTypeLabels).map(([key, label]) => (
-                                  <div
-                                    key={key}
-                                    className={`
-                                      flex-shrink-0 px-4 py-2.5 rounded-lg border text-sm font-bold whitespace-nowrap cursor-default transition-colors
-                                      ${pref.propertyType === key 
-                                        ? "bg-primary text-white border-primary shadow-sm" 
-                                        : "bg-slate-50 border-gray-200 text-gray-500"}
-                                    `}
-                                  >
-                                    {pref.propertyType === key && <Check className="inline-block w-3.5 h-3.5 ml-1.5" />}
-                                    {label}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع العقار:</Label>
+                            <p className="text-sm font-medium">{propertyTypeLabels[pref.propertyType] || pref.propertyType || "غير محدد"}</p>
                           </div>
-
-                          {/* المواصفات التفصيلية */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                            {/* الغرف */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                <Bed className="h-4 w-4" />
-                                عدد الغرف
-                              </Label>
-                              {isEditingPreference ? (
-                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                                  {["1", "2", "3", "4", "5", "6", "7+"].map((room) => (
-                                    <button
-                                      key={room}
-                                      type="button"
-                                      onClick={() => {
-                                        setPreferenceEditData({ ...preferenceEditData, rooms: room });
-                                      }}
-                                      className={`
-                                        flex-shrink-0 px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap transition-colors
-                                        ${(preferenceEditData.rooms || pref.rooms) === room 
-                                          ? "bg-primary text-white border-primary shadow-sm" 
-                                          : "bg-slate-50 border-gray-200 text-gray-500 hover:bg-slate-100"}
-                                      `}
-                                    >
-                                      {(preferenceEditData.rooms || pref.rooms) === room && <Check className="inline-block w-3 h-3 ml-1" />}
-                                      {room} غرفة
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                pref.rooms ? (
-                                  <div className="p-3 rounded-lg bg-slate-50 border">
-                                    <p className="text-base font-bold text-primary">{pref.rooms} غرفة</p>
-                                  </div>
-                                ) : (
-                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                    <p className="text-sm text-muted-foreground">غير محدد</p>
-                                  </div>
-                                )
-                              )}
-                            </div>
-
-                            {/* المساحة */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                <Ruler className="h-4 w-4" />
-                                المساحة
-                              </Label>
-                              {isEditingPreference ? (
-                                <Input
-                                  value={preferenceEditData.area || pref.area || ''}
-                                  onChange={(e) => setPreferenceEditData({ ...preferenceEditData, area: e.target.value })}
-                                  placeholder="متر مربع"
-                                  dir="rtl"
-                                />
-                              ) : (
-                                pref.area ? (
-                                  <div className="p-3 rounded-lg bg-slate-50 border">
-                                    <p className="text-base font-bold text-primary">{pref.area} م²</p>
-                                  </div>
-                                ) : (
-                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                    <p className="text-sm text-muted-foreground">غير محدد</p>
-                                  </div>
-                                )
-                              )}
-                            </div>
-
-                            {/* نوع المعاملة */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                                <Handshake className="h-4 w-4" />
-                                نوع المعاملة
-                              </Label>
-                              {isEditingPreference ? (
-                                <Select
-                                  value={preferenceEditData.transactionType || pref.transactionType || 'buy'}
-                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, transactionType: value as 'buy' | 'rent' })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="buy">شراء</SelectItem>
-                                    <SelectItem value="rent">إيجار</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <div className="p-3 rounded-lg bg-slate-50 border">
-                                  <Badge variant="outline" className="text-sm">
-                                    {pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Handshake className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع المعاملة:</Label>
+                            <p className="text-sm font-medium">{pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}</p>
                           </div>
+                          {pref.rooms && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Bed className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">عدد الغرف:</Label>
+                              <p className="text-sm font-medium">{pref.rooms} غرفة</p>
+                            </div>
+                          )}
+                          {pref.area && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Ruler className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">المساحة:</Label>
+                              <p className="text-sm font-medium">{pref.area} م²</p>
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -7635,266 +7373,99 @@ export default function AdminDashboard() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-4">
-                          {/* الميزانية */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground">الميزانية المتاحة</Label>
-                            {isEditingPreference ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label className="text-xs text-muted-foreground">من (ريال)</Label>
-                                  <Input
-                                    type="number"
-                                    value={preferenceEditData.budgetMin || pref.budgetMin || ''}
-                                    onChange={(e) => setPreferenceEditData({ 
-                                      ...preferenceEditData, 
-                                      budgetMin: e.target.value ? parseInt(e.target.value) : undefined 
-                                    })}
-                                    placeholder="الحد الأدنى"
-                                    dir="rtl"
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="text-xs text-muted-foreground">إلى (ريال)</Label>
-                                  <Input
-                                    type="number"
-                                    value={preferenceEditData.budgetMax || pref.budgetMax || ''}
-                                    onChange={(e) => setPreferenceEditData({ 
-                                      ...preferenceEditData, 
-                                      budgetMax: e.target.value ? parseInt(e.target.value) : undefined 
-                                    })}
-                                    placeholder="الحد الأقصى"
-                                    dir="rtl"
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              (pref.budgetMin || pref.budgetMax) ? (
-                                <div className="p-4 rounded-lg bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200">
-                                  <p className="text-xl font-bold text-primary">{maskBudget(pref.budgetMin, pref.budgetMax)}</p>
-                                  {(pref.budgetMin || pref.budgetMax) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {pref.budgetMin ? `من ${formatCurrency(pref.budgetMin)}` : ''} 
-                                      {pref.budgetMin && pref.budgetMax ? ' إلى ' : ''}
-                                      {pref.budgetMax ? `${formatCurrency(pref.budgetMax)}` : ''}
-                                    </p>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="p-4 rounded-lg bg-slate-50 border border-dashed">
-                                  <p className="text-sm text-muted-foreground">غير محدد</p>
-                                </div>
-                              )
-                            )}
-                          </div>
-
-                          {/* طريقة الدفع والغرض */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground">طريقة الدفع</Label>
-                              {isEditingPreference ? (
-                                <Select
-                                  value={preferenceEditData.paymentMethod || pref.paymentMethod || ''}
-                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, paymentMethod: value })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="اختر طريقة الدفع" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="cash">كاش</SelectItem>
-                                    <SelectItem value="bank">تمويل بنكي</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                pref.paymentMethod ? (
-                                  <div className="p-3 rounded-lg bg-slate-50 border">
-                                    <Badge variant="outline" className="text-sm">
-                                      {paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}
-                                    </Badge>
-                                  </div>
-                                ) : (
-                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                    <p className="text-sm text-muted-foreground">غير محدد</p>
-                                  </div>
-                                )
-                              )}
+                        <div className="space-y-3">
+                          {(pref.budgetMin || pref.budgetMax) ? (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Wallet className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الميزانية:</Label>
+                              <p className="text-sm font-medium">
+                                {pref.budgetMin && pref.budgetMax 
+                                  ? `${formatCurrency(pref.budgetMin)} - ${formatCurrency(pref.budgetMax)}`
+                                  : pref.budgetMin 
+                                    ? `من ${formatCurrency(pref.budgetMin)}`
+                                    : pref.budgetMax
+                                      ? `حتى ${formatCurrency(pref.budgetMax)}`
+                                      : "غير محدد"}
+                              </p>
                             </div>
-
-                            {/* الغرض */}
-                            <div className="space-y-2">
-                              <Label className="text-sm font-semibold text-muted-foreground">الغرض من الشراء</Label>
-                              {isEditingPreference ? (
-                                <Select
-                                  value={preferenceEditData.purpose || pref.purpose || ''}
-                                  onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, purpose: value })}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="اختر الغرض" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="residence">سكن</SelectItem>
-                                    <SelectItem value="investment">استثمار</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                pref.purpose ? (
-                                  <div className="p-3 rounded-lg bg-slate-50 border">
-                                    <Badge variant="outline" className="text-sm">
-                                      {pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}
-                                    </Badge>
-                                  </div>
-                                ) : (
-                                  <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                    <p className="text-sm text-muted-foreground">غير محدد</p>
-                                  </div>
-                                )
-                              )}
+                          ) : null}
+                          {pref.paymentMethod && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Wallet className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">طريقة الدفع:</Label>
+                              <p className="text-sm font-medium">{paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}</p>
                             </div>
-                          </div>
-
-                          {/* الجدول الزمني */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              الجدول الزمني للشراء
-                            </Label>
-                            {isEditingPreference ? (
-                              <Select
-                                value={preferenceEditData.purchaseTimeline || pref.purchaseTimeline || ''}
-                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, purchaseTimeline: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="اختر الجدول الزمني" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="asap">فوراً</SelectItem>
-                                  <SelectItem value="within_month">خلال شهر</SelectItem>
-                                  <SelectItem value="within_3months">خلال 3 أشهر</SelectItem>
-                                  <SelectItem value="within_6months">خلال 6 أشهر</SelectItem>
-                                  <SelectItem value="within_year">خلال سنة</SelectItem>
-                                  <SelectItem value="flexible">مرن</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              pref.purchaseTimeline ? (
-                                <div className="p-3 rounded-lg bg-slate-50 border">
-                                  <Badge variant="outline" className="text-sm">
-                                    {pref.purchaseTimeline === "asap" ? "فوراً" :
-                                     pref.purchaseTimeline === "within_month" ? "خلال شهر" :
-                                     pref.purchaseTimeline === "within_3months" ? "خلال 3 أشهر" :
-                                     pref.purchaseTimeline === "within_6months" ? "خلال 6 أشهر" :
-                                     pref.purchaseTimeline === "within_year" ? "خلال سنة" :
-                                     pref.purchaseTimeline === "flexible" ? "مرن" : pref.purchaseTimeline}
-                                  </Badge>
-                                </div>
-                              ) : (
-                                <div className="p-3 rounded-lg bg-slate-50 border border-dashed">
-                                  <p className="text-sm text-muted-foreground">غير محدد</p>
-                                </div>
-                              )
-                            )}
-                          </div>
-
-                          {/* نوع العميل */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                              <UserIcon className="h-4 w-4" />
-                              نوع العميل
-                            </Label>
-                            {isEditingPreference ? (
-                              <Select
-                                value={preferenceEditData.clientType || pref.clientType || 'direct'}
-                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, clientType: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="direct">مباشر</SelectItem>
-                                  <SelectItem value="broker">وسيط</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <div className="p-3 rounded-lg bg-slate-50 border">
-                                <Badge variant="outline" className="text-sm">
-                                  {pref.clientType === "direct" ? "مباشر" : pref.clientType === "broker" ? "وسيط" : pref.clientType}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* الحالة */}
-                          <div className="space-y-2">
-                            <Label className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                              <Power className="h-4 w-4" />
-                              حالة الرغبة
-                            </Label>
-                            {isEditingPreference ? (
-                              <Select
-                                value={preferenceEditData.isActive !== undefined ? (preferenceEditData.isActive ? 'active' : 'inactive') : (pref.isActive ? 'active' : 'inactive')}
-                                onValueChange={(value) => setPreferenceEditData({ ...preferenceEditData, isActive: value === 'active' })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">نشط</SelectItem>
-                                  <SelectItem value="inactive">غير نشط</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
-                                {pref.isActive ? "نشط" : "غير نشط"}
-                              </Badge>
-                            )}
+                          )}
+                          {pref.purpose && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Target className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الغرض من الشراء:</Label>
+                              <p className="text-sm font-medium">{pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}</p>
+                            </div>
+                          )}
+                          {pref.purchaseTimeline && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الجدول الزمني:</Label>
+                              <p className="text-sm font-medium">
+                                {pref.purchaseTimeline === "asap" ? "فوراً" :
+                                 pref.purchaseTimeline === "within_month" ? "خلال شهر" :
+                                 pref.purchaseTimeline === "within_3months" ? "خلال 3 أشهر" :
+                                 pref.purchaseTimeline === "within_6months" ? "خلال 6 أشهر" :
+                                 pref.purchaseTimeline === "within_year" ? "خلال سنة" :
+                                 pref.purchaseTimeline === "flexible" ? "مرن" : pref.purchaseTimeline}
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع العميل:</Label>
+                            <p className="text-sm font-medium">{pref.clientType === "direct" ? "مباشر" : pref.clientType === "broker" ? "وسيط" : pref.clientType}</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
 
-                  {/* أزرار الحفظ */}
-                  {isEditingPreference && (
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={() => {
-                          setIsEditingPreference(false);
-                          setPreferenceEditData({});
-                        }}
-                        className="gap-2"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        إلغاء
-                      </Button>
-                      <Button
-                        size="lg"
-                        onClick={() => {
-                          if (pref.id) {
-                            updatePreferenceMutation.mutate({ 
-                              preferenceId: pref.id, 
-                              data: preferenceEditData 
-                            });
-                          }
-                        }}
-                        disabled={updatePreferenceMutation.isPending}
-                        className="gap-2"
-                      >
-                        {updatePreferenceMutation.isPending ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            جاري الحفظ...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4" />
-                            حفظ التغييرات
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                    {/* اللمسات الأخيرة - المميزات الذكية */}
+                    {((pref as any)?.smartTags && Array.isArray((pref as any).smartTags) && (pref as any).smartTags.length > 0) && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-pink-100">
+                              <Star className="h-4 w-4 text-pink-600" />
+                            </div>
+                            المميزات الذكية
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex flex-wrap gap-2">
+                            {(pref as any).smartTags.map((tag: string) => (
+                              <Badge key={tag} variant="outline" className="text-sm">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* الملاحظات */}
+                    {((pref as any)?.notes && (pref as any).notes.trim()) && (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-purple-100">
+                              <FileTextIcon className="h-4 w-4 text-purple-600" />
+                            </div>
+                            الملاحظات
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(pref as any).notes}</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </div>
               </>
             );
@@ -7902,6 +7473,7 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* نافذة تفاصيل العقار */}
       {/* نافذة تفاصيل العقار */}
       <Dialog open={showPropertyDetailsDialog} onOpenChange={(open) => {
         setShowPropertyDetailsDialog(open);

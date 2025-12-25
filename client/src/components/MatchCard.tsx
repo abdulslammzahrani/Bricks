@@ -181,6 +181,24 @@ export function MatchCard({
                     </Badge>
                   )}
                 </div>
+                {/* Smart Tags from buyer preference */}
+                {((buyerPreference?.smartTags && Array.isArray(buyerPreference.smartTags) && buyerPreference.smartTags.length > 0) || 
+                  ((buyerPreference as any)?.smart_tags && Array.isArray((buyerPreference as any).smart_tags) && (buyerPreference as any).smart_tags.length > 0)) && (
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-2 pt-2 border-t">
+                    {((buyerPreference?.smartTags && Array.isArray(buyerPreference.smartTags)) ? buyerPreference.smartTags : ((buyerPreference as any)?.smart_tags || [])).map((tag: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="text-xs rounded-full">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {/* Notes from buyer preference */}
+                {((buyerPreference?.notes && buyerPreference.notes.trim()) || ((buyerPreference as any)?.notes && String((buyerPreference as any).notes).trim())) && (
+                  <div className="mt-2 pt-2 border-t">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات المشتري:</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{buyerPreference?.notes || (buyerPreference as any)?.notes || ""}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -332,6 +350,24 @@ export function MatchCard({
                     </Badge>
                   )}
                 </div>
+                {/* Smart Tags from property */}
+                {((property?.smartTags && Array.isArray(property.smartTags) && property.smartTags.length > 0) || 
+                  ((property as any)?.smart_tags && Array.isArray((property as any).smart_tags) && (property as any).smart_tags.length > 0)) && (
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-2 pt-2 border-t">
+                    {((property?.smartTags && Array.isArray(property.smartTags)) ? property.smartTags : ((property as any)?.smart_tags || [])).map((tag: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="text-xs rounded-full">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {/* Notes from property */}
+                {((property?.notes && property.notes.trim()) || ((property as any)?.notes && String((property as any).notes).trim())) && (
+                  <div className="mt-2 pt-2 border-t">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات البائع:</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{property?.notes || (property as any)?.notes || ""}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

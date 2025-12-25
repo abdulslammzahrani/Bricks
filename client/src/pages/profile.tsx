@@ -900,6 +900,25 @@ export default function ProfilePage() {
                         <div className="text-sm text-muted-foreground">
                           الميزانية: {pref.budgetMin?.toLocaleString() || 0} - {pref.budgetMax?.toLocaleString() || "غير محدد"} ريال
                         </div>
+                        
+                        {/* Smart Tags */}
+                        {((pref.smartTags && Array.isArray(pref.smartTags) && pref.smartTags.length > 0) || ((pref as any).smart_tags && Array.isArray((pref as any).smart_tags) && (pref as any).smart_tags.length > 0)) && (
+                          <div className="flex flex-wrap gap-1.5 pt-2">
+                            {((pref.smartTags && Array.isArray(pref.smartTags)) ? pref.smartTags : ((pref as any).smart_tags || [])).map((tag: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Notes */}
+                        {((pref.notes && pref.notes.trim()) || ((pref as any).notes && String((pref as any).notes).trim())) && (
+                          <div className="pt-2">
+                            <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات:</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{pref.notes || (pref as any).notes || ""}</p>
+                          </div>
+                        )}
 
                         {/* Expandable Inline Edit Section */}
                         {expandedItemId === pref.id && (
@@ -1131,6 +1150,27 @@ export default function ProfilePage() {
                               <Check className="h-3 w-3" />
                               <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
                             </div>
+                            
+                            {/* Display Smart Tags and Notes in expanded view */}
+                            {((pref.smartTags && Array.isArray(pref.smartTags) && pref.smartTags.length > 0) || ((pref as any).smart_tags && Array.isArray((pref as any).smart_tags) && (pref as any).smart_tags.length > 0)) && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <Label className="text-xs text-muted-foreground">المميزات المطلوبة:</Label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {((pref.smartTags && Array.isArray(pref.smartTags)) ? pref.smartTags : ((pref as any).smart_tags || [])).map((tag: string, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {((pref.notes && pref.notes.trim()) || ((pref as any).notes && String((pref as any).notes).trim())) && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <Label className="text-xs text-muted-foreground">ملاحظات إضافية:</Label>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted/50 p-2 rounded-md">{pref.notes || (pref as any).notes || ""}</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
@@ -1217,6 +1257,25 @@ export default function ProfilePage() {
                             {prop.viewsCount || 0} مشاهدة
                           </div>
                         </div>
+                        
+                        {/* Smart Tags */}
+                        {((prop.smartTags && Array.isArray(prop.smartTags) && prop.smartTags.length > 0) || ((prop as any).smart_tags && Array.isArray((prop as any).smart_tags) && (prop as any).smart_tags.length > 0)) && (
+                          <div className="flex flex-wrap gap-1.5 pt-2 mt-2 border-t">
+                            {((prop.smartTags && Array.isArray(prop.smartTags)) ? prop.smartTags : ((prop as any).smart_tags || [])).map((tag: string, idx: number) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Notes */}
+                        {((prop.notes && prop.notes.trim()) || ((prop as any).notes && String((prop as any).notes).trim())) && (
+                          <div className="pt-2 mt-2 border-t">
+                            <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات:</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{prop.notes || (prop as any).notes || ""}</p>
+                          </div>
+                        )}
 
                         {/* Expandable Inline Edit Section for Properties */}
                         {expandedItemId === prop.id && (
@@ -1497,6 +1556,27 @@ export default function ProfilePage() {
                               <Check className="h-3 w-3" />
                               <span>التغييرات تُحفظ تلقائياً عند الخروج من الحقل</span>
                             </div>
+                            
+                            {/* Display Smart Tags and Notes in expanded view */}
+                            {((prop.smartTags && Array.isArray(prop.smartTags) && prop.smartTags.length > 0) || ((prop as any).smart_tags && Array.isArray((prop as any).smart_tags) && (prop as any).smart_tags.length > 0)) && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <Label className="text-xs text-muted-foreground">مميزات العقار:</Label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {((prop.smartTags && Array.isArray(prop.smartTags)) ? prop.smartTags : ((prop as any).smart_tags || [])).map((tag: string, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {((prop.notes && prop.notes.trim()) || ((prop as any).notes && String((prop as any).notes).trim())) && (
+                              <div className="space-y-2 pt-2 border-t">
+                                <Label className="text-xs text-muted-foreground">ملاحظات إضافية:</Label>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted/50 p-2 rounded-md">{prop.notes || (prop as any).notes || ""}</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>

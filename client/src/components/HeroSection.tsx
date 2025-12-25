@@ -73,7 +73,7 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
 
   // ✅ ربط المشتري وتحديث الداشبورد
   const buyerMutation = useMutation({
-    mutationFn: (filters: any) => {
+    mutationFn: async (filters: any) => {
       // تحويل بيانات AdvancedSearchForm إلى التنسيق المتوقع من API
       const parsedBudgetMin = filters.minPrice 
         ? parseInt(String(filters.minPrice).replace(/[^\d]/g, ""), 10)
@@ -82,7 +82,7 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
         ? parseInt(String(filters.maxPrice).replace(/[^\d]/g, ""), 10)
         : null;
 
-      return apiRequest("POST", "/api/buyers/register", {
+      const response = await apiRequest("POST", "/api/buyers/register", {
         name: filters.name || "",
         phone: filters.phone || "",
         email: filters.email || `${filters.phone}@temp.com`,
@@ -98,7 +98,16 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
         purchaseTimeline: filters.purchaseTimeline || null,
         transactionType: filters.transactionType === "rent" ? "rent" : "buy",
         clientType: filters.clientType || "direct",
+        smartTags: filters.smartTags || [],
+        notes: filters.notes || "",
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
@@ -106,6 +115,14 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
       setIsComplete(true);
       onCompleteChange?.(true);
       toast({ title: "تم تسجيل رغبتك بنجاح 🚀" });
+    },
+    onError: (error: any) => {
+      console.error("Error registering buyer:", error);
+      toast({ 
+        title: "حدث خطأ", 
+        description: error.message || "فشل في تسجيل الرغبة. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
     }
   });
 
