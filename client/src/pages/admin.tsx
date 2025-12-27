@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ import {
   TrendingUp,
   TrendingDown,
   MapPin,
+  Map as MapIcon,
   Wallet,
   Home,
   RefreshCw,
@@ -60,6 +62,8 @@ import {
   Settings2,
   LogOut,
   List,
+  LayoutGrid,
+  Grid3x3,
   Send,
   History,
   PlayCircle,
@@ -130,7 +134,6 @@ import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, S
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { saudiCities } from "@shared/saudi-locations";
 import { MatchCard, MatchCardCompact } from "@/components/MatchCard";
 import { MarketPulse, MarketPulseCompact } from "@/components/MarketPulse";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -141,6 +144,10 @@ import SellerPropertyForm from "@/components/SellerPropertyForm";
 import { MatchScoreCircle } from "@/components/MatchScoreCircle";
 import { ComparisonSection } from "@/components/ComparisonSection";
 import { TagsSection } from "@/components/TagsSection";
+import { PropertyMap } from "@/components/PropertyMap";
+import FormBuilder from "@/components/admin/FormBuilder/UltraSimplifiedFormBuilder";
+import LandingPagesManager from "@/components/admin/LandingPagesManager";
+import LeadsManager from "@/components/leads/LeadsManager";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -363,17 +370,29 @@ const platformInfo: Record<string, { name: string; icon: typeof SiFacebook; colo
   },
 };
 
+/**
+ * قائمة الأقسام في لوحة التحكم الإدارية
+ * 
+ * 📍 للبحث عن قسم معين:
+ * 1. ابحث عن: activeSection === "id" (مثال: activeSection === "form-builder")
+ * 2. أو ابحث عن: اسم_القسم Section في التعليقات
+ * 
+ * 📚 راجع PAGES_MAP.md و QUICK_REFERENCE.md لمزيد من التفاصيل
+ */
 const menuItems = [
-  { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },
-  { id: "users", label: "المستخدمين", icon: Users },
-  { id: "preferences", label: "الرغبات", icon: ClipboardList },
-  { id: "properties", label: "العقارات", icon: Building2 },
-  { id: "matches", label: "المطابقات", icon: Handshake },
+  { id: "overview", label: "نظرة عامة", icon: LayoutDashboard },        // ~السطر 1807
+  { id: "users", label: "المستخدمين", icon: Users },                    // ~السطر 1875
+  { id: "preferences", label: "الرغبات", icon: ClipboardList },          // ~السطر 2413
+  { id: "leads", label: "الليدز", icon: Users },
+  { id: "properties", label: "العقارات", icon: Building2 },             // ~السطر 2875
+  { id: "matches", label: "المطابقات", icon: Handshake },                // ~السطر 3427
+  { id: "form-builder", label: "Form Builder", icon: FileText },         // ~السطر 6079
   { id: "deals", label: "الصفقات العقارية", icon: ShoppingBag },
   { id: "analytics", label: "التحليلات", icon: TrendingUp },
   { id: "sending", label: "الإرسال", icon: Send },
   { id: "marketing", label: "التسويق", icon: Megaphone },
-  { id: "pages", label: "الصفحات التعريفية", icon: FileText },
+  { id: "landing-pages", label: "صفحات الهبوط", icon: Link2 },          // ~السطر 6084
+  { id: "pages", label: "الصفحات التعريفية", icon: FileText },          // ~السطر 6089
 ];
 
 export default function AdminDashboard() {
@@ -383,6 +402,35 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [propertyFilter, setPropertyFilter] = useState<string>("all");
+
+  // Fetch cities from API (fallback to static data)
+  const { data: citiesFromAPI } = useQuery({
+    queryKey: ["/api/form-builder/cities"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/form-builder/cities");
+        if (!res.ok) throw new Error("Failed to fetch cities");
+        return await res.json();
+      } catch (error) {
+        console.warn("Failed to fetch cities from API, using fallback:", error);
+        const { saudiCities } = await import("@shared/saudi-locations");
+        return saudiCities;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const availableCities = citiesFromAPI || [];
+  // State لإدارة وضع عرض العقارات
+  const [propertiesViewMode, setPropertiesViewMode] = useState<"grid" | "map" | "list" | "table">(() => {
+    const saved = localStorage.getItem("propertiesViewMode");
+    return (saved === "grid" || saved === "map" || saved === "list" || saved === "table") ? saved : "grid";
+  });
+  // State لإدارة وضع عرض الرغبات
+  const [preferencesViewMode, setPreferencesViewMode] = useState<"grid" | "map" | "list" | "table">(() => {
+    const saved = localStorage.getItem("preferencesViewMode");
+    return (saved === "grid" || saved === "map" || saved === "list" || saved === "table") ? saved : "grid";
+  });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [sendingClientId, setSendingClientId] = useState<string | null>(null);
   const [analyticsTimeFilter, setAnalyticsTimeFilter] = useState<"week" | "month" | "year">("month");
@@ -452,8 +500,12 @@ export default function AdminDashboard() {
   const [propertyEditData, setPropertyEditData] = useState<Partial<Property>>({});
   // State للتعديلات في قائمة المقارنة
   const [comparisonEdits, setComparisonEdits] = useState<Record<string, { buyer?: string; seller?: string }>>({});
+  // State للتعديلات في تفاصيل الرغبة
+  const [preferenceDetailsEdits, setPreferenceDetailsEdits] = useState<Partial<BuyerPreference>>({});
+  // State لتتبع الحقل الذي يتم تعديله حالياً
+  const [editingPreferenceField, setEditingPreferenceField] = useState<{ field: keyof BuyerPreference; tempValue: string } | null>(null);
 
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery<{
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery<{
     totalBuyers: number;
     totalSellers: number;
     totalProperties: number;
@@ -464,15 +516,15 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/stats"],
   });
 
-  const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery<User[]>({
+  const { data: users = [], isLoading: usersLoading, error: usersError, refetch: refetchUsers } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: preferences = [], isLoading: prefsLoading } = useQuery<BuyerPreference[]>({
+  const { data: preferences = [], isLoading: prefsLoading, error: prefsError } = useQuery<BuyerPreference[]>({
     queryKey: ["/api/admin/preferences"],
   });
 
-  const { data: properties = [], isLoading: propsLoading, refetch: refetchProperties } = useQuery<Property[]>({
+  const { data: properties = [], isLoading: propsLoading, error: propsError, refetch: refetchProperties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
   });
 
@@ -490,7 +542,17 @@ export default function AdminDashboard() {
     });
   }, [matches, matchesLoading, matchesError]);
 
-  const { data: contactRequests = [] } = useQuery<ContactRequest[]>({
+  // حفظ وضع عرض العقارات في localStorage
+  useEffect(() => {
+    localStorage.setItem("propertiesViewMode", propertiesViewMode);
+  }, [propertiesViewMode]);
+
+  // حفظ وضع عرض الرغبات في localStorage
+  useEffect(() => {
+    localStorage.setItem("preferencesViewMode", preferencesViewMode);
+  }, [preferencesViewMode]);
+
+  const { data: contactRequests = [], isLoading: contactRequestsLoading, error: contactRequestsError } = useQuery<ContactRequest[]>({
     queryKey: ["/api/admin/contact-requests"],
   });
 
@@ -1196,14 +1258,27 @@ export default function AdminDashboard() {
   // Mutation لتحديث حالة المطابقة
   const updateMatchStatusMutation = useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/admin/matches/${matchId}/status`, { status });
+      const response = await apiRequest("PATCH", `/api/admin/matches/${matchId}/status`, { status });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/matches"] });
-      toast({ title: "تم تحديث الحالة بنجاح" });
+      if (variables.status === "preliminary_approval") {
+        toast({ 
+          title: "تمت الموافقة المبدئية", 
+          description: "تم نقل المطابقة إلى الصفقات العقارية بنجاح" 
+        });
+      } else {
+        toast({ title: "تم تحديث الحالة بنجاح" });
+      }
     },
     onError: (error: any) => {
-      toast({ title: "خطأ", description: error.message || "فشل في تحديث الحالة", variant: "destructive" });
+      console.error("Error updating match status:", error);
+      toast({ 
+        title: "خطأ", 
+        description: error.message || "فشل في تحديث الحالة. يرجى المحاولة مرة أخرى.", 
+        variant: "destructive" 
+      });
     },
   });
 
@@ -1559,7 +1634,23 @@ export default function AdminDashboard() {
     }, 500);
   };
 
-  const isLoading = statsLoading || usersLoading || prefsLoading || propsLoading;
+  // حساب isLoading بشكل صحيح مع إضافة error handling
+  const isLoading = statsLoading || usersLoading || prefsLoading || propsLoading || matchesLoading || contactRequestsLoading;
+  
+  // Debug: Log loading states
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("📊 Loading States:", {
+        statsLoading,
+        usersLoading,
+        prefsLoading,
+        propsLoading,
+        matchesLoading,
+        contactRequestsLoading,
+        isLoading,
+      });
+    }
+  }, [statsLoading, usersLoading, prefsLoading, propsLoading, matchesLoading, contactRequestsLoading, isLoading]);
 
   const handleRefreshAll = () => {
     refetchStats();
@@ -1571,6 +1662,19 @@ export default function AdminDashboard() {
   const sellers = users.filter(u => u.role === "seller");
   const activePreferences = preferences.filter(p => p.isActive);
   const activeProperties = properties.filter(p => p.isActive);
+
+  // Debug: Log data for troubleshooting
+  useEffect(() => {
+    console.log("📊 Admin Dashboard Data:", {
+      preferences: preferences.length,
+      activePreferences: activePreferences.length,
+      properties: properties.length,
+      activeProperties: activeProperties.length,
+      matches: matches.length,
+      contactRequests: contactRequests.length,
+      activeSection,
+    });
+  }, [preferences, activePreferences, properties, activeProperties, matches, contactRequests, activeSection]);
 
   const filteredUsers = users.filter(u => {
     if (userFilter !== "all" && u.role !== userFilter) return false;
@@ -1661,8 +1765,31 @@ export default function AdminDashboard() {
 
           <main className="flex-1 overflow-auto p-6">
             <div className="max-w-7xl mx-auto">
-            {/* Unified KPI Header - فقط في قسم المطابقات */}
-            {activeSection !== "matches" && (
+            {/* Unified KPI Header - إحصائيات عامة */}
+            {(isLoading && !stats && !users && !preferences && !properties && !matches && !contactRequests) ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardContent className="p-5">
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5">
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <Card data-testid="card-stat-matches">
                   <CardContent className="p-5">
@@ -1671,8 +1798,17 @@ export default function AdminDashboard() {
                         <Target className="h-5 w-5 text-pink-500" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">{matches.length}</p>
-                        <p className="text-sm text-muted-foreground">المطابقات</p>
+                        {matchesError ? (
+                          <>
+                            <p className="text-sm text-destructive">خطأ</p>
+                            <p className="text-xs text-muted-foreground">فشل التحميل</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-2xl font-bold">{matches.length || 0}</p>
+                            <p className="text-sm text-muted-foreground">المطابقات</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1684,8 +1820,17 @@ export default function AdminDashboard() {
                         <Home className="h-5 w-5 text-orange-500" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">{activeProperties.length}</p>
-                        <p className="text-sm text-muted-foreground">العقارات</p>
+                        {propsError ? (
+                          <>
+                            <p className="text-sm text-destructive">خطأ</p>
+                            <p className="text-xs text-muted-foreground">فشل التحميل</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-2xl font-bold">{activeProperties.length || 0}</p>
+                            <p className="text-sm text-muted-foreground">العقارات</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1697,8 +1842,17 @@ export default function AdminDashboard() {
                         <ClipboardList className="h-5 w-5 text-purple-500" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">{activePreferences.length}</p>
-                        <p className="text-sm text-muted-foreground">الرغبات</p>
+                        {prefsError ? (
+                          <>
+                            <p className="text-sm text-destructive">خطأ</p>
+                            <p className="text-xs text-muted-foreground">فشل التحميل</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-2xl font-bold">{activePreferences.length || 0}</p>
+                            <p className="text-sm text-muted-foreground">الرغبات</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1710,8 +1864,17 @@ export default function AdminDashboard() {
                         <MessageSquare className="h-5 w-5 text-teal-500" />
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">{contactRequests.length}</p>
-                        <p className="text-sm text-muted-foreground">طلبات التواصل</p>
+                        {contactRequestsError ? (
+                          <>
+                            <p className="text-sm text-destructive">خطأ</p>
+                            <p className="text-xs text-muted-foreground">فشل التحميل</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-2xl font-bold">{contactRequests.length || 0}</p>
+                            <p className="text-sm text-muted-foreground">طلبات التواصل</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -2330,128 +2493,258 @@ export default function AdminDashboard() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>رغبات المشترين ({preferences.length})</CardTitle>
-                    <CardDescription>جميع طلبات الشراء المسجلة</CardDescription>
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <CardTitle>رغبات المشترين ({preferences.length})</CardTitle>
+                        <CardDescription>جميع طلبات الشراء المسجلة</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* أزرار التبديل بين أوضاع العرض */}
+                        <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
+                          <Button
+                            size="sm"
+                            variant={preferencesViewMode === "grid" ? "default" : "ghost"}
+                            onClick={() => setPreferencesViewMode("grid")}
+                            className="h-8 px-3"
+                          >
+                            <Grid3x3 className="h-4 w-4 ml-1" />
+                            شبكة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={preferencesViewMode === "map" ? "default" : "ghost"}
+                            onClick={() => setPreferencesViewMode("map")}
+                            className="h-8 px-3"
+                          >
+                            <MapIcon className="h-4 w-4 ml-1" />
+                            خريطة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={preferencesViewMode === "list" ? "default" : "ghost"}
+                            onClick={() => setPreferencesViewMode("list")}
+                            className="h-8 px-3"
+                          >
+                            <List className="h-4 w-4 ml-1" />
+                            قائمة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={preferencesViewMode === "table" ? "default" : "ghost"}
+                            onClick={() => setPreferencesViewMode("table")}
+                            className="h-8 px-3"
+                          >
+                            <LayoutGrid className="h-4 w-4 ml-1" />
+                            جدول
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                 </Card>
-                <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 border-b border-gray-100">
-                        <TableHead className="min-w-[200px] text-center font-semibold">المشتري</TableHead>
-                        <TableHead className="min-w-[150px] text-center font-semibold">المدينة</TableHead>
-                        <TableHead className="min-w-[150px] text-center font-semibold">الأحياء</TableHead>
-                        <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
-                        <TableHead className="w-[150px] text-center font-semibold">الميزانية</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
-                        <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">الإجراءات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {preferences.length > 0 ? (
-                        preferences.map((pref) => {
-                          const user = users.find(u => u.id === pref.userId);
-                          return (
-                            <TableRow key={pref.id} className="hover:bg-slate-50/50">
-                              <TableCell className="py-4">
-                                {user ? (
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                      <UserIcon className="w-5 h-5 text-primary" />
-                                    </div>
-                                    <div className="flex flex-col items-start text-right">
-                                      <p className="font-medium text-sm">{user.name}</p>
-                                      <p className="text-xs text-muted-foreground">{maskPhone(user.phone || '')}</p>
-                                    </div>
+                
+                {/* عرض الرغبات حسب الوضع المحدد */}
+                {preferencesViewMode === "grid" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {preferences.length > 0 ? (
+                      preferences.map((pref) => {
+                        const user = users.find(u => u.id === pref.userId);
+                        return (
+                          <Card key={pref.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    {user ? (
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                          <UserIcon className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                          <p className="font-semibold text-base">{user.name}</p>
+                                          <p className="text-xs text-muted-foreground">{maskPhone(user.phone || '')}</p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground mb-2">مشتري غير معروف</p>
+                                    )}
                                   </div>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">غير معروف</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge variant="secondary">{pref.city}</Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <div className="text-sm">
-                                  {pref.districts && pref.districts.length > 0 ? (
-                                    <span className="text-muted-foreground">{pref.districts.slice(0, 2).join("، ")}{pref.districts.length > 2 ? ` +${pref.districts.length - 2}` : ''}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground">-</span>
+                                  <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
+                                    {pref.isActive ? "نشط" : "غير نشط"}
+                                  </Badge>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">{pref.city}</span>
+                                  </div>
+                                  {pref.districts && pref.districts.length > 0 && (
+                                    <div className="text-sm text-muted-foreground">
+                                      الأحياء: {pref.districts.slice(0, 3).join("، ")}{pref.districts.length > 3 ? ` +${pref.districts.length - 3}` : ''}
+                                    </div>
+                                  )}
+                                  <Badge variant="outline">
+                                    {propertyTypeLabels[pref.propertyType] || pref.propertyType}
+                                  </Badge>
+                                  {(pref.budgetMin || pref.budgetMax) && (
+                                    <div className="text-lg font-bold text-primary">
+                                      {maskBudget(pref.budgetMin, pref.budgetMax)}
+                                    </div>
+                                  )}
+                                  {pref.rooms && (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <Bed className="h-4 w-4" />
+                                      {pref.rooms} غرف
+                                    </div>
+                                  )}
+                                  {pref.area && (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <Ruler className="h-4 w-4" />
+                                      {pref.area} م²
+                                    </div>
                                   )}
                                 </div>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge variant="outline">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <div className="text-sm font-medium">
-                                  {(pref.budgetMin || pref.budgetMax) ? maskBudget(pref.budgetMin, pref.budgetMax) : '-'}
+
+                                {/* أزرار الإجراءات */}
+                                <div className="flex items-center gap-2 pt-2 border-t">
+                                  <Button
+                                    size="sm"
+                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                    onClick={() => handleShowPreferenceDetails(pref.id)}
+                                  >
+                                    <Eye className="w-4 h-4 ml-1" />
+                                    عرض التفاصيل
+                                  </Button>
+                                  {user && user.phone && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        const whatsappLink = getWhatsAppLink(user.phone!);
+                                        window.open(whatsappLink, '_blank');
+                                      }}
+                                      title="واتساب"
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </div>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <span className="text-sm">{pref.rooms || '-'}</span>
-                              </TableCell>
-                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                {user && (
-                                  <div className="flex items-center justify-center gap-1">
-                                    {user.phone && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const whatsappLink = getWhatsAppLink(user.phone!);
-                                          window.open(whatsappLink, '_blank');
-                                        }}
-                                        title="واتساب"
-                                      >
-                                        <MessageSquare className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {user.phone && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const cleanedPhone = user.phone!.replace(/\D/g, '');
-                                          window.location.href = `tel:${cleanedPhone}`;
-                                        }}
-                                        title="اتصال"
-                                      >
-                                        <Phone className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {user.email && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          window.location.href = `mailto:${user.email}`;
-                                        }}
-                                        title="إيميل"
-                                      >
-                                        <Mail className="w-4 h-4" />
-                                      </Button>
-                                    )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <Card className="col-span-full">
+                        <CardContent className="py-8 text-center">
+                          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                          <p className="text-muted-foreground">لا توجد رغبات مسجلة</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {preferencesViewMode === "map" && (
+                  <Card>
+                    <CardContent className="p-0">
+                      <div className="h-[500px]">
+                        <PropertyMap properties={preferences.map(p => ({
+                          id: p.id,
+                          city: p.city,
+                          district: p.districts && p.districts.length > 0 ? p.districts[0] : "غير محدد",
+                          propertyType: p.propertyType,
+                          price: p.budgetMax || p.budgetMin || 0,
+                          viewsCount: 0,
+                          latitude: undefined,
+                          longitude: undefined,
+                        }))} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {preferencesViewMode === "list" && (
+                  <div className="space-y-2">
+                    {preferences.length > 0 ? (
+                      preferences.map((pref) => {
+                        const user = users.find(u => u.id === pref.userId);
+                        return (
+                          <Card key={pref.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                {/* أيقونة المشتري */}
+                                <div className="w-16 h-16 flex-shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                                  {user ? (
+                                    <div className="text-center">
+                                      <UserIcon className="w-8 h-8 text-primary mx-auto" />
+                                    </div>
+                                  ) : (
+                                    <UserIcon className="w-8 h-8 text-muted-foreground/30" />
+                                  )}
+                                </div>
+
+                                {/* معلومات الرغبة */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      {user && (
+                                        <div className="mb-1">
+                                          <p className="font-semibold text-base">{user.name}</p>
+                                          <p className="text-xs text-muted-foreground">{maskPhone(user.phone || '')}</p>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                                        <span className="text-sm font-medium">{pref.city}</span>
+                                        {pref.districts && pref.districts.length > 0 && (
+                                          <span className="text-xs text-muted-foreground">
+                                            ({pref.districts.length} حي)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge variant="outline">
+                                          {propertyTypeLabels[pref.propertyType] || pref.propertyType}
+                                        </Badge>
+                                        {(pref.budgetMin || pref.budgetMax) && (
+                                          <span className="text-sm font-bold text-primary">
+                                            {maskBudget(pref.budgetMin, pref.budgetMax)}
+                                          </span>
+                                        )}
+                                        {pref.rooms && (
+                                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Bed className="h-3 w-3" />
+                                            {pref.rooms} غرف
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
+                                      {pref.isActive ? "نشط" : "غير نشط"}
+                                    </Badge>
                                   </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
-                                  {pref.isActive ? "نشط" : "غير نشط"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-center gap-2">
-                                  <Button 
-                                    size="sm" 
+                                </div>
+
+                                {/* أزرار الإجراءات */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {user && user.phone && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      onClick={() => {
+                                        const whatsappLink = getWhatsAppLink(user.phone!);
+                                        window.open(whatsappLink, '_blank');
+                                      }}
+                                      title="واتساب"
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
                                     variant="outline"
                                     onClick={() => handleShowPreferenceDetails(pref.id)}
                                   >
@@ -2462,8 +2755,7 @@ export default function AdminDashboard() {
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                    onClick={() => {
                                       setDeleteConfirmDialog({
                                         open: true,
                                         type: "preference",
@@ -2476,21 +2768,186 @@ export default function AdminDashboard() {
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                            لا توجد رغبات مسجلة
-                          </TableCell>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8 text-center">
+                          <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                          <p className="text-muted-foreground">لا توجد رغبات مسجلة</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {preferencesViewMode === "table" && (
+                  <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                          <TableHead className="min-w-[200px] text-center font-semibold">المشتري</TableHead>
+                          <TableHead className="min-w-[150px] text-center font-semibold">المدينة</TableHead>
+                          <TableHead className="min-w-[150px] text-center font-semibold">الأحياء</TableHead>
+                          <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
+                          <TableHead className="w-[150px] text-center font-semibold">الميزانية</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
+                          <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">الإجراءات</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {preferences.length > 0 ? (
+                          preferences.map((pref) => {
+                            const user = users.find(u => u.id === pref.userId);
+                            return (
+                              <TableRow key={pref.id} className="hover:bg-slate-50/50">
+                                <TableCell className="py-4">
+                                  {user ? (
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <UserIcon className="w-5 h-5 text-primary" />
+                                      </div>
+                                      <div className="flex flex-col items-start text-right">
+                                        <p className="font-medium text-sm">{user.name}</p>
+                                        <p className="text-xs text-muted-foreground">{maskPhone(user.phone || '')}</p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">غير معروف</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge variant="secondary">{pref.city}</Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <div className="text-sm">
+                                    {pref.districts && pref.districts.length > 0 ? (
+                                      <span className="text-muted-foreground">{pref.districts.slice(0, 2).join("، ")}{pref.districts.length > 2 ? ` +${pref.districts.length - 2}` : ''}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">-</span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge variant="outline">{propertyTypeLabels[pref.propertyType] || pref.propertyType}</Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <div className="text-sm font-medium">
+                                    {(pref.budgetMin || pref.budgetMax) ? maskBudget(pref.budgetMin, pref.budgetMax) : '-'}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <span className="text-sm">{pref.rooms || '-'}</span>
+                                </TableCell>
+                                <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  {user && (
+                                    <div className="flex items-center justify-center gap-1">
+                                      {user.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const whatsappLink = getWhatsAppLink(user.phone!);
+                                            window.open(whatsappLink, '_blank');
+                                          }}
+                                          title="واتساب"
+                                        >
+                                          <MessageSquare className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {user.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const cleanedPhone = user.phone!.replace(/\D/g, '');
+                                            window.location.href = `tel:${cleanedPhone}`;
+                                          }}
+                                          title="اتصال"
+                                        >
+                                          <Phone className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {user.email && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `mailto:${user.email}`;
+                                          }}
+                                          title="إيميل"
+                                        >
+                                          <Mail className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge className={pref.isActive ? "bg-green-500" : "bg-muted"}>
+                                    {pref.isActive ? "نشط" : "غير نشط"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleShowPreferenceDetails(pref.id)}
+                                    >
+                                      <Eye className="w-3 h-3 ml-1" />
+                                      عرض
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteConfirmDialog({
+                                          open: true,
+                                          type: "preference",
+                                          id: pref.id,
+                                          name: `رغبة ${user?.name || pref.id}`,
+                                        });
+                                      }}
+                                      title="حذف"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                              لا توجد رغبات مسجلة
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* Leads Section */}
+            {activeSection === "leads" && (
+              <LeadsManager />
             )}
 
             {/* Properties Section */}
@@ -2504,6 +2961,45 @@ export default function AdminDashboard() {
                         <CardDescription>إدارة العقارات المعروضة</CardDescription>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
+                        {/* أزرار التبديل بين أوضاع العرض */}
+                        <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/50">
+                          <Button
+                            size="sm"
+                            variant={propertiesViewMode === "grid" ? "default" : "ghost"}
+                            onClick={() => setPropertiesViewMode("grid")}
+                            className="h-8 px-3"
+                          >
+                            <Grid3x3 className="h-4 w-4 ml-1" />
+                            شبكة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={propertiesViewMode === "map" ? "default" : "ghost"}
+                            onClick={() => setPropertiesViewMode("map")}
+                            className="h-8 px-3"
+                          >
+                            <MapIcon className="h-4 w-4 ml-1" />
+                            خريطة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={propertiesViewMode === "list" ? "default" : "ghost"}
+                            onClick={() => setPropertiesViewMode("list")}
+                            className="h-8 px-3"
+                          >
+                            <List className="h-4 w-4 ml-1" />
+                            قائمة
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={propertiesViewMode === "table" ? "default" : "ghost"}
+                            onClick={() => setPropertiesViewMode("table")}
+                            className="h-8 px-3"
+                          >
+                            <LayoutGrid className="h-4 w-4 ml-1" />
+                            جدول
+                          </Button>
+                        </div>
                         <Select value={propertyFilter} onValueChange={setPropertyFilter}>
                           <SelectTrigger className="w-[140px]">
                             <SelectValue placeholder="الكل" />
@@ -2521,132 +3017,244 @@ export default function AdminDashboard() {
                     </div>
                   </CardHeader>
                 </Card>
-                <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 border-b border-gray-100">
-                        <TableHead className="min-w-[200px] text-center font-semibold">البائع</TableHead>
-                        <TableHead className="min-w-[120px] text-center font-semibold">المدينة</TableHead>
-                        <TableHead className="min-w-[120px] text-center font-semibold">الحي</TableHead>
-                        <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
-                        <TableHead className="w-[150px] text-center font-semibold">السعر</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">المساحة</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">المشاهدات</TableHead>
-                        <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
-                        <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
-                        <TableHead className="w-[120px] text-center font-semibold">الإجراءات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProperties.length > 0 ? (
-                        filteredProperties.map((prop) => {
-                          const seller = users.find(u => u.id === prop.sellerId);
-                          return (
-                            <TableRow key={prop.id} className="hover:bg-slate-50/50">
-                              <TableCell className="py-4">
-                                {seller ? (
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                      <Store className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <div className="flex flex-col items-start text-right">
-                                      <p className="font-medium text-sm">{seller.name}</p>
-                                      <p className="text-xs text-muted-foreground">{toArabicPhone(seller.phone || '')}</p>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">غير معروف</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge variant="secondary">{prop.city}</Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <span className="text-sm">{prop.district}</span>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <div className="text-sm font-bold text-primary">
-                                  {formatCurrency(prop.price)} ريال
+                
+                {/* عرض العقارات حسب الوضع المحدد */}
+                {propertiesViewMode === "grid" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredProperties.length > 0 ? (
+                      filteredProperties.map((prop) => {
+                        const seller = users.find(u => u.id === prop.sellerId);
+                        return (
+                          <Card key={prop.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                            {/* صورة العقار */}
+                            <div className="relative h-48 bg-muted">
+                              {prop.images && prop.images.length > 0 ? (
+                                <img
+                                  src={prop.images[0]}
+                                  alt={`${propertyTypeLabels[prop.propertyType] || prop.propertyType} في ${prop.district}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Building2 className="h-12 w-12 text-muted-foreground/30" />
                                 </div>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <span className="text-sm">{prop.area || '-'}</span>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <span className="text-sm">{prop.rooms || '-'}</span>
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                                  <Eye className="w-3 h-3" />
-                                  {prop.viewsCount || 0}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                {seller && (
-                                  <div className="flex items-center justify-center gap-1">
-                                    {seller.phone && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const whatsappLink = getWhatsAppLink(seller.phone!);
-                                          window.open(whatsappLink, '_blank');
-                                        }}
-                                        title="واتساب"
-                                      >
-                                        <MessageSquare className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {seller.phone && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const cleanedPhone = seller.phone!.replace(/\D/g, '');
-                                          window.location.href = `tel:${cleanedPhone}`;
-                                        }}
-                                        title="اتصال"
-                                      >
-                                        <Phone className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                    {seller.email && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          window.location.href = `mailto:${seller.email}`;
-                                        }}
-                                        title="إيميل"
-                                      >
-                                        <Mail className="w-4 h-4" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="py-4 text-center">
-                                <Badge className={prop.isActive ? "bg-green-500" : "bg-red-500"}>
-                                  {prop.isActive ? "نشط" : "موقوف"}
+                              )}
+                              <Badge className={`absolute top-2 left-2 ${prop.isActive ? "bg-green-500" : "bg-orange-500"}`}>
+                                {prop.isActive ? "نشط" : "قيد المراجعة"}
+                              </Badge>
+                              {prop.images && prop.images.length > 0 && (
+                                <Badge variant="secondary" className="absolute top-2 right-2">
+                                  {prop.images.length} صورة
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-center gap-1">
+                              )}
+                            </div>
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <Badge variant="outline" className="mb-2">
+                                    {propertyTypeLabels[prop.propertyType] || prop.propertyType}
+                                  </Badge>
+                                  <h3 className="font-semibold text-lg mb-1">
+                                    {prop.city} - {prop.district}
+                                  </h3>
+                                  <div className="text-xl font-bold text-primary">
+                                    {formatCurrency(prop.price)} ريال
+                                  </div>
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                                  {prop.rooms && (
+                                    <span className="flex items-center gap-1">
+                                      <Bed className="h-4 w-4" />
+                                      {prop.rooms} غرف
+                                    </span>
+                                  )}
+                                  {prop.bathrooms && (
+                                    <span className="flex items-center gap-1">
+                                      <Bath className="h-4 w-4" />
+                                      {prop.bathrooms} دورات مياه
+                                    </span>
+                                  )}
+                                  {prop.area && (
+                                    <span className="flex items-center gap-1">
+                                      <Ruler className="h-4 w-4" />
+                                      {prop.area} م²
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* المميزات */}
+                                {prop.amenities && prop.amenities.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 pt-2 border-t">
+                                    {prop.amenities.slice(0, 3).map((amenity, idx) => (
+                                      <Badge key={idx} variant="outline" className="text-xs">
+                                        {amenity}
+                                      </Badge>
+                                    ))}
+                                    {prop.amenities.length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{prop.amenities.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* معلومات البائع */}
+                                {seller && (
+                                  <div className="pt-2 border-t">
+                                    <p className="text-sm font-medium mb-1">معلومات البائع</p>
+                                    <p className="text-xs text-muted-foreground">{seller.name}</p>
+                                    <p className="text-xs text-muted-foreground">{toArabicPhone(seller.phone || '')}</p>
+                                  </div>
+                                )}
+
+                                {/* أزرار الإجراءات */}
+                                <div className="flex items-center gap-2 pt-2">
+                                  <Button
+                                    size="sm"
+                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                    onClick={() => {
+                                      setSelectedPropertyId(prop.id);
+                                      setShowPropertyDetailsDialog(true);
+                                    }}
+                                  >
+                                    <Eye className="w-4 h-4 ml-1" />
+                                    عرض التفاصيل
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <Card className="col-span-full">
+                        <CardContent className="py-8 text-center">
+                          <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                          <p className="text-muted-foreground">لا توجد عقارات</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {propertiesViewMode === "map" && (
+                  <Card>
+                    <CardContent className="p-0">
+                      <div className="h-[500px]">
+                        <PropertyMap properties={filteredProperties.map(p => ({
+                          id: p.id,
+                          city: p.city,
+                          district: p.district,
+                          propertyType: p.propertyType,
+                          price: p.price,
+                          viewsCount: p.viewsCount || 0,
+                          latitude: p.latitude,
+                          longitude: p.longitude,
+                        }))} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {propertiesViewMode === "list" && (
+                  <div className="space-y-2">
+                    {filteredProperties.length > 0 ? (
+                      filteredProperties.map((prop) => {
+                        const seller = users.find(u => u.id === prop.sellerId);
+                        return (
+                          <Card key={prop.id} className="hover:shadow-md transition-shadow">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                {/* صورة صغيرة */}
+                                <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                                  {prop.images && prop.images.length > 0 ? (
+                                    <img
+                                      src={prop.images[0]}
+                                      alt={`${propertyTypeLabels[prop.propertyType] || prop.propertyType}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Building2 className="h-8 w-8 text-muted-foreground/30" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* معلومات العقار */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="outline">
+                                          {propertyTypeLabels[prop.propertyType] || prop.propertyType}
+                                        </Badge>
+                                        <Badge className={prop.isActive ? "bg-green-500" : "bg-orange-500"}>
+                                          {prop.isActive ? "نشط" : "قيد المراجعة"}
+                                        </Badge>
+                                      </div>
+                                      <h3 className="font-semibold text-base mb-1">
+                                        {prop.city} - {prop.district}
+                                      </h3>
+                                      <div className="text-lg font-bold text-primary">
+                                        {formatCurrency(prop.price)} ريال
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                    {prop.rooms && (
+                                      <span className="flex items-center gap-1">
+                                        <Bed className="h-3 w-3" />
+                                        {prop.rooms} غرف
+                                      </span>
+                                    )}
+                                    {prop.bathrooms && (
+                                      <span className="flex items-center gap-1">
+                                        <Bath className="h-3 w-3" />
+                                        {prop.bathrooms} دورات مياه
+                                      </span>
+                                    )}
+                                    {prop.area && (
+                                      <span className="flex items-center gap-1">
+                                        <Ruler className="h-3 w-3" />
+                                        {prop.area} م²
+                                      </span>
+                                    )}
+                                    <span className="flex items-center gap-1">
+                                      <Eye className="h-3 w-3" />
+                                      {prop.viewsCount || 0} مشاهدة
+                                    </span>
+                                  </div>
+
+                                  {/* معلومات البائع */}
+                                  {seller && (
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                      البائع: {seller.name} - {toArabicPhone(seller.phone || '')}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* أزرار الإجراءات */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {seller && seller.phone && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                      onClick={() => {
+                                        const whatsappLink = getWhatsAppLink(seller.phone!);
+                                        window.open(whatsappLink, '_blank');
+                                      }}
+                                      title="واتساب"
+                                    >
+                                      <MessageSquare className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                    onClick={() => {
                                       setSelectedPropertyId(prop.id);
                                       setShowPropertyDetailsDialog(true);
                                     }}
@@ -2659,7 +3267,6 @@ export default function AdminDashboard() {
                                     variant={prop.isActive ? "destructive" : "default"}
                                     onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
                                     disabled={togglePropertyMutation.isPending}
-                                    data-testid={`button-toggle-property-${prop.id}`}
                                   >
                                     {prop.isActive ? (
                                       <>
@@ -2677,8 +3284,7 @@ export default function AdminDashboard() {
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                    onClick={() => {
                                       setDeleteConfirmDialog({
                                         open: true,
                                         type: "property",
@@ -2691,20 +3297,208 @@ export default function AdminDashboard() {
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
-                            لا توجد عقارات
-                          </TableCell>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    ) : (
+                      <Card>
+                        <CardContent className="py-8 text-center">
+                          <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                          <p className="text-muted-foreground">لا توجد عقارات</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
+                {propertiesViewMode === "table" && (
+                  <div className="w-full bg-white overflow-x-auto rounded-lg border border-gray-100">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50/50 border-b border-gray-100">
+                          <TableHead className="min-w-[200px] text-center font-semibold">البائع</TableHead>
+                          <TableHead className="min-w-[120px] text-center font-semibold">المدينة</TableHead>
+                          <TableHead className="min-w-[120px] text-center font-semibold">الحي</TableHead>
+                          <TableHead className="w-[120px] text-center font-semibold">نوع العقار</TableHead>
+                          <TableHead className="w-[150px] text-center font-semibold">السعر</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">المساحة</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">الغرف</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">المشاهدات</TableHead>
+                          <TableHead className="w-[140px] text-center font-semibold">وسائل التواصل</TableHead>
+                          <TableHead className="w-[100px] text-center font-semibold">الحالة</TableHead>
+                          <TableHead className="w-[120px] text-center font-semibold">الإجراءات</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProperties.length > 0 ? (
+                          filteredProperties.map((prop) => {
+                            const seller = users.find(u => u.id === prop.sellerId);
+                            return (
+                              <TableRow key={prop.id} className="hover:bg-slate-50/50">
+                                <TableCell className="py-4">
+                                  {seller ? (
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Store className="w-5 h-5 text-green-600" />
+                                      </div>
+                                      <div className="flex flex-col items-start text-right">
+                                        <p className="font-medium text-sm">{seller.name}</p>
+                                        <p className="text-xs text-muted-foreground">{toArabicPhone(seller.phone || '')}</p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">غير معروف</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge variant="secondary">{prop.city}</Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <span className="text-sm">{prop.district}</span>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge variant="outline">{propertyTypeLabels[prop.propertyType] || prop.propertyType}</Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <div className="text-sm font-bold text-primary">
+                                    {formatCurrency(prop.price)} ريال
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <span className="text-sm">{prop.area || '-'}</span>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <span className="text-sm">{prop.rooms || '-'}</span>
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                                    <Eye className="w-3 h-3" />
+                                    {prop.viewsCount || 0}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  {seller && (
+                                    <div className="flex items-center justify-center gap-1">
+                                      {seller.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const whatsappLink = getWhatsAppLink(seller.phone!);
+                                            window.open(whatsappLink, '_blank');
+                                          }}
+                                          title="واتساب"
+                                        >
+                                          <MessageSquare className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {seller.phone && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const cleanedPhone = seller.phone!.replace(/\D/g, '');
+                                            window.location.href = `tel:${cleanedPhone}`;
+                                          }}
+                                          title="اتصال"
+                                        >
+                                          <Phone className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {seller.email && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = `mailto:${seller.email}`;
+                                          }}
+                                          title="إيميل"
+                                        >
+                                          <Mail className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="py-4 text-center">
+                                  <Badge className={prop.isActive ? "bg-green-500" : "bg-red-500"}>
+                                    {prop.isActive ? "نشط" : "موقوف"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedPropertyId(prop.id);
+                                        setShowPropertyDetailsDialog(true);
+                                      }}
+                                    >
+                                      <Eye className="w-3 h-3 ml-1" />
+                                      عرض
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant={prop.isActive ? "destructive" : "default"}
+                                      onClick={() => togglePropertyMutation.mutate({ id: prop.id, isActive: !prop.isActive })}
+                                      disabled={togglePropertyMutation.isPending}
+                                      data-testid={`button-toggle-property-${prop.id}`}
+                                    >
+                                      {prop.isActive ? (
+                                        <>
+                                          <XCircle className="w-3 h-3 ml-1" />
+                                          إيقاف
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle className="w-3 h-3 ml-1" />
+                                          تفعيل
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteConfirmDialog({
+                                          open: true,
+                                          type: "property",
+                                          id: prop.id,
+                                          name: `عقار في ${prop.city} - ${prop.district}`,
+                                        });
+                                      }}
+                                      title="حذف"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+                              لا توجد عقارات
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -5360,6 +6154,16 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Form Builder Section */}
+            {activeSection === "form-builder" && (
+              <FormBuilder />
+            )}
+
+            {/* Landing Pages Section */}
+            {activeSection === "landing-pages" && (
+              <LandingPagesManager />
+            )}
+
             {/* Static Pages Section */}
             {activeSection === "pages" && (
               <StaticPagesSection />
@@ -5994,10 +6798,6 @@ export default function AdminDashboard() {
                                             matchId: match.id, 
                                             status: "preliminary_approval" 
                                           });
-                                          toast({ 
-                                            title: "تمت الموافقة المبدئية", 
-                                            description: "تم نقل المطابقة إلى الصفقات العقارية" 
-                                          });
                                         }}
                                         disabled={updateMatchStatusMutation.isPending || (match as any).status === "preliminary_approval"}
                                       >
@@ -6154,10 +6954,6 @@ export default function AdminDashboard() {
                                         updateMatchStatusMutation.mutate({ 
                                           matchId: match.id, 
                                           status: "preliminary_approval" 
-                                        });
-                                        toast({ 
-                                          title: "تمت الموافقة المبدئية", 
-                                          description: "تم نقل المطابقة إلى الصفقات العقارية" 
                                         });
                                       }}
                                       disabled={updateMatchStatusMutation.isPending || (match as any).status === "preliminary_approval"}
@@ -7019,7 +7815,7 @@ export default function AdminDashboard() {
                             <Edit2 className="w-3 h-3 text-muted-foreground" />
                           </label>
                           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
-                            {saudiCities.map((city) => (
+                            {availableCities.map((city: { name: string }) => (
                               <button
                                 key={city.name}
                                 onClick={() => savePropertyField("city", city.name)}
@@ -7045,9 +7841,9 @@ export default function AdminDashboard() {
                           </label>
                           <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
                             {(() => {
-                              const selectedCity = saudiCities.find(c => c.name === prop?.city);
+                              const selectedCity = availableCities.find((c: { name: string }) => c.name === prop?.city);
                               const districts = selectedCity?.neighborhoods || [];
-                              return districts.length > 0 ? districts.map((district) => (
+                              return districts.length > 0 ? districts.map((district: { name: string }) => (
                                 <button
                                   key={district.name}
                                   onClick={() => savePropertyField("district", district.name)}
@@ -7225,6 +8021,8 @@ export default function AdminDashboard() {
           setSelectedPreferenceId(null);
           setIsEditingPreference(false);
           setPreferenceEditData({});
+          setPreferenceDetailsEdits({});
+          setEditingPreferenceField(null);
         }
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
@@ -7237,13 +8035,53 @@ export default function AdminDashboard() {
             const buyer = users.find(u => u.id === pref.userId);
             if (!buyer) return <div className="text-center py-8 text-muted-foreground">المشتري غير موجود</div>;
 
+            // دالة للحصول على القيمة (المعدلة أو الأصلية)
+            const getPreferenceValue = (field: keyof BuyerPreference) => {
+              if (editingPreferenceField?.field === field) {
+                return editingPreferenceField.tempValue;
+              }
+              return preferenceDetailsEdits[field] !== undefined ? preferenceDetailsEdits[field] : pref[field];
+            };
+
+            // دالة لبدء التعديل
+            const startEditingField = (field: keyof BuyerPreference) => {
+              const currentValue = preferenceDetailsEdits[field] !== undefined ? preferenceDetailsEdits[field] : pref[field];
+              setEditingPreferenceField({ 
+                field, 
+                tempValue: Array.isArray(currentValue) ? currentValue.join("، ") : String(currentValue || "") 
+              });
+            };
+
+            // دالة لحفظ التعديل
+            const saveFieldEdit = (field: keyof BuyerPreference, value: any) => {
+              setPreferenceDetailsEdits(prev => ({
+                ...prev,
+                [field]: value
+              }));
+              setEditingPreferenceField(null);
+              // حفظ تلقائي
+              updatePreferenceMutation.mutate({
+                preferenceId: pref.id,
+                data: { [field]: value }
+              });
+            };
+
+            // دالة لإلغاء التعديل
+            const cancelFieldEdit = () => {
+              setEditingPreferenceField(null);
+            };
+
             return (
               <>
                 <DialogHeader className="pb-4 border-b">
                   <DialogTitle className="text-xl">تفاصيل الرغبة</DialogTitle>
                   <DialogDescription className="mt-1">
-                    {buyer.name} - {pref.city}
+                    {buyer.name} - {getPreferenceValue("city") || pref.city}
                   </DialogDescription>
+                  <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 rounded-lg text-xs text-blue-600">
+                    <Edit2 className="h-3 w-3" />
+                    <span>اضغط مرتين على أي حقل لتعديله مباشرة</span>
+                  </div>
                 </DialogHeader>
                 
                 <div className="flex justify-center pb-4">
@@ -7300,22 +8138,86 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">المدينة المفضلة:</Label>
-                            <p className="text-sm font-medium">{pref.city || "غير محدد"}</p>
+                            {editingPreferenceField?.field === "city" ? (
+                              <Select
+                                value={getPreferenceValue("city") as string}
+                                onValueChange={(val) => saveFieldEdit("city", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر المدينة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableCities.map((city: { name: string }) => (
+                                    <SelectItem key={city.name} value={city.name}>
+                                      {city.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("city")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("city") || "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label className="text-sm font-semibold text-muted-foreground">
-                              الأحياء المفضلة ({pref.districts?.length || 0})
+                              الأحياء المفضلة ({(getPreferenceValue("districts") as string[] || pref.districts || []).length})
                             </Label>
-                            {pref.districts && pref.districts.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {pref.districts.map((district) => (
-                                  <Badge key={district} variant="outline" className="text-sm">
-                                    {district}
-                                  </Badge>
-                                ))}
+                            {editingPreferenceField?.field === "districts" ? (
+                              <div className="space-y-2">
+                                <Input
+                                  placeholder="أدخل الأحياء مفصولة بفواصل"
+                                  value={getPreferenceValue("districts") as string}
+                                  onChange={(e) => {
+                                    setEditingPreferenceField({ field: "districts", tempValue: e.target.value });
+                                  }}
+                                  onBlur={() => {
+                                    const districts = (getPreferenceValue("districts") as string).split("،").map(d => d.trim()).filter(d => d);
+                                    saveFieldEdit("districts", districts);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const districts = (getPreferenceValue("districts") as string).split("،").map(d => d.trim()).filter(d => d);
+                                      saveFieldEdit("districts", districts);
+                                    } else if (e.key === 'Escape') {
+                                      cancelFieldEdit();
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                                <p className="text-xs text-muted-foreground">أدخل الأحياء مفصولة بفواصل (،)</p>
                               </div>
                             ) : (
-                              <p className="text-sm text-muted-foreground">غير محدد</p>
+                              (getPreferenceValue("districts") as string[] || pref.districts || []).length > 0 ? (
+                                <div 
+                                  className="flex flex-wrap gap-2 cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded p-2 transition-all group"
+                                  onDoubleClick={() => startEditingField("districts")}
+                                  title="اضغط مرتين للتعديل"
+                                >
+                                  {(getPreferenceValue("districts") as string[] || pref.districts || []).map((district) => (
+                                    <Badge key={district} variant="outline" className="text-sm">
+                                      {district}
+                                    </Badge>
+                                  ))}
+                                  <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity self-center" />
+                                </div>
+                              ) : (
+                                <div 
+                                  className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                  onDoubleClick={() => startEditingField("districts")}
+                                  title="اضغط مرتين للتعديل"
+                                >
+                                  <span>غير محدد</span>
+                                  <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              )
                             )}
                           </div>
                         </div>
@@ -7337,27 +8239,124 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع العقار:</Label>
-                            <p className="text-sm font-medium">{propertyTypeLabels[pref.propertyType] || pref.propertyType || "غير محدد"}</p>
+                            {editingPreferenceField?.field === "propertyType" ? (
+                              <Select
+                                value={getPreferenceValue("propertyType") as string}
+                                onValueChange={(val) => saveFieldEdit("propertyType", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر نوع العقار" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(propertyTypeLabels).map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("propertyType")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{propertyTypeLabels[getPreferenceValue("propertyType") as string] || getPreferenceValue("propertyType") || "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                             <Handshake className="h-4 w-4 text-muted-foreground" />
                             <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع المعاملة:</Label>
-                            <p className="text-sm font-medium">{pref.transactionType === "buy" ? "شراء" : pref.transactionType === "rent" ? "إيجار" : "غير محدد"}</p>
+                            {editingPreferenceField?.field === "transactionType" ? (
+                              <Select
+                                value={getPreferenceValue("transactionType") as string}
+                                onValueChange={(val) => saveFieldEdit("transactionType", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر نوع المعاملة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="buy">شراء</SelectItem>
+                                  <SelectItem value="rent">إيجار</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("transactionType")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("transactionType") === "buy" ? "شراء" : getPreferenceValue("transactionType") === "rent" ? "إيجار" : "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
-                          {pref.rooms && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Bed className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">عدد الغرف:</Label>
-                              <p className="text-sm font-medium">{pref.rooms} غرفة</p>
-                            </div>
-                          )}
-                          {pref.area && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Ruler className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">المساحة:</Label>
-                              <p className="text-sm font-medium">{pref.area} م²</p>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Bed className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">عدد الغرف:</Label>
+                            {editingPreferenceField?.field === "rooms" ? (
+                              <Input
+                                type="text"
+                                value={getPreferenceValue("rooms") as string}
+                                onChange={(e) => setEditingPreferenceField({ field: "rooms", tempValue: e.target.value })}
+                                onBlur={() => saveFieldEdit("rooms", getPreferenceValue("rooms"))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveFieldEdit("rooms", getPreferenceValue("rooms"));
+                                  } else if (e.key === 'Escape') {
+                                    cancelFieldEdit();
+                                  }
+                                }}
+                                placeholder="مثال: 3"
+                                className="w-[200px]"
+                                autoFocus
+                              />
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("rooms")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("rooms") ? `${getPreferenceValue("rooms")} غرفة` : "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Ruler className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">المساحة:</Label>
+                            {editingPreferenceField?.field === "area" ? (
+                              <Input
+                                type="text"
+                                value={getPreferenceValue("area") as string}
+                                onChange={(e) => setEditingPreferenceField({ field: "area", tempValue: e.target.value })}
+                                onBlur={() => saveFieldEdit("area", getPreferenceValue("area"))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveFieldEdit("area", getPreferenceValue("area"));
+                                  } else if (e.key === 'Escape') {
+                                    cancelFieldEdit();
+                                  }
+                                }}
+                                placeholder="مثال: 150 م²"
+                                className="w-[200px]"
+                                autoFocus
+                              />
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("area")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("area") ? `${getPreferenceValue("area")} م²` : "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -7374,53 +8373,192 @@ export default function AdminDashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {(pref.budgetMin || pref.budgetMax) ? (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Wallet className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الميزانية:</Label>
-                              <p className="text-sm font-medium">
-                                {pref.budgetMin && pref.budgetMax 
-                                  ? `${formatCurrency(pref.budgetMin)} - ${formatCurrency(pref.budgetMax)}`
-                                  : pref.budgetMin 
-                                    ? `من ${formatCurrency(pref.budgetMin)}`
-                                    : pref.budgetMax
-                                      ? `حتى ${formatCurrency(pref.budgetMax)}`
-                                      : "غير محدد"}
-                              </p>
-                            </div>
-                          ) : null}
-                          {pref.paymentMethod && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Wallet className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">طريقة الدفع:</Label>
-                              <p className="text-sm font-medium">{paymentMethodLabels[pref.paymentMethod] || pref.paymentMethod}</p>
-                            </div>
-                          )}
-                          {pref.purpose && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Target className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الغرض من الشراء:</Label>
-                              <p className="text-sm font-medium">{pref.purpose === "residence" ? "سكن" : pref.purpose === "investment" ? "استثمار" : pref.purpose}</p>
-                            </div>
-                          )}
-                          {pref.purchaseTimeline && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الجدول الزمني:</Label>
-                              <p className="text-sm font-medium">
-                                {pref.purchaseTimeline === "asap" ? "فوراً" :
-                                 pref.purchaseTimeline === "within_month" ? "خلال شهر" :
-                                 pref.purchaseTimeline === "within_3months" ? "خلال 3 أشهر" :
-                                 pref.purchaseTimeline === "within_6months" ? "خلال 6 أشهر" :
-                                 pref.purchaseTimeline === "within_year" ? "خلال سنة" :
-                                 pref.purchaseTimeline === "flexible" ? "مرن" : pref.purchaseTimeline}
-                              </p>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Wallet className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الميزانية:</Label>
+                            {editingPreferenceField?.field === "budgetMin" || editingPreferenceField?.field === "budgetMax" ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  value={getPreferenceValue("budgetMin") as number || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value ? parseInt(e.target.value) : null;
+                                    setPreferenceDetailsEdits(prev => ({ ...prev, budgetMin: val }));
+                                  }}
+                                  onBlur={() => {
+                                    updatePreferenceMutation.mutate({
+                                      preferenceId: pref.id,
+                                      data: { budgetMin: getPreferenceValue("budgetMin") }
+                                    });
+                                    setEditingPreferenceField(null);
+                                  }}
+                                  placeholder="الحد الأدنى"
+                                  className="w-[150px]"
+                                  autoFocus={editingPreferenceField?.field === "budgetMin"}
+                                />
+                                <span className="text-muted-foreground">-</span>
+                                <Input
+                                  type="number"
+                                  value={getPreferenceValue("budgetMax") as number || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value ? parseInt(e.target.value) : null;
+                                    setPreferenceDetailsEdits(prev => ({ ...prev, budgetMax: val }));
+                                  }}
+                                  onBlur={() => {
+                                    updatePreferenceMutation.mutate({
+                                      preferenceId: pref.id,
+                                      data: { budgetMax: getPreferenceValue("budgetMax") }
+                                    });
+                                    setEditingPreferenceField(null);
+                                  }}
+                                  placeholder="الحد الأقصى"
+                                  className="w-[150px]"
+                                  autoFocus={editingPreferenceField?.field === "budgetMax"}
+                                />
+                              </div>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => setEditingPreferenceField({ field: "budgetMin", tempValue: String(getPreferenceValue("budgetMin") || "") })}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>
+                                  {(getPreferenceValue("budgetMin") || getPreferenceValue("budgetMax")) ? (
+                                    getPreferenceValue("budgetMin") && getPreferenceValue("budgetMax")
+                                      ? `${formatCurrency(getPreferenceValue("budgetMin") as number)} - ${formatCurrency(getPreferenceValue("budgetMax") as number)}`
+                                      : getPreferenceValue("budgetMin")
+                                        ? `من ${formatCurrency(getPreferenceValue("budgetMin") as number)}`
+                                        : getPreferenceValue("budgetMax")
+                                          ? `حتى ${formatCurrency(getPreferenceValue("budgetMax") as number)}`
+                                          : "غير محدد"
+                                  ) : "غير محدد"}
+                                </span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Wallet className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">طريقة الدفع:</Label>
+                            {editingPreferenceField?.field === "paymentMethod" ? (
+                              <Select
+                                value={getPreferenceValue("paymentMethod") as string}
+                                onValueChange={(val) => saveFieldEdit("paymentMethod", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر طريقة الدفع" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="cash">كاش</SelectItem>
+                                  <SelectItem value="bank">تمويل بنكي</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("paymentMethod")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{paymentMethodLabels[getPreferenceValue("paymentMethod") as string || ""] || getPreferenceValue("paymentMethod") || "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Target className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الغرض من الشراء:</Label>
+                            {editingPreferenceField?.field === "purpose" ? (
+                              <Select
+                                value={getPreferenceValue("purpose") as string}
+                                onValueChange={(val) => saveFieldEdit("purpose", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر الغرض" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="residence">سكن</SelectItem>
+                                  <SelectItem value="investment">استثمار</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("purpose")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("purpose") === "residence" ? "سكن" : getPreferenceValue("purpose") === "investment" ? "استثمار" : getPreferenceValue("purpose") || "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">الجدول الزمني:</Label>
+                            {editingPreferenceField?.field === "purchaseTimeline" ? (
+                              <Select
+                                value={getPreferenceValue("purchaseTimeline") as string}
+                                onValueChange={(val) => saveFieldEdit("purchaseTimeline", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر الجدول الزمني" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="asap">فوراً</SelectItem>
+                                  <SelectItem value="within_month">خلال شهر</SelectItem>
+                                  <SelectItem value="within_3months">خلال 3 أشهر</SelectItem>
+                                  <SelectItem value="within_6months">خلال 6 أشهر</SelectItem>
+                                  <SelectItem value="within_year">خلال سنة</SelectItem>
+                                  <SelectItem value="flexible">مرن</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("purchaseTimeline")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>
+                                  {getPreferenceValue("purchaseTimeline") === "asap" ? "فوراً" :
+                                   getPreferenceValue("purchaseTimeline") === "within_month" ? "خلال شهر" :
+                                   getPreferenceValue("purchaseTimeline") === "within_3months" ? "خلال 3 أشهر" :
+                                   getPreferenceValue("purchaseTimeline") === "within_6months" ? "خلال 6 أشهر" :
+                                   getPreferenceValue("purchaseTimeline") === "within_year" ? "خلال سنة" :
+                                   getPreferenceValue("purchaseTimeline") === "flexible" ? "مرن" : getPreferenceValue("purchaseTimeline") || "غير محدد"}
+                                </span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                             <UserIcon className="h-4 w-4 text-muted-foreground" />
                             <Label className="text-sm font-semibold text-muted-foreground min-w-[120px]">نوع العميل:</Label>
-                            <p className="text-sm font-medium">{pref.clientType === "direct" ? "مباشر" : pref.clientType === "broker" ? "وسيط" : pref.clientType}</p>
+                            {editingPreferenceField?.field === "clientType" ? (
+                              <Select
+                                value={getPreferenceValue("clientType") as string}
+                                onValueChange={(val) => saveFieldEdit("clientType", val)}
+                                onOpenChange={(open) => !open && cancelFieldEdit()}
+                              >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="اختر نوع العميل" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="direct">مباشر</SelectItem>
+                                  <SelectItem value="broker">وسيط</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <div 
+                                className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:bg-blue-100 bg-blue-50/50 border border-transparent hover:border-blue-200 rounded px-2 py-1 transition-all group"
+                                onDoubleClick={() => startEditingField("clientType")}
+                                title="اضغط مرتين للتعديل"
+                              >
+                                <span>{getPreferenceValue("clientType") === "direct" ? "مباشر" : getPreferenceValue("clientType") === "broker" ? "وسيط" : getPreferenceValue("clientType") || "غير محدد"}</span>
+                                <Edit2 className="h-3 w-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -7653,8 +8791,8 @@ export default function AdminDashboard() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {(() => {
-                                    const selectedCity = saudiCities.find(c => c.name === currentCity);
-                                    return selectedCity?.neighborhoods.map(neighborhood => (
+                                    const selectedCity = availableCities.find((c: { name: string }) => c.name === currentCity);
+                                    return selectedCity?.neighborhoods.map((neighborhood: { name: string }) => (
                                       <SelectItem key={neighborhood.name} value={neighborhood.name}>{neighborhood.name}</SelectItem>
                                     )) || [];
                                   })()}

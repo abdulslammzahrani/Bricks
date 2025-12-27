@@ -107,6 +107,8 @@ export default function ProfilePage() {
       setActiveTab("matches");
     } else if (tabParam === "properties" && activeTab !== "properties") {
       setActiveTab("properties");
+    } else if (tabParam === "leads" && activeTab !== "leads") {
+      setActiveTab("leads");
     } else if (!tabParam && activeTab !== "preferences") {
       setActiveTab("preferences");
     }
@@ -619,6 +621,7 @@ export default function ProfilePage() {
   const navItems = [
     { id: "preferences", label: "رغباتي", icon: Heart, count: preferencesCount },
     { id: "properties", label: "عروضي", icon: Building2, count: propertiesCount },
+    ...(userData?.role === "seller" ? [{ id: "leads", label: "الليدز", icon: Users, count: 0 }] : []),
     { id: "matches", label: "المتطابقة", icon: Zap, count: 0 },
     { id: "messages", label: "الرسائل", icon: MessageCircle, count: 0 },
   ];
@@ -1186,6 +1189,11 @@ export default function ProfilePage() {
                 </Card>
               )}
               </div>
+            )}
+
+            {/* Leads Section */}
+            {activeTab === "leads" && userData?.role === "seller" && (
+              <LeadsManager sellerId={userData?.id || undefined} />
             )}
 
             {/* Properties Section */}

@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { useFormBuilderConfig } from "@/hooks/useFormBuilderConfig";
+import DynamicFormRenderer from "@/components/admin/FormBuilder/DynamicFormRenderer";
+import FormNavigationButton from "@/components/admin/FormBuilder/FormNavigationButton";
 
 import { 
   MapPin, User, Home, Building2, 
@@ -18,50 +20,14 @@ import {
   ArrowUp, School, Stethoscope, Fuel, Briefcase, Truck, Users, Activity,
   Armchair, Trees as TreeIcon, Key, FileSignature 
 } from "lucide-react";
-import { saudiCities } from "@shared/saudi-locations";
+import * as icons from "lucide-react";
+import { saudiCities, directionLabels, Direction } from "@shared/saudi-locations";
 
-// ... (نفس الإعدادات السابقة SPECIFIC_TAGS و SMART_RANGES) ...
-// 1️⃣ إعدادات التاقات
-const SPECIFIC_TAGS: Record<string, string[]> = {
-  "villa": ["مسبح", "قبو", "مصعد", "تكييف مركزي", "ملحق خارجي", "مسطحات خضراء", "واجهة مودرن", "شقة استثمارية", "غرفة كبار سن", "درج داخلي", "نظام سمارت هوم", "عوازل حرارية", "إشراف هندسي", "ضمانات هيكل", "غرفة غسيل", "غرفة سينما"],
-  "apartment": ["مدخل خاص", "سطح خاص", "موقف خاص", "غرفة سائق", "غرفة خادمة", "دخول ذكي", "بلكونة", "مطبخ راكب", "مكيفات راكبة", "خزان مستقل", "قريبة من مسجد", "ألياف بصرية", "تشطيب فاخر"],
-  "residential_building": ["موقع زاوية", "واجهة كلادينج", "مصعد (ماركة عالمية)", "عدادات مستقلة", "تمديدات سبليت", "مدخل فندقي", "غرفة حارس", "أنظمة دفاع مدني", "خزان مياه كبير", "مواقف مرصوفة", "نظام انتركوم", "سطح معزول", "قريب من الخدمات", "صك إلكتروني", "عقود إلكترونية"],
-  "tower": ["مهبط طائرات (Helipad)", "نظام إدارة مباني (BMS)", "مصاعد ذكية (Destination Control)", "واجهات زجاجية (Double Glazed)", "ردهة استقبال فندقية", "نادي صحي وسبا", "قاعة مؤتمرات مشتركة", "مصلى مركزي", "مواقف ذكية/Valet", "مولدات احتياطية كاملة", "تكييف مركزي (Chiller)", "أنظمة مراقبة CCTV", "ألياف بصرية (Fiber)", "نظام تنظيف واجهات", "حدائق معلقة (Roof Garden)", "كافتيريا داخلية"],
-  "showroom": ["ارتفاع سقف مضاعف", "واجهة زجاجية (Curtain Wall)", "رخصة مطعم/كافيه", "جلسات خارجية مرخصة", "مواقف أمامية واسعة", "مدخل خدمة خلفي", "تمديدات غاز مركزية", "نظام تهوية (Ventilation)", "إمكانية التجزئة", "موقع زاوية", "مساحة إعلانية", "مدخل ذوي همم (Ramp)", "عداد كهرباء مستقل", "تكييف مركزي مستقل", "أرضيات فاخرة", "نظام صوتي مدمج"],
-  "office": ["أرضيات مرتفعة (Raised Floors)", "إطلالة بانورامية", "دخول ذكي (Access Control)", "غرفة خوادم (Server Room)", "مطبخ تحضيري (Pantry)", "عوازل صوتية", "تصميم مرن (Open Plan)", "دورة مياه خاصة", "غرفة أرشيف", "إضاءة LED", "نظام سلامة (Sprinklers)", "ستائر ذكية", "أثاث مكتبي", "قاعة اجتماعات زجاجية", "خدمة نظافة", "واي فاي مركزي"],
-  "commercial_building": ["على شارع تجاري", "معارض مؤجرة", "مكاتب جاهزة", "رخصة دفاع مدني", "عدادات مستقلة", "كاميرات مراقبة", "مصعد", "قبو مواقف"],
-  "complex": ["سور وبوابات (Gated)", "حراسة 24/7", "مسبح مشترك", "نادي رياضي (Gym)", "حدائق (Landscape)", "ألعاب أطفال", "ميني ماركت", "قاعة مناسبات", "صيانة ونظافة دائمة", "مواقف مظللة", "دخول ذكي", "مسجد/مصلى", "محطة معالجة مياه", "مولد احتياطي", "مكافحة حريق مركزية", "كافيه لاونج"],
-  "commercial_land": ["رخصة بناء جاهزة", "موقع حيوي", "أرض مستوية", "خدمات واصلة", "شارع مسفلت", "قريبة من معالم", "سهولة الوصول", "خالية من العوائق", "مصرحة متعدد", "إمكانية الدمج", "تقرير مساحي", "واجهة تجارية", "منطقة نمو", "بعيدة عن السيول", "مسموح القبو", "سور مؤقت"],
-  "school": ["معامل حاسب آلي", "مختبرات علوم", "مكتبة شاملة", "مسرح مدرسي", "مسبح داخلي", "ملاعب رياضية", "عيادة طبية", "مقصف/كافيتيريا", "غرف معلمين مؤثثة", "مصلى واسع", "ساحات مظللة", "نظام مراقبة", "بوابات آمنة", "منطقة حافلات (Drop-off)", "تسهيلات لأصحاب الهمم", "غرف فنون/مرسم"],
-  "warehouse": ["رصيف تحميل (Dock Levelers)", "أرضية إيبوكسي", "نظام رفوف (Racking Ready)", "عزل حراري (Sandwich Panel)", "إضاءة طبيعية", "مكتب إداري داخلي", "مرافق للعمال", "غرفة حارس", "سور خرساني", "كهرباء 3 فاز", "نظام إطفاء متطور", "ساحة مناورة شاحنات", "تهوية صناعية", "كاميرات مراقبة", "مخارج طوارئ", "غرف تبريد"],
-  "gas_station": ["عقود Anchor Tenants", "سوبر ماركت (C-Store)", "طلبات سيارة (Drive-thru)", "منطقة مطاعم", "مغسلة أوتوماتيكية", "مغسلة يدوية", "مركز خدمة سيارات", "صراف آلي (ATM)", "مصلى ودورات مياه", "سكن عمال", "مضخات ديزل للشاحنات", "استرجاع أبخرة", "مظلة LED حديثة", "خدمات مجانية (هواء/ماء)", "ربط أمني (شموس)", "خزانات مزدوجة (Double Wall)"],
-  "factory": ["رافعات علوية (Cranes)", "أرضيات صناعية", "نظام إطفاء آلي", "رصيف تحميل", "مبنى إداري", "مختبر جودة", "مستودع مواد", "شبكة هواء مضغوط", "نظام تهوية", "ميزان شاحنات", "غرفة مولدات", "سكن عمال", "خزانات وقود", "تصريف صناعي", "ورشة صيانة", "شهادات أيزو"],
-  "health_center": ["غرفة أشعة (X-Ray)", "مختبر تحاليل", "صيدلية داخلية", "غرفة تعقيم", "مداخل ذوي همم", "غرفة نفايات طبية", "مولد طوارئ UPS", "غرفة طوارئ", "نظام استدعاء تمريض", "أرضيات فينيل طبي", "تكييف HEPA", "مواقف إسعاف", "استراحة أطباء", "دورات مياه خاصة", "شاشات انتظار", "دفاع مدني طبي"],
-  "industrial_land": ["داخل مدينة صناعية", "طرق شاحنات", "قرب ميناء", "محطة كهرباء", "شبكة غاز صناعي", "تصريف صناعي", "تصريح سكن عمال", "أرضية صلبة", "خدمات لوجستية", "أمن صناعي", "مخططات معتمدة", "إمكانية التجزئة", "إعفاءات جمركية", "شبكة اتصال", "تخزين خارجي", "مسورة بالكامل"],
-  "farm": ["فيلا/استراحة", "مجالس خارجية", "مسبح", "شبكة ري حديثة", "خزانات ضخمة", "بيوت محمية", "حظائر مواشي", "سكن عمال", "طرق مرصوفة", "مستودع أعلاف", "أشجار مثمرة", "مسطحات خضراء", "منطقة شواء", "سور كامل", "غطاسات ومضخات", "بوابة إلكترونية"]
-};
-
-// 2️⃣ إعدادات الأزرار الذكية
-const SMART_RANGES = {
-  area: ["100-200", "200-300", "300-400", "400-600", "600-900", "900-1500", "1500-3000", "3000+"],
-  floors: ["1-3", "4-7", "8-12", "13-20", "20-30", "30+"],
-  elevators: ["1", "2", "3", "4", "6", "8", "10+"],
-  units_small: ["1-5", "6-10", "11-20", "21-35"],
-  units_large: ["20-50", "50-100", "100-200", "200+"],
-  rooms: ["1", "2", "3", "4", "5", "6", "7+"],
-  bathrooms: ["1", "2", "3", "4", "5+"],
-  streets: ["1", "2", "3", "4"],
-  pumps: ["2", "4", "6", "8", "10", "12+"],
-  tanks: ["30k", "50k", "70k", "100k+"],
-  income: ["< 100k", "100k-200k", "200k-500k", "500k-1M", "1M+"],
-  roi: ["5%", "6%", "7%", "8%", "9%", "10%+"],
-  facadeWidth: ["10-15m", "15-20m", "20-30m", "30m+"],
-  ceilingHeight: ["3-4m", "4-6m", "6-8m", "8m+"],
-  power: ["Normal", "200 KVA", "500 KVA", "1000 KVA+"],
-  capacity: ["< 100", "100-300", "300-500", "500-1000", "1000+"]
-};
-
-const SAUDI_BANKS = ["الراجحي", "الأهلي (SNB)", "الرياض", "الإنماء", "الأول (SAB)", "البلاد", "الجزيرة", "العربي", "الاستثمار", "الفرنسي"];
+// استيراد الإعدادات المشتركة
+import { 
+  SPECIFIC_TAGS, SMART_RANGES, SAUDI_BANKS, 
+  getPropertyTypesByCategory, getTagsForPropertyType 
+} from "@/lib/property-form-config";
 
 interface SearchFilters {
   name: string; phone: string; email: string; 
@@ -126,6 +92,16 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAutoRegistered, setIsAutoRegistered] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Try to load form config from Form Builder (optional - fallback to hardcoded if not available)
+  const { formConfig, useFormBuilder, isLoading: isLoadingFormConfig } = useFormBuilderConfig("buyer_form");
+  
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log("AdvancedSearchForm - useFormBuilder:", useFormBuilder);
+    console.log("AdvancedSearchForm - formConfig:", formConfig);
+    console.log("AdvancedSearchForm - isLoadingFormConfig:", isLoadingFormConfig);
+  }
 
   const [filters, setFilters] = useState<SearchFilters>({
     name: "", phone: "", email: "", propertyCategory: "",
@@ -156,20 +132,51 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [selectedDirection, setSelectedDirection] = useState<Direction | "all">("all");
 
   const firstName = filters.name ? filters.name.split(" ")[0] : "";
 
-  // ... (Cards and Helpers same as before) ...
-  const cards = useMemo(() => [
-    { id: 0, icon: User, title: "ابدأ رحلتك العقارية", color: "bg-emerald-500", lightColor: "bg-emerald-100" },
-    { id: 1, icon: Sparkles, title: `تفاصيل الطلب`, color: "bg-amber-500", lightColor: "bg-amber-100" },
-    { id: 2, icon: MapPin, title: "المدينة المفضلة", color: "bg-blue-500", lightColor: "bg-blue-100" },
-    { id: 3, icon: Navigation, title: "الحي المرغوب", color: "bg-teal-500", lightColor: "bg-teal-100" },
-    { id: 4, icon: Home, title: "نوع العقار", color: "bg-purple-500", lightColor: "bg-purple-100" },
-    { id: 5, icon: Settings2, title: "المواصفات الفنية", color: "bg-orange-500", lightColor: "bg-orange-100" },
-    { id: 6, icon: Wallet, title: "الميزانية والاستثمار", color: "bg-indigo-500", lightColor: "bg-indigo-100" },
-    { id: 7, icon: Star, title: "اللمسات الأخيرة", color: "bg-pink-500", lightColor: "bg-pink-100" },
-  ], [firstName]);
+  // Step colors - matching the real form
+  const stepColors = [
+    { bg: "bg-emerald-500", light: "bg-emerald-100", border: "border-emerald-200" },
+    { bg: "bg-amber-500", light: "bg-amber-100", border: "border-amber-200" },
+    { bg: "bg-blue-500", light: "bg-blue-100", border: "border-blue-200" },
+    { bg: "bg-teal-500", light: "bg-teal-100", border: "border-teal-200" },
+    { bg: "bg-purple-500", light: "bg-purple-100", border: "border-purple-200" },
+    { bg: "bg-orange-500", light: "bg-orange-100", border: "border-orange-200" },
+    { bg: "bg-indigo-500", light: "bg-indigo-100", border: "border-indigo-200" },
+    { bg: "bg-pink-500", light: "bg-pink-100", border: "border-pink-200" },
+  ];
+
+  // Use Form Builder steps if available, otherwise use hardcoded cards
+  const cards = useMemo(() => {
+    if (useFormBuilder && formConfig && formConfig.steps) {
+      return formConfig.steps.map((stepData, idx) => {
+        const color = stepColors[idx % stepColors.length];
+        const StepIcon = stepData.step.icon
+          ? (icons[stepData.step.icon as keyof typeof icons] as React.ComponentType<{ className?: string }>)
+          : FileText;
+        return {
+          id: idx,
+          icon: StepIcon || FileText,
+          title: stepData.step.title,
+          color: color.bg,
+          lightColor: color.light,
+        };
+      });
+    }
+    // Fallback to hardcoded cards
+    return [
+      { id: 0, icon: User, title: "ابدأ رحلتك العقارية", color: "bg-emerald-500", lightColor: "bg-emerald-100" },
+      { id: 1, icon: Sparkles, title: `تفاصيل الطلب`, color: "bg-amber-500", lightColor: "bg-amber-100" },
+      { id: 2, icon: MapPin, title: "المدينة المفضلة", color: "bg-blue-500", lightColor: "bg-blue-100" },
+      { id: 3, icon: Navigation, title: "الحي المرغوب", color: "bg-teal-500", lightColor: "bg-teal-100" },
+      { id: 4, icon: Home, title: "نوع العقار", color: "bg-purple-500", lightColor: "bg-purple-100" },
+      { id: 5, icon: Settings2, title: "المواصفات الفنية", color: "bg-orange-500", lightColor: "bg-orange-100" },
+      { id: 6, icon: Wallet, title: "الميزانية والاستثمار", color: "bg-indigo-500", lightColor: "bg-indigo-100" },
+      { id: 7, icon: Star, title: "اللمسات الأخيرة", color: "bg-pink-500", lightColor: "bg-pink-100" },
+    ];
+  }, [useFormBuilder, formConfig, firstName]);
 
   const totalCards = cards.length;
 
@@ -178,7 +185,23 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
   const isPhoneValid = useMemo(() => filters.phone.trim() ? validateSaudiPhone(filters.phone).isValid : false, [filters.phone]);
   const filteredCities = useMemo(() => saudiCities.filter(c => c.name.includes(citySearch)), [citySearch]);
   const availableDistricts = useMemo(() => { if (filters.cities.length === 0) return []; return saudiCities.find(c => c.name === filters.cities[0])?.neighborhoods || []; }, [filters.cities]);
-  const filteredDistricts = useMemo(() => availableDistricts.filter(d => d.name.includes(districtSearch)), [availableDistricts, districtSearch]);
+  const filteredDistricts = useMemo(() => {
+    let districts = availableDistricts;
+    // تصفية حسب الاتجاه
+    if (selectedDirection !== "all") {
+      districts = districts.filter(d => d.direction === selectedDirection);
+    }
+    // تصفية حسب البحث
+    if (districtSearch) {
+      districts = districts.filter(d => d.name.includes(districtSearch));
+    }
+    return districts;
+  }, [availableDistricts, districtSearch, selectedDirection]);
+  
+  // التحقق من وجود أحياء مع اتجاهات في المدينة المحددة
+  const hasDirections = useMemo(() => {
+    return availableDistricts.some(d => d.direction);
+  }, [availableDistricts]);
   const toggleFeature = (tag: string) => { setFilters(prev => ({ ...prev, smartTags: prev.smartTags.includes(tag) ? prev.smartTags.filter(t => t !== tag) : [...prev.smartTags, tag] })); };
 
   // ✅✅ FIX: Toggle Logic for City and District
@@ -207,7 +230,56 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
     });
   };
 
-  const autoRegisterUser = async () => { /* ... */ setIsAutoRegistered(true); setIsRegistering(false); };
+  const autoRegisterUser = async () => {
+    if (isRegistering || isAutoRegistered) return;
+    
+    setIsRegistering(true);
+    
+    try {
+      // التحقق من البيانات الأساسية
+      if (!filters.name || !isPhoneValid || !filters.email) {
+        toast({
+          title: "خطأ",
+          description: "يرجى إكمال البيانات الأساسية أولاً",
+          variant: "destructive",
+        });
+        setIsRegistering(false);
+        return;
+      }
+
+      // تسجيل المستخدم تلقائياً عبر API
+      const response = await fetch("/api/buyers/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: filters.name,
+          phone: filters.phone,
+          email: filters.email,
+          city: filters.cities && filters.cities.length > 0 ? filters.cities[0] : "الرياض",
+          districts: filters.districts || [],
+          propertyType: filters.propertyType || null,
+          propertyCategory: filters.propertyCategory || null,
+          transactionType: filters.transactionType || "buy",
+        }),
+      });
+
+      if (response.ok) {
+        setIsAutoRegistered(true);
+        toast({
+          title: "تم التسجيل",
+          description: "تم تسجيلك بنجاح، يمكنك المتابعة",
+        });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "فشل في التسجيل");
+      }
+    } catch (error: any) {
+      console.error("Error auto-registering:", error);
+      // لا نعرض خطأ للمستخدم هنا، فقط نسجل (لأن التسجيل سيحدث عند الإرسال النهائي)
+    } finally {
+      setIsRegistering(false);
+    }
+  };
   const goNext = async () => { if (activeCard < totalCards - 1 && !isAnimating) { if (activeCard === 0 && !isAutoRegistered) await autoRegisterUser(); if (activeCard === 5) { setIsAnalyzing(true); setTimeout(() => { setIsAnalyzing(false); advance(); }, 1500); return; } advance(); } };
   const advance = () => { setIsAnimating(true); setTimeout(() => { setActiveCard(p => p + 1); setIsAnimating(false); }, 200); };
   const goBack = (idx: number) => { if (idx < activeCard && !isAnimating) { setIsAnimating(true); setTimeout(() => { setActiveCard(idx); setIsAnimating(false); }, 200); }};
@@ -217,14 +289,39 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
     onSearch(filters);
   };
 
-  const canProceed = () => {
-    if (activeCard === 0) return filters.name && isPhoneValid && filters.email && filters.propertyCategory;
-    if (activeCard === 1) return filters.transactionType && filters.propertyCondition;
+  const canProceed = (): boolean => {
+    // If using Form Builder, validate based on current step's required fields
+    if (useFormBuilder && formConfig && formConfig.steps[activeCard]) {
+      const currentStep = formConfig.steps[activeCard];
+      const requiredFields = currentStep.fields.filter(f => f.field.required);
+      
+      // Check if all required fields are filled
+      for (const fieldData of requiredFields) {
+        const field = fieldData.field;
+        const value = (filters as Record<string, any>)[field.name];
+        
+        // Special validation for phone
+        if (field.name === "phone" && !isPhoneValid) {
+          return false;
+        }
+        
+        // Check if field has value
+        if (value === undefined || value === null || value === "" || 
+            (Array.isArray(value) && value.length === 0)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    
+    // Fallback to hardcoded validation
+    if (activeCard === 0) return !!(filters.name && isPhoneValid && filters.email && filters.propertyCategory);
+    if (activeCard === 1) return !!(filters.transactionType && filters.propertyCondition);
     if (activeCard === 2) return filters.cities.length > 0;
     if (activeCard === 3) return filters.districts.length > 0;
-    if (activeCard === 4) return filters.propertyType;
-    if (activeCard === 5) return filters.minArea; 
-    if (activeCard === 6) return filters.maxPrice && filters.paymentMethod;
+    if (activeCard === 4) return !!filters.propertyType;
+    if (activeCard === 5) return !!filters.minArea; 
+    if (activeCard === 6) return !!(filters.maxPrice && filters.paymentMethod);
     return true;
   };
 
@@ -399,6 +496,25 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                 </div>
 
                 <div className="p-6">
+                  {/* Use Form Builder if available, otherwise use hardcoded form */}
+                  {useFormBuilder && formConfig && formConfig.config && formConfig.steps[activeCard] ? (
+                    <DynamicFormRenderer
+                      formConfig={{
+                        config: formConfig.config,
+                        steps: [formConfig.steps[activeCard]],
+                      }}
+                      values={filters}
+                      onChange={(fieldName, value) => {
+                        if (fieldName === "phone") {
+                          handlePhoneChange(value);
+                        } else {
+                          setFilters((f) => ({ ...f, [fieldName]: value }));
+                        }
+                      }}
+                      renderFieldsOnly={true}
+                    />
+                  ) : (
+                    <>
                   {/* Card 0: Improved UI with 2 Big Cards */}
                   {activeCard === 0 && (
                     <div className="space-y-4 animate-in slide-in-from-bottom-4">
@@ -537,8 +653,29 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                   {/* ✅✅ Card 3: District with Toggle Logic */}
                   {activeCard === 3 && (
                     <div className="space-y-4 animate-in slide-in-from-right-8">
+                      {/* فلتر الاتجاهات */}
+                      {hasDirections && (
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <button
+                            onClick={() => setSelectedDirection("all")}
+                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedDirection === "all" ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                          >
+                            الكل
+                          </button>
+                          {(["north", "south", "east", "west", "center"] as Direction[]).map(dir => (
+                            <button
+                              key={dir}
+                              onClick={() => setSelectedDirection(dir)}
+                              className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-1 ${selectedDirection === dir ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                            >
+                              <Compass className="w-3 h-3" />
+                              {directionLabels[dir]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div className="relative"><Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" /><Input placeholder="ابحث عن حي..." value={districtSearch} onChange={(e) => setDistrictSearch(e.target.value)} className="h-12 pr-10 rounded-xl" /></div>
-                      <div className="h-[240px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
+                      <div className="h-[200px] overflow-y-auto grid grid-cols-3 gap-2 pr-2">
                         {filteredDistricts.length > 0 ? filteredDistricts.map(d => (
                           <button key={d.name} onClick={() => toggleDistrict(d.name)} className={`py-3 px-2 rounded-lg border text-sm font-bold transition-all ${filters.districts.includes(d.name) ? "bg-primary text-white border-primary" : "bg-white hover:bg-muted border-border"}`}>
                             {filters.districts.includes(d.name) && <Check className="inline-block w-3 h-3 ml-1" />}{d.name}
@@ -557,7 +694,11 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                   {/* Card 6: Budget */}
                   {activeCard === 6 && (
                     <div className="space-y-6 animate-in slide-in-from-right-8 flex flex-col justify-center min-h-[400px]">
-                      <div><label className="block text-sm font-medium mb-2">الميزانية المتوقعة</label><div className="grid grid-cols-2 gap-2">{getBudgetOptions().map(b => <button key={b.value} onClick={() => setFilters(f => ({ ...f, maxPrice: b.value }))} className={`py-3 px-2 rounded-lg border text-xs font-bold transition-all hover:shadow-md ${filters.maxPrice === b.value ? "border-primary bg-primary text-white scale-105" : "border-border hover:bg-muted"}`}>{b.label}</button>)}</div></div>
+                      <div><label className="block text-sm font-medium mb-2">الميزانية المتوقعة</label><div className="grid grid-cols-2 gap-2">{getBudgetOptions().map(b => {
+                        const value = 'value' in b ? b.value : b.v;
+                        const label = 'label' in b ? b.label : b.l;
+                        return <button key={value} onClick={() => setFilters(f => ({ ...f, maxPrice: value }))} className={`py-3 px-2 rounded-lg border text-xs font-bold transition-all hover:shadow-md ${filters.maxPrice === value ? "border-primary bg-primary text-white scale-105" : "border-border hover:bg-muted"}`}>{label}</button>;
+                      })}</div></div>
                       <div><label className="block text-sm font-medium mb-2 flex items-center gap-2"><Wallet className="h-4 w-4" /> طريقة الشراء</label><div className="grid grid-cols-2 gap-3"><button onClick={() => setFilters(f => ({ ...f, paymentMethod: "cash" }))} className={`p-3 rounded-xl border-2 font-bold ${filters.paymentMethod === "cash" ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>كاش</button><button onClick={() => setFilters(f => ({ ...f, paymentMethod: "finance" }))} className={`p-3 rounded-xl border-2 font-bold ${filters.paymentMethod === "finance" ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>تمويل بنكي</button></div></div>
                       {filters.paymentMethod === "finance" && (<div className="space-y-3 animate-in fade-in"><label className="block text-sm font-medium mb-1">البنك</label><div className="grid grid-cols-2 gap-2">{SAUDI_BANKS.map(bank => (<button key={bank} onClick={() => setFilters(f => ({...f, bankName: bank}))} className={`py-2 px-1 rounded border text-[10px] font-bold ${filters.bankName === bank ? "bg-primary text-white" : "bg-white"}`}>{bank}</button>))}</div><Input type="number" placeholder="الراتب الشهري" value={filters.salary} onChange={e => setFilters(f => ({...f, salary: e.target.value}))} className="text-center" /></div>)}
                       <Button onClick={goNext} disabled={!canProceed()} className="w-full h-12 rounded-xl text-lg">التالي</Button>
@@ -591,6 +732,26 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                         إرسال الطلب
                       </Button>
                     </div>
+                  )}
+                    </>
+                  )}
+                  
+                  {/* Next/Submit Button for Form Builder mode */}
+                  {useFormBuilder && formConfig && (
+                    <FormNavigationButton
+                      isLastStep={activeCard === formConfig.steps.length - 1}
+                      canProceed={canProceed()}
+                      onNext={goNext}
+                      onSubmit={handleSearch}
+                      submitLabel="إرسال الطلب"
+                      nextLabel="التالي"
+                      submitGradient={{
+                        from: "from-emerald-600",
+                        to: "to-green-500",
+                        hoverFrom: "hover:from-emerald-700",
+                        hoverTo: "hover:to-green-600",
+                      }}
+                    />
                   )}
                 </div>
               </div>
@@ -751,7 +912,51 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                 {activeCard === 2 && <div className="space-y-3 animate-in slide-in-from-right-4">{filters.cities.length > 0 && <div className="flex flex-wrap gap-1 justify-center">{filters.cities.map(c => <Badge key={c} variant="secondary" className="px-2 py-0.5 text-[10px]">{c} <X className="h-2.5 w-2.5 mr-1" onClick={() => toggleCity(c)} /></Badge>)}</div>}<div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={citySearch} onChange={e => setCitySearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5"><div className="grid grid-cols-3 gap-2">{filteredCities.map(c => { const isSelected = filters.cities.includes(c.name); return (<button key={c.name} onClick={() => toggleCity(c.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<span className="truncate">{c.name}</span></button>); })}</div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
                 {/* ✅✅ Card 3: District with Toggle Logic */}
-                {activeCard === 3 && <div className="space-y-3 animate-in slide-in-from-right-4">{filters.districts.length > 0 && <div className="flex flex-wrap gap-1 justify-center">{filters.districts.map(d => <Badge key={d} variant="secondary" className="text-[10px]">{d} <X className="h-2.5 w-2.5 mr-1" onClick={() => toggleDistrict(d)} /></Badge>)}</div>}<div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5">{filteredDistricts.length > 0 ? (<div className="grid grid-cols-3 gap-2">{filteredDistricts.map(d => { const isSelected = filters.districts.includes(d.name); return (<button key={`${d.cityName}-${d.name}`} onClick={() => toggleDistrict(d.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<div className="flex flex-col items-center overflow-hidden w-full"><span className="truncate w-full">{d.name}</span><span className="text-[8px] opacity-70 font-normal truncate w-full">{d.cityName}</span></div></button>); })}</div>) : (<div className="h-full flex flex-col items-center justify-center text-muted-foreground"><MapPin className="h-6 w-6 mb-2 opacity-20" /><p className="text-xs">لا توجد أحياء مطابقة</p></div>)}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
+                {activeCard === 3 && <div className="space-y-3 animate-in slide-in-from-right-4">
+                  {/* فلتر الاتجاهات - موبايل */}
+                  {hasDirections && (
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      <button
+                        onClick={() => setSelectedDirection("all")}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${selectedDirection === "all" ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                      >
+                        الكل
+                      </button>
+                      {(["north", "south", "east", "west", "center"] as Direction[]).map(dir => (
+                        <button
+                          key={dir}
+                          onClick={() => setSelectedDirection(dir)}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-0.5 ${selectedDirection === dir ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                        >
+                          {directionLabels[dir]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {filters.districts.length > 0 && <div className="flex flex-wrap gap-1 justify-center">{filters.districts.map(d => <Badge key={d} variant="secondary" className="text-[10px]">{d} <X className="h-2.5 w-2.5 mr-1" onClick={() => toggleDistrict(d)} /></Badge>)}</div>}
+                  <div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div>
+                  <div className="h-[160px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5">
+                    {filteredDistricts.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {filteredDistricts.map(d => { 
+                          const isSelected = filters.districts.includes(d.name); 
+                          return (
+                            <button key={d.name} onClick={() => toggleDistrict(d.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>
+                              {isSelected && <Check className="h-2.5 w-2.5" />}
+                              <span className="truncate">{d.name}</span>
+                            </button>
+                          ); 
+                        })}
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                        <MapPin className="h-6 w-6 mb-2 opacity-20" />
+                        <p className="text-xs">لا توجد أحياء مطابقة</p>
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button>
+                </div>}
 
                 {activeCard === 4 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="grid grid-cols-4 gap-2">{propertyTypes.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => handleSelection('propertyType', type.value)} className={`p-2 rounded-lg border flex flex-col items-center gap-1 transition-transform active:scale-95 ${filters.propertyType === type.value ? "border-primary bg-primary/5 scale-105" : "border-border"}`}><Icon className="h-5 w-5" /><span className="text-[10px] font-bold text-center">{type.label}</span></button>)})}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
@@ -759,7 +964,11 @@ export const AdvancedSearchForm = memo(function AdvancedSearchForm({ onSearch }:
                 {activeCard === 5 && renderCard5Content()}
 
                 {/* Mobile Card 6 */}
-                {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">الميزانية</label><div className="grid grid-cols-2 gap-1.5">{getBudgetOptions().map(b => <button key={b.value} onClick={() => setFilters(f => ({ ...f, maxPrice: b.value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${filters.maxPrice === b.value ? "bg-primary text-white" : "border-border"}`}>{b.label}</button>)}</div></div><div><label className="text-xs font-medium mb-1.5 block">طريقة الشراء</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentMethod', 'cash')} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش</button><button onClick={() => handleSelection('paymentMethod', 'finance', false)} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>تمويل بنكي</button></div></div>{filters.paymentMethod === "finance" && (<div className="space-y-2"><label className="text-xs font-medium mb-1.5 block">البنك</label><div className="grid grid-cols-2 gap-1.5">{SAUDI_BANKS.map(bank => (<button key={bank} onClick={() => setFilters(f => ({ ...f, bankName: bank }))} className={`py-1.5 px-1 rounded border text-[9px] font-bold ${filters.bankName === bank ? "bg-primary text-white" : "border-border"}`}>{bank}</button>))}</div><Input type="number" placeholder="الراتب" value={filters.salary} onChange={e => setFilters(f => ({ ...f, salary: e.target.value }))} className="h-9 text-center" /></div>)}<Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
+                {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">الميزانية</label><div className="grid grid-cols-2 gap-1.5">{getBudgetOptions().map(b => {
+                  const value = 'value' in b ? b.value : b.v;
+                  const label = 'label' in b ? b.label : b.l;
+                  return <button key={value} onClick={() => setFilters(f => ({ ...f, maxPrice: value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${filters.maxPrice === value ? "bg-primary text-white" : "border-border"}`}>{label}</button>;
+                })}</div></div><div><label className="text-xs font-medium mb-1.5 block">طريقة الشراء</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentMethod', 'cash')} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش</button><button onClick={() => handleSelection('paymentMethod', 'finance')} className={`p-2 rounded border text-xs font-bold ${filters.paymentMethod === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>تمويل بنكي</button></div></div>{filters.paymentMethod === "finance" && (<div className="space-y-2"><label className="text-xs font-medium mb-1.5 block">البنك</label><div className="grid grid-cols-2 gap-1.5">{SAUDI_BANKS.map(bank => (<button key={bank} onClick={() => setFilters(f => ({ ...f, bankName: bank }))} className={`py-1.5 px-1 rounded border text-[9px] font-bold ${filters.bankName === bank ? "bg-primary text-white" : "border-border"}`}>{bank}</button>))}</div><Input type="number" placeholder="الراتب" value={filters.salary} onChange={e => setFilters(f => ({ ...f, salary: e.target.value }))} className="h-9 text-center" /></div>)}<Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
 
                 {/* Mobile Card 7 */}
                 {activeCard === 7 && <div className="space-y-3"><label className="text-xs font-medium mb-1.5 block">تفاصيل إضافية</label>

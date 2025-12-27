@@ -85,10 +85,11 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
       const response = await apiRequest("POST", "/api/buyers/register", {
         name: filters.name || "",
         phone: filters.phone || "",
-        email: filters.email || `${filters.phone}@temp.com`,
+        email: filters.email || null, // إرسال null بدلاً من إيميل مؤقت
         city: filters.cities && filters.cities.length > 0 ? filters.cities[0] : "",
         districts: filters.districts || [],
-        propertyType: filters.propertyType || "apartment",
+        propertyType: filters.propertyType || null, // إرسال null بدلاً من قيمة افتراضية
+        propertyCategory: filters.propertyCategory || null, // إضافة propertyCategory
         rooms: filters.rooms || null,
         area: filters.minArea || null,
         budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
@@ -205,7 +206,7 @@ export default function HeroSection({ onCompleteChange }: HeroSectionProps) {
               </div>
               <div className="w-full">
                 {mode === "buyer" ? (
-                  <AdvancedSearchForm onSearch={(f) => buyerMutation.mutate(f)} onSwitchToChat={() => {}} />
+                  <AdvancedSearchForm onSearch={(f) => buyerMutation.mutate(f)} />
                 ) : (
                   <ListPropertyForm onSubmit={(p) => sellerMutation.mutate(p)} />
                 )}

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
+import * as formBuilderStorage from "./form-builder-storage";
 import {
   insertUserSchema,
   insertBuyerPreferenceSchema,
@@ -12,8 +13,17 @@ import {
   userSegments,
   adCampaigns,
   campaignSends,
+  appointments,
+  landingPages,
+  marketerLinks,
+  progressiveProfiles,
+  matches,
+  properties,
 } from "@shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import * as landingPageService from "./landing-page-service";
+import * as leadsService from "./leads-service";
+import { handleFormSubmission } from "./routes/form-submission";
+import { eq, desc, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
@@ -76,159 +86,9 @@ export async function registerRoutes(
   // ============================================================
 
   // تسجيل البائع + العقار (للهيرو سكشين)
-  app.post("/api/sellers/register", async (req, res) => {
-    try {
-      const data = req.body;
-      
-      // تنظيف وvalidate البيانات
-      const cleanPhone = normalizePhone(data.phone || "");
-      if (!isValidPhone(cleanPhone)) {
-        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
-      }
-      
-      // الإيميل إلزامي الآن
-      if (!data.email) {
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
-      }
-      
-      const cleanEmail = normalizeEmail(data.email);
-      if (!isValidEmail(cleanEmail)) {
-        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
-      }
-      
-      let isNewUser = false;
-      // نستخدم الـ Storage الأصلي الموجود في ملفك
-      let user = await storage.getUserByPhone(cleanPhone);
-      if (!user) {
-        const passwordHash = await bcrypt.hash("password123", 10);
-        
-        user = await storage.createUser({
-          name: (data.name || "بائع جديد").trim(),
-          phone: cleanPhone,
-          email: cleanEmail,
-          role: "seller",
-          passwordHash,
-        });
-        
-        isNewUser = true;
-      }
+  // تم حذف endpoint المكرر - يتم استخدام endpoint في السطر 1295 بدلاً منه
 
-      const property = await storage.createProperty({
-        sellerId: user.id,
-        propertyType: data.propertyType || "apartment",
-        city: data.city || "الرياض",
-        district: data.district || "غير محدد",
-        price: Number(data.price) || 0,
-        area: data.area ? String(data.area) : null,
-        rooms: data.rooms ? String(data.rooms) : null,
-        bathrooms: data.bathrooms ? String(data.bathrooms) : null,
-        description: data.description || null,
-        status: data.status || "ready",
-        isActive: true,
-        images: Array.isArray(data.images) ? data.images : [],
-        smartTags: Array.isArray(data.smartTags) ? data.smartTags : [],
-        notes: data.notes || null,
-      });
-
-      // البحث عن المطابقات للعقار الجديد
-      await storage.findMatchesForProperty(property.id);
-
-      req.session.userId = user.id;
-      req.session.save();
-      return res.status(201).json({ 
-        success: true, 
-        user, 
-        property,
-        isNewUser,
-        phone: data.phone.trim(),
-      });
-    } catch (error: any) {
-      console.error("Error registering seller:", error);
-      return res.status(500).json({ error: error.message });
-    }
-  });
-
-  // تسجيل المشتري + الرغبة (للهيرو سكشين)
-  app.post("/api/buyers/register", async (req, res) => {
-    try {
-      const data = req.body;
-      
-      // تنظيف وvalidate البيانات
-      const cleanPhone = normalizePhone(data.phone || "");
-      if (!isValidPhone(cleanPhone)) {
-        return res.status(400).json({ error: "رقم الجوال غير صحيح" });
-      }
-      
-      // الإيميل إلزامي الآن
-      if (!data.email) {
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب" });
-      }
-      
-      const cleanEmail = normalizeEmail(data.email);
-      if (!isValidEmail(cleanEmail)) {
-        return res.status(400).json({ error: "البريد الإلكتروني غير صحيح" });
-      }
-
-      let isNewUser = false;
-      let user = await storage.getUserByPhone(cleanPhone);
-      if (!user) {
-        const passwordHash = await bcrypt.hash("password123", 10);
-        
-        user = await storage.createUser({
-          name: (data.name || "مشتري جديد").trim(),
-          phone: cleanPhone,
-          email: cleanEmail,
-          role: "buyer",
-          passwordHash,
-        });
-        
-        isNewUser = true;
-      }
-
-      // Parse budget values safely
-      const parsedBudgetMin = data.budgetMin
-        ? parseInt(String(data.budgetMin), 10)
-        : null;
-      const parsedBudgetMax = data.budgetMax
-        ? parseInt(String(data.budgetMax), 10)
-        : null;
-
-      const preference = await storage.createBuyerPreference({
-        userId: user.id,
-        city: data.city || "الرياض",
-        districts: Array.isArray(data.districts) ? data.districts : [],
-        propertyType: data.propertyType || "apartment",
-        rooms: data.rooms || null,
-        area: data.area || null,
-        budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
-        budgetMax: isNaN(parsedBudgetMax!) ? null : parsedBudgetMax,
-        paymentMethod: data.paymentMethod || null,
-        purpose: data.purpose || null,
-        purchaseTimeline: data.purchaseTimeline || null,
-        transactionType: data.transactionType || "buy",
-        clientType: data.clientType || "direct",
-        smartTags: Array.isArray(data.smartTags) ? data.smartTags : [],
-        notes: data.notes || null,
-        isActive: true,
-      });
-
-      // البحث عن المطابقات للرغبة الجديدة
-      await storage.findMatchesForPreference(preference.id);
-
-      req.session.userId = user.id;
-      req.session.save();
-      return res.status(201).json({ 
-        success: true, 
-        user, 
-        preference,
-        isNewUser,
-        phone: data.phone.trim(),
-      });
-    } catch (error: any) {
-      console.error("Error registering buyer:", error);
-      return res.status(500).json({ error: error.message });
-    }
-  });
+  // تم حذف endpoint المكرر - يتم استخدام endpoint في السطر 976 بدلاً منه
 
   // ============================================================
   // 🔚 نهاية الجزء المضاف - الآن أكمل باقي الـ 2000 سطر كما هي
@@ -972,6 +832,7 @@ export async function registerRoutes(
         city,
         districts,
         propertyType,
+        propertyCategory, // إضافة propertyCategory
         rooms,
         area,
         budgetMin,
@@ -989,9 +850,10 @@ export async function registerRoutes(
       if (!city || typeof city !== "string") {
         return res.status(400).json({ error: "المدينة مطلوبة" });
       }
-      if (!propertyType || typeof propertyType !== "string") {
-        return res.status(400).json({ error: "نوع العقار مطلوب" });
-      }
+      // propertyType يمكن أن يكون null (سيتم استخدام قيمة افتراضية)
+      // if (!propertyType || typeof propertyType !== "string") {
+      //   return res.status(400).json({ error: "نوع العقار مطلوب" });
+      // }
 
       // تنظيف وvalidate البيانات
       const cleanPhone = normalizePhone(phone || "");
@@ -1043,11 +905,16 @@ export async function registerRoutes(
         : null;
 
       // Create preference
+      // حفظ propertyCategory في notes مؤقتاً حتى يتم إضافته إلى schema
+      const notesWithCategory = propertyCategory 
+        ? (notes ? `${notes}\n[propertyCategory:${propertyCategory}]` : `[propertyCategory:${propertyCategory}]`)
+        : notes;
+      
       const preference = await storage.createBuyerPreference({
         userId: user.id,
         city,
         districts: Array.isArray(districts) ? districts : [],
-        propertyType,
+        propertyType: propertyType || "apartment", // قيمة افتراضية إذا كان null (لأنه required في schema)
         rooms: rooms || null,
         area: area || null,
         budgetMin: isNaN(parsedBudgetMin!) ? null : parsedBudgetMin,
@@ -1055,7 +922,7 @@ export async function registerRoutes(
         paymentMethod: paymentMethod || null,
         purpose: purpose || null,
         smartTags: Array.isArray(smartTags) ? smartTags : [],
-        notes: notes || null,
+        notes: notesWithCategory || null,
         isActive: true,
       });
 
@@ -1291,6 +1158,7 @@ export async function registerRoutes(
         accountType,
         entityName,
         propertyType,
+        propertyCategory, // إضافة propertyCategory
         city,
         district,
         price,
@@ -1315,9 +1183,10 @@ export async function registerRoutes(
       if (!district || typeof district !== "string") {
         return res.status(400).json({ error: "الحي مطلوب" });
       }
-      if (!propertyType || typeof propertyType !== "string") {
-        return res.status(400).json({ error: "نوع العقار مطلوب" });
-      }
+      // propertyType يمكن أن يكون null (سيتم استخدام قيمة افتراضية)
+      // if (!propertyType || typeof propertyType !== "string") {
+      //   return res.status(400).json({ error: "نوع العقار مطلوب" });
+      // }
       if (!price) {
         return res.status(400).json({ error: "السعر مطلوب" });
       }
@@ -1372,9 +1241,14 @@ export async function registerRoutes(
       }
 
       // Create property
+      // حفظ propertyCategory في notes مؤقتاً حتى يتم إضافته إلى schema
+      const notesWithCategory = propertyCategory 
+        ? (notes ? `${notes}\n[propertyCategory:${propertyCategory}]` : `[propertyCategory:${propertyCategory}]`)
+        : notes;
+      
       const property = await storage.createProperty({
         sellerId: user.id,
-        propertyType,
+        propertyType: propertyType || "apartment", // قيمة افتراضية إذا كان null
         city,
         district,
         price: parsedPrice,
@@ -1384,7 +1258,7 @@ export async function registerRoutes(
         status: status || "ready",
         images: Array.isArray(images) ? images : [],
         smartTags: Array.isArray(smartTags) ? smartTags : [],
-        notes: notes || null,
+        notes: notesWithCategory || null,
         isActive: true,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
@@ -3558,6 +3432,1476 @@ export async function registerRoutes(
       }
     },
   );
+
+  // ==================== FORM BUILDER API ====================
+
+  // Form Configs
+  app.get("/api/admin/form-builder/configs", async (req, res) => {
+    try {
+      const configs = await formBuilderStorage.getAllFormConfigs();
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/form-builder/configs/:id", async (req, res) => {
+    try {
+      const config = await formBuilderStorage.getFormConfigById(req.params.id);
+      if (!config) {
+        return res.status(404).json({ error: "النموذج غير موجود" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/form-builder/configs", async (req, res) => {
+    try {
+      const config = await formBuilderStorage.createFormConfig(req.body);
+      res.status(201).json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/form-builder/configs/:id", async (req, res) => {
+    try {
+      const updated = await formBuilderStorage.updateFormConfig(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "النموذج غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/form-builder/configs/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteFormConfig(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get form by name or type (for public use)
+  app.get("/api/form-builder/:nameOrType", async (req, res) => {
+    try {
+      const config = await formBuilderStorage.getCompleteFormConfig(req.params.nameOrType);
+      if (!config) {
+        return res.status(404).json({ error: "النموذج غير موجود" });
+      }
+      res.json(config);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== FORM BUILDER DATA ENDPOINTS ====================
+  
+  // Get cities (for city_picker)
+  app.get("/api/form-builder/cities", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const dbCities = await locationsStorage.getAllCities();
+      
+      if (dbCities.length > 0) {
+        // Use cities from database with districts
+        const citiesWithDistricts = await Promise.all(
+          dbCities.map(async (city) => {
+            const districts = await locationsStorage.getAllDistricts(city.id);
+            return {
+              name: city.name,
+              nameEn: city.nameEn || "",
+              region: city.region,
+              coordinates: { lat: city.latitude, lng: city.longitude },
+              neighborhoods: districts.map(d => ({
+                name: d.name,
+                nameEn: d.nameEn,
+                direction: d.direction,
+              })),
+            };
+          })
+        );
+        res.json(citiesWithDistricts);
+      } else {
+        // Fallback to static data
+        const { saudiCities } = await import("@shared/saudi-locations");
+        res.json(saudiCities);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get districts for a city (updated to use DB with fallback)
+  app.get("/api/form-builder/districts/:city", async (req, res) => {
+    try {
+        const locationsStorage = await import("./locations-storage");
+        const city = await locationsStorage.getCityByName(req.params.city);
+        
+        if (city) {
+          // Use districts from database with coordinates
+          const districts = await locationsStorage.getAllDistricts(city.id);
+        res.json(districts.map(d => ({
+          name: d.name,
+          nameEn: d.nameEn,
+          direction: d.direction,
+          latitude: d.latitude,
+          longitude: d.longitude,
+        })));
+      } else {
+        // Fallback to static data
+        const { saudiCities } = await import("@shared/saudi-locations");
+        const staticCity = saudiCities.find(c => c.name === req.params.city);
+        if (!staticCity) {
+          return res.status(404).json({ error: "المدينة غير موجودة" });
+        }
+        res.json(staticCity.neighborhoods);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get property types (filtered by category if provided)
+  app.get("/api/form-builder/property-types", async (req, res) => {
+    try {
+      const { getPropertyTypesByCategory } = await import("@/lib/property-form-config");
+      const category = req.query.category as "residential" | "commercial" | "" | undefined;
+      const types = getPropertyTypesByCategory(category || "");
+      res.json(types);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get smart tags (filtered by propertyType if provided) - Public API
+  app.get("/api/form-builder/smart-tags", async (req, res) => {
+    try {
+      const propertyType = req.query.propertyType as string | undefined;
+      const tags = await formBuilderStorage.getAllSmartTags(propertyType);
+      
+      if (tags.length > 0) {
+        // Return tags from database
+        res.json(tags.map(tag => ({ value: tag.tag, label: tag.label })));
+      } else {
+        // Fallback to static tags if database is empty
+        const { SPECIFIC_TAGS, getTagsForPropertyType } = await import("@/lib/property-form-config");
+        if (propertyType) {
+          const staticTags = getTagsForPropertyType(propertyType);
+          res.json(staticTags.map(tag => ({ value: tag, label: tag })));
+        } else {
+          const allTags = new Set<string>();
+          Object.values(SPECIFIC_TAGS).forEach(tags => {
+            tags.forEach(tag => allTags.add(tag));
+          });
+          res.json(Array.from(allTags).map(tag => ({ value: tag, label: tag })));
+        }
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== SMART TAGS MANAGEMENT API ====================
+  
+  // Get all smart tags (admin)
+  app.get("/api/admin/form-builder/smart-tags", async (req, res) => {
+    try {
+      const propertyType = req.query.propertyType as string | undefined;
+      const tags = await formBuilderStorage.getAllSmartTags(propertyType);
+      res.json(tags);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get smart tag by ID
+  app.get("/api/admin/form-builder/smart-tags/:id", async (req, res) => {
+    try {
+      const tag = await formBuilderStorage.getSmartTagById(req.params.id);
+      if (!tag) {
+        return res.status(404).json({ error: "التاق غير موجود" });
+      }
+      res.json(tag);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create smart tag
+  app.post("/api/admin/form-builder/smart-tags", async (req, res) => {
+    try {
+      console.log("[Smart Tags] POST request received:", req.body);
+      const tag = await formBuilderStorage.createSmartTag(req.body);
+      console.log("[Smart Tags] Tag created:", tag);
+      res.status(201).json(tag);
+    } catch (error: any) {
+      console.error("[Smart Tags] Error creating tag:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update smart tag
+  app.put("/api/admin/form-builder/smart-tags/:id", async (req, res) => {
+    try {
+      const updated = await formBuilderStorage.updateSmartTag(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "التاق غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete smart tag
+  app.delete("/api/admin/form-builder/smart-tags/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteSmartTag(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reorder smart tags (must be before the general POST route)
+  app.post("/api/admin/form-builder/smart-tags/reorder", async (req, res) => {
+    try {
+      const { tagIds } = req.body;
+      if (!Array.isArray(tagIds)) {
+        return res.status(400).json({ error: "tagIds يجب أن يكون array" });
+      }
+      await formBuilderStorage.reorderSmartTags(tagIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== LOCATIONS MANAGEMENT API ====================
+  
+  const locationsStorage = await import("./locations-storage");
+
+  // Cities API
+  app.get("/api/admin/locations/cities", async (req, res) => {
+    try {
+      const cities = await locationsStorage.getAllCities();
+      res.json(cities);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/locations/cities/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const city = await locationsStorage.getCityById(req.params.id);
+      if (!city) {
+        return res.status(404).json({ error: "المدينة غير موجودة" });
+      }
+      res.json(city);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/cities", async (req, res) => {
+    try {
+      // Validate input
+      const validation = await import("./location-validation");
+      const validationResult = validation.validateCityData(req.body);
+      if (!validationResult.isValid) {
+        return res.status(400).json({ error: validationResult.errors.join(", ") });
+      }
+
+      // Check for duplicate city name
+      const locationsStorage = await import("./locations-storage");
+      const existingCity = await locationsStorage.getCityByName(req.body.name.trim());
+      if (existingCity) {
+        return res.status(400).json({ error: "المدينة موجودة بالفعل" });
+      }
+
+      const city = await locationsStorage.createCity({
+        ...req.body,
+        name: req.body.name.trim(),
+        region: req.body.region.trim(),
+        latitude: typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude,
+        longitude: typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude,
+      });
+      res.status(201).json(city);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/locations/cities/:id", async (req, res) => {
+    try {
+      // Validate input if coordinates are provided
+      if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
+        const validation = await import("./location-validation");
+        const lat = req.body.latitude !== undefined 
+          ? (typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude)
+          : 0;
+        const lng = req.body.longitude !== undefined
+          ? (typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude)
+          : 0;
+        
+        const coordsValidation = validation.validateCoordinates(lat, lng);
+        if (!coordsValidation.isValid) {
+          return res.status(400).json({ error: coordsValidation.errors.join(", ") });
+        }
+      }
+
+      // Check for duplicate city name if name is being updated
+      if (req.body.name) {
+        const locationsStorage = await import("./locations-storage");
+        const existingCity = await locationsStorage.getCityByName(req.body.name.trim());
+        if (existingCity && existingCity.id !== req.params.id) {
+          return res.status(400).json({ error: "المدينة موجودة بالفعل" });
+        }
+      }
+
+      const locationsStorage = await import("./locations-storage");
+      const updateData: any = {};
+      if (req.body.name) updateData.name = req.body.name.trim();
+      if (req.body.region) updateData.region = req.body.region.trim();
+      if (req.body.latitude !== undefined) {
+        updateData.latitude = typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude;
+      }
+      if (req.body.longitude !== undefined) {
+        updateData.longitude = typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude;
+      }
+      if (req.body.nameEn !== undefined) updateData.nameEn = req.body.nameEn?.trim();
+      if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+      if (req.body.order !== undefined) updateData.order = req.body.order;
+
+      const updated = await locationsStorage.updateCity(req.params.id, updateData);
+      if (!updated) {
+        return res.status(404).json({ error: "المدينة غير موجودة" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/locations/cities/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      await locationsStorage.deleteCity(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/cities/reorder", async (req, res) => {
+    try {
+      const { cityIds } = req.body;
+      if (!Array.isArray(cityIds)) {
+        return res.status(400).json({ error: "cityIds يجب أن يكون array" });
+      }
+      const locationsStorage = await import("./locations-storage");
+      await locationsStorage.reorderCities(cityIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Export cities to CSV
+  app.get("/api/admin/locations/cities/export", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const cities = await locationsStorage.getAllCities();
+      
+      // Create CSV content
+      const csvHeader = "name,nameEn,region,latitude,longitude,isActive,order\n";
+      const csvRows = cities.map(city => 
+        `"${city.name}","${city.nameEn || ""}","${city.region}",${city.latitude},${city.longitude},${city.isActive},${city.order}`
+      ).join("\n");
+      
+      const csvContent = csvHeader + csvRows;
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=cities-${new Date().toISOString().split("T")[0]}.csv`);
+      res.send("\ufeff" + csvContent); // BOM for Excel UTF-8 support
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Import cities from CSV
+  app.post("/api/admin/locations/cities/import", async (req, res) => {
+    try {
+      if (!req.body.fileContent) {
+        return res.status(400).json({ error: "لم يتم إرسال محتوى الملف" });
+      }
+      
+      const fileContent = req.body.fileContent;
+      
+      // Parse CSV (simple parser)
+      const lines = fileContent.split("\n").filter(line => line.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ error: "الملف فارغ أو غير صحيح" });
+      }
+      
+      const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+      const nameIndex = headers.indexOf("name");
+      const nameEnIndex = headers.indexOf("nameEn");
+      const regionIndex = headers.indexOf("region");
+      const latIndex = headers.indexOf("latitude");
+      const lngIndex = headers.indexOf("longitude");
+      const isActiveIndex = headers.indexOf("isActive");
+      const orderIndex = headers.indexOf("order");
+      
+      if (nameIndex === -1 || regionIndex === -1 || latIndex === -1 || lngIndex === -1) {
+        return res.status(400).json({ error: "الملف لا يحتوي على الحقول المطلوبة" });
+      }
+      
+      const locationsStorage = await import("./locations-storage");
+      const validation = await import("./location-validation");
+      
+      let imported = 0;
+      let errors = 0;
+      
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+          const name = values[nameIndex];
+          const nameEn = values[nameEnIndex] || "";
+          const region = values[regionIndex];
+          const lat = parseFloat(values[latIndex]);
+          const lng = parseFloat(values[lngIndex]);
+          const isActive = values[isActiveIndex] !== undefined ? values[isActiveIndex] === "true" : true;
+          const order = values[orderIndex] ? parseInt(values[orderIndex]) : 0;
+          
+          // Validate
+          const validationResult = validation.validateCityData({ name, region, latitude: lat, longitude: lng });
+          if (!validationResult.isValid) {
+            errors++;
+            continue;
+          }
+          
+          // Check if exists
+          const existing = await locationsStorage.getCityByName(name);
+          if (existing) {
+            // Update existing
+            await locationsStorage.updateCity(existing.id, { nameEn, region, latitude: lat, longitude: lng, isActive, order });
+          } else {
+            // Create new
+            await locationsStorage.createCity({ name, nameEn, region, latitude: lat, longitude: lng, isActive, order });
+          }
+          imported++;
+        } catch (error) {
+          errors++;
+        }
+      }
+      
+      res.json({ imported, errors, total: lines.length - 1 });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Districts API
+  app.get("/api/admin/locations/districts", async (req, res) => {
+    try {
+      const cityId = req.query.cityId as string | undefined;
+      const locationsStorage = await import("./locations-storage");
+      const districts = await locationsStorage.getAllDistricts(cityId);
+      res.json(districts);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/locations/districts/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const district = await locationsStorage.getDistrictById(req.params.id);
+      if (!district) {
+        return res.status(404).json({ error: "الحي غير موجود" });
+      }
+      res.json(district);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/districts", async (req, res) => {
+    try {
+      // Validate input
+      const validation = await import("./location-validation");
+      const validationResult = validation.validateDistrictData(req.body);
+      if (!validationResult.isValid) {
+        return res.status(400).json({ error: validationResult.errors.join(", ") });
+      }
+
+      // Check for duplicate district name in the same city
+      const locationsStorage = await import("./locations-storage");
+      const existingDistrict = await locationsStorage.getDistrictByName(req.body.cityId, req.body.name.trim());
+      if (existingDistrict) {
+        return res.status(400).json({ error: "الحي موجود بالفعل في هذه المدينة" });
+      }
+
+      const district = await locationsStorage.createDistrict({
+        ...req.body,
+        name: req.body.name.trim(),
+        latitude: typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude,
+        longitude: typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude,
+      });
+      res.status(201).json(district);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/locations/districts/:id", async (req, res) => {
+    try {
+      // Validate coordinates if provided
+      if (req.body.latitude !== undefined || req.body.longitude !== undefined) {
+        const validation = await import("./location-validation");
+        const lat = req.body.latitude !== undefined 
+          ? (typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude)
+          : 0;
+        const lng = req.body.longitude !== undefined
+          ? (typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude)
+          : 0;
+        
+        const coordsValidation = validation.validateCoordinates(lat, lng);
+        if (!coordsValidation.isValid) {
+          return res.status(400).json({ error: coordsValidation.errors.join(", ") });
+        }
+      }
+
+      // Check for duplicate district name if name and cityId are being updated
+      if (req.body.name && req.body.cityId) {
+        const locationsStorage = await import("./locations-storage");
+        const existingDistrict = await locationsStorage.getDistrictByName(req.body.cityId, req.body.name.trim());
+        if (existingDistrict && existingDistrict.id !== req.params.id) {
+          return res.status(400).json({ error: "الحي موجود بالفعل في هذه المدينة" });
+        }
+      }
+
+      const locationsStorage = await import("./locations-storage");
+      const updateData: any = {};
+      if (req.body.cityId) updateData.cityId = req.body.cityId;
+      if (req.body.name) updateData.name = req.body.name.trim();
+      if (req.body.latitude !== undefined) {
+        updateData.latitude = typeof req.body.latitude === "string" ? parseFloat(req.body.latitude) : req.body.latitude;
+      }
+      if (req.body.longitude !== undefined) {
+        updateData.longitude = typeof req.body.longitude === "string" ? parseFloat(req.body.longitude) : req.body.longitude;
+      }
+      if (req.body.nameEn !== undefined) updateData.nameEn = req.body.nameEn?.trim();
+      if (req.body.direction !== undefined) updateData.direction = req.body.direction;
+      if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+      if (req.body.order !== undefined) updateData.order = req.body.order;
+
+      const updated = await locationsStorage.updateDistrict(req.params.id, updateData);
+      if (!updated) {
+        return res.status(404).json({ error: "الحي غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/locations/districts/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      await locationsStorage.deleteDistrict(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/districts/reorder", async (req, res) => {
+    try {
+      const { districtIds } = req.body;
+      if (!Array.isArray(districtIds)) {
+        return res.status(400).json({ error: "districtIds يجب أن يكون array" });
+      }
+      const locationsStorage = await import("./locations-storage");
+      await locationsStorage.reorderDistricts(districtIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Directions API
+  app.get("/api/admin/locations/directions", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const directions = await locationsStorage.getAllDirections();
+      res.json(directions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/locations/directions/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const direction = await locationsStorage.getDirectionById(req.params.id);
+      if (!direction) {
+        return res.status(404).json({ error: "الاتجاه غير موجود" });
+      }
+      res.json(direction);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/directions", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const direction = await locationsStorage.createDirection(req.body);
+      res.status(201).json(direction);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/locations/directions/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      const updated = await locationsStorage.updateDirection(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "الاتجاه غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/locations/directions/:id", async (req, res) => {
+    try {
+      const locationsStorage = await import("./locations-storage");
+      await locationsStorage.deleteDirection(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Geocoding API - للحصول على الإحداثيات تلقائياً
+  app.post("/api/admin/locations/geocode/city", async (req, res) => {
+    try {
+      const { geocodeCity } = await import("./geocoding-service");
+      const { cityName, region } = req.body;
+      
+      if (!cityName) {
+        return res.status(400).json({ error: "اسم المدينة مطلوب" });
+      }
+      
+      const result = await geocodeCity(cityName, region);
+      
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(404).json({ error: "لم يتم العثور على إحداثيات للمدينة" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/locations/geocode/district", async (req, res) => {
+    try {
+      const { geocodeDistrict } = await import("./geocoding-service");
+      const { districtName, cityName, region } = req.body;
+      
+      if (!districtName || !cityName) {
+        return res.status(400).json({ error: "اسم الحي والمدينة مطلوبان" });
+      }
+      
+      const result = await geocodeDistrict(districtName, cityName, region);
+      
+      if (result) {
+        res.json(result);
+      } else {
+        res.status(404).json({ error: "لم يتم العثور على إحداثيات للحي" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get special field types
+  app.get("/api/form-builder/fields/special-types", async (req, res) => {
+    try {
+      res.json([
+        { value: "city_picker", label: "اختيار المدينة", description: "حقل خاص لاختيار المدينة مع الأحياء" },
+        { value: "district_picker", label: "اختيار الأحياء", description: "حقل خاص لاختيار الأحياء (يتطلب اختيار المدينة أولاً)" },
+        { value: "property_type_picker", label: "اختيار نوع العقار", description: "حقل خاص لاختيار نوع العقار مع التصفية حسب الفئة" },
+        { value: "smart_tags_picker", label: "الوسوم الذكية", description: "حقل خاص لاختيار الوسوم الذكية حسب نوع العقار" },
+        { value: "location_map", label: "خريطة الموقع", description: "حقل خاص لاختيار الموقع على الخريطة" },
+      ]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Form Steps
+  app.get("/api/admin/form-builder/steps/:formId", async (req, res) => {
+    try {
+      const steps = await formBuilderStorage.getStepsByFormId(req.params.formId);
+      res.json(steps);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/form-builder/steps", async (req, res) => {
+    try {
+      const step = await formBuilderStorage.createStep(req.body);
+      res.status(201).json(step);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/form-builder/steps/:id", async (req, res) => {
+    try {
+      const updated = await formBuilderStorage.updateStep(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "الخطوة غير موجودة" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/form-builder/steps/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteStep(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/form-builder/steps/reorder", async (req, res) => {
+    try {
+      const { stepIds } = req.body;
+      if (!Array.isArray(stepIds)) {
+        return res.status(400).json({ error: "يجب إرسال مصفوفة من معرفات الخطوات" });
+      }
+      await formBuilderStorage.reorderSteps(stepIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Form Fields
+  app.get("/api/admin/form-builder/fields/:stepId", async (req, res) => {
+    try {
+      const fields = await formBuilderStorage.getFieldsByStepId(req.params.stepId);
+      res.json(fields);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/form-builder/fields", async (req, res) => {
+    try {
+      const field = await formBuilderStorage.createField(req.body);
+      res.status(201).json(field);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/form-builder/fields/:id", async (req, res) => {
+    try {
+      const updated = await formBuilderStorage.updateField(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "الحقل غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/form-builder/fields/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteField(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/form-builder/fields/reorder", async (req, res) => {
+    try {
+      const { fieldIds } = req.body;
+      if (!Array.isArray(fieldIds)) {
+        return res.status(400).json({ error: "يجب إرسال مصفوفة من معرفات الحقول" });
+      }
+      // Update order for each field
+      for (let i = 0; i < fieldIds.length; i++) {
+        await formBuilderStorage.updateField(fieldIds[i], { order: i + 1 });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Field Options
+  app.get("/api/admin/form-builder/options/:fieldId", async (req, res) => {
+    try {
+      const options = await formBuilderStorage.getOptionsByFieldId(req.params.fieldId);
+      res.json(options);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/form-builder/options", async (req, res) => {
+    try {
+      const option = await formBuilderStorage.createOption(req.body);
+      res.status(201).json(option);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/form-builder/options/:id", async (req, res) => {
+    try {
+      const updated = await formBuilderStorage.updateOption(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "الخيار غير موجود" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/form-builder/options/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteOption(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete Form Config (for frontend)
+  app.get("/api/form-builder/:formName", async (req, res) => {
+    try {
+      const formConfig = await formBuilderStorage.getCompleteFormConfig(req.params.formName);
+      if (!formConfig) {
+        return res.status(404).json({ error: "النموذج غير موجود" });
+      }
+      res.json(formConfig);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Unified Form Submission Endpoint
+  app.post("/api/form-builder/submit/:formName", async (req, res) => {
+    try {
+      const { formName } = req.params;
+      const formData = req.body;
+      const result = await handleFormSubmission(formName, formData);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message || "حدث خطأ أثناء إرسال البيانات" });
+    }
+  });
+
+  // ==================== FORM FIELD CONFIGS API ====================
+
+  // Get all configs for a field
+  app.get("/api/admin/form-builder/fields/:fieldId/configs", async (req, res) => {
+    try {
+      const configs = await formBuilderStorage.getFormFieldConfigs(req.params.fieldId);
+      res.json(configs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a field config
+  app.post("/api/admin/form-builder/fields/:fieldId/configs", async (req, res) => {
+    try {
+      const { configType, configData, isActive } = req.body;
+      const newConfig = await formBuilderStorage.createFormFieldConfig({
+        fieldId: req.params.fieldId,
+        configType,
+        configData: configData || {},
+        isActive: isActive !== undefined ? isActive : true,
+      });
+      res.status(201).json(newConfig);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update a field config
+  app.put("/api/admin/form-builder/fields/configs/:id", async (req, res) => {
+    try {
+      const { configType, configData, isActive } = req.body;
+      const updatedConfig = await formBuilderStorage.updateFormFieldConfig(req.params.id, {
+        configType,
+        configData,
+        isActive,
+      });
+      if (!updatedConfig) {
+        return res.status(404).json({ error: "إعداد الحقل غير موجود" });
+      }
+      res.json(updatedConfig);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a field config
+  app.delete("/api/admin/form-builder/fields/configs/:id", async (req, res) => {
+    try {
+      await formBuilderStorage.deleteFormFieldConfig(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== APPOINTMENTS (BOOKING SYSTEM) ====================
+  
+  app.post("/api/appointments", async (req, res) => {
+    try {
+      const { matchId, buyerId, sellerId, appointmentDate, timeSlot, notes, location } = req.body;
+      if (!buyerId || !sellerId || !appointmentDate || !timeSlot) {
+        return res.status(400).json({ error: "بيانات ناقصة" });
+      }
+      const result = await db.insert(appointments).values({
+        matchId,
+        buyerId,
+        sellerId,
+        appointmentDate: new Date(appointmentDate),
+        timeSlot,
+        notes,
+        location,
+        status: "pending",
+      }).returning();
+      res.status(201).json(result[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/appointments", async (req, res) => {
+    try {
+      const { userId, matchId, status } = req.query;
+      let query = db.select().from(appointments);
+      
+      if (userId) {
+        query = query.where(
+          or(eq(appointments.buyerId, userId as string), eq(appointments.sellerId, userId as string))
+        );
+      }
+      if (matchId) {
+        query = query.where(eq(appointments.matchId, matchId as string));
+      }
+      if (status) {
+        query = query.where(eq(appointments.status, status as string));
+      }
+      
+      const result = await query.orderBy(desc(appointments.appointmentDate));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/appointments/:id", async (req, res) => {
+    try {
+      const { appointmentDate, timeSlot, status, notes, location } = req.body;
+      const result = await db
+        .update(appointments)
+        .set({
+          ...(appointmentDate && { appointmentDate: new Date(appointmentDate) }),
+          ...(timeSlot && { timeSlot }),
+          ...(status && { status }),
+          ...(notes !== undefined && { notes }),
+          ...(location !== undefined && { location }),
+          updatedAt: new Date(),
+        })
+        .where(eq(appointments.id, req.params.id))
+        .returning();
+      
+      if (result.length === 0) {
+        return res.status(404).json({ error: "الموعد غير موجود" });
+      }
+      res.json(result[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/appointments/:id", async (req, res) => {
+    try {
+      await db.delete(appointments).where(eq(appointments.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== LANDING PAGES API ====================
+
+  // Get landing page by slug
+  app.get("/api/landing-pages/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const marketerRef = req.query.ref as string | undefined;
+
+      // Track view
+      if (marketerRef) {
+        await landingPageService.trackLandingPageView(slug, marketerRef);
+      }
+
+      const landingPageData = await landingPageService.getLandingPageBySlug(slug);
+      
+      if (!landingPageData) {
+        return res.status(404).json({ error: "صفحة الهبوط غير موجودة" });
+      }
+
+      res.json(landingPageData);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create landing page (admin)
+  app.post("/api/landing-pages", async (req, res) => {
+    try {
+      const { propertyId, slug, lockedContent } = req.body;
+      const currentUserId = req.headers["x-user-id"] as string | undefined;
+
+      if (!propertyId) {
+        return res.status(400).json({ error: "معرف العقار مطلوب" });
+      }
+
+      const landingPage = await landingPageService.createLandingPage({
+        propertyId,
+        slug,
+        createdBy: currentUserId || undefined,
+        lockedContent,
+      });
+
+      res.json(landingPage);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Register lead (Stage 1: Basic info)
+  app.post("/api/landing-pages/:slug/lead", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { name, phone, email } = req.body;
+      const marketerRef = req.query.ref as string | undefined;
+
+      if (!name || !phone) {
+        return res.status(400).json({ error: "الاسم والجوال مطلوبان" });
+      }
+
+      // Get landing page
+      const landingPageData = await landingPageService.getLandingPageBySlug(slug);
+      if (!landingPageData) {
+        return res.status(404).json({ error: "صفحة الهبوط غير موجودة" });
+      }
+
+      const { profile, unlockToken } = await landingPageService.createProgressiveProfile({
+        name,
+        phone,
+        email,
+        propertyId: landingPageData.property.id,
+        landingPageId: landingPageData.landingPage.id,
+        marketerRef,
+      });
+
+      res.json({ profile, unlockToken });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Verify unlock token
+  app.get("/api/landing-pages/:slug/unlock", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { token } = req.query;
+
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "رمز الوصول مطلوب" });
+      }
+
+      const landingPageData = await landingPageService.getLandingPageBySlug(slug);
+      if (!landingPageData) {
+        return res.status(404).json({ error: "صفحة الهبوط غير موجودة" });
+      }
+
+      const isValid = await landingPageService.verifyUnlockToken(
+        token,
+        landingPageData.property.id
+      );
+
+      res.json({ valid: isValid });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create booking
+  app.post("/api/landing-pages/:slug/booking", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { visitorPhone, appointmentDate, timeSlot, notes } = req.body;
+
+      if (!visitorPhone || !appointmentDate || !timeSlot) {
+        return res.status(400).json({ error: "البيانات المطلوبة غير مكتملة" });
+      }
+
+      const landingPageData = await landingPageService.getLandingPageBySlug(slug);
+      if (!landingPageData) {
+        return res.status(404).json({ error: "صفحة الهبوط غير موجودة" });
+      }
+
+      const appointment = await landingPageService.createLandingPageBooking({
+        propertyId: landingPageData.property.id,
+        visitorPhone,
+        appointmentDate: new Date(appointmentDate),
+        timeSlot,
+        notes,
+      });
+
+      // Send WhatsApp notification to seller
+      if (landingPageData.seller?.phone) {
+        const message = `تم حجز معاينة جديدة للعقار في ${landingPageData.property.district}\nالتاريخ: ${new Date(appointmentDate).toLocaleDateString('ar-SA')}\nالفترة: ${timeSlot === 'morning' ? 'صباحاً' : timeSlot === 'afternoon' ? 'ظهراً' : 'مساءً'}`;
+        await sendWhatsAppMessage(landingPageData.seller.phone, message);
+      }
+
+      res.json(appointment);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete profile (Stage 2: Preferences)
+  app.post("/api/landing-pages/:slug/complete", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { visitorPhone, preferences } = req.body;
+
+      if (!visitorPhone || !preferences) {
+        return res.status(400).json({ error: "البيانات المطلوبة غير مكتملة" });
+      }
+
+      const { buyerPreference, userId } = await landingPageService.completeProgressiveProfile({
+        visitorPhone,
+        preferences,
+      });
+
+      // Find matching properties
+      await storage.findMatchesForPreference(buyerPreference.id);
+      
+      // Get matches from database
+      const matchResults = await db
+        .select({
+          property: properties,
+          matchScore: matches.matchScore,
+        })
+        .from(matches)
+        .leftJoin(properties, eq(matches.propertyId, properties.id))
+        .where(eq(matches.buyerPreferenceId, buyerPreference.id))
+        .orderBy(desc(matches.matchScore))
+        .limit(5);
+
+      const matchingProperties = matchResults
+        .filter((m) => m.property !== null)
+        .map((m) => m.property as typeof properties.$inferSelect);
+
+      res.json({
+        buyerPreference,
+        userId,
+        matchingProperties: matchingProperties.slice(0, 5), // Top 5 matches
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== MARKETER LINKS API ====================
+
+  // Create marketer link
+  app.post("/api/marketer-links", async (req, res) => {
+    try {
+      const { landingPageId, marketerId, marketerName, trackingCode, commissionRate } = req.body;
+
+      if (!landingPageId) {
+        return res.status(400).json({ error: "معرف صفحة الهبوط مطلوب" });
+      }
+
+      const marketerLink = await landingPageService.createMarketerLink({
+        landingPageId,
+        marketerId,
+        marketerName,
+        trackingCode,
+        commissionRate,
+      });
+
+      res.json(marketerLink);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get marketer stats
+  app.get("/api/marketer-links/stats", async (req, res) => {
+    try {
+      const marketerId = req.query.marketerId as string | undefined;
+      const trackingCode = req.query.trackingCode as string | undefined;
+
+      if (!marketerId && !trackingCode) {
+        return res.status(400).json({ error: "معرف المسوق أو رمز التتبع مطلوب" });
+      }
+
+      const whereConditions = [];
+      if (marketerId) {
+        whereConditions.push(eq(marketerLinks.marketerId, marketerId));
+      }
+      if (trackingCode) {
+        whereConditions.push(eq(marketerLinks.trackingCode, trackingCode));
+      }
+
+      const links = await db
+        .select()
+        .from(marketerLinks)
+        .where(and(...whereConditions));
+
+      // Get all stats
+      const totalClicks = links.reduce((sum, link) => sum + link.clicks, 0);
+      const totalConversions = links.reduce((sum, link) => sum + link.conversions, 0);
+      const totalBookings = links.reduce((sum, link) => sum + link.bookings, 0);
+      const totalCommission = links.reduce((sum, link) => sum + link.totalCommission, 0);
+
+      res.json({
+        links,
+        stats: {
+          totalClicks,
+          totalConversions,
+          totalBookings,
+          totalCommission,
+          conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
+          bookingRate: totalConversions > 0 ? (totalBookings / totalConversions) * 100 : 0,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Track marketer link click
+  app.post("/api/marketer-links/:id/track", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const [link] = await db
+        .select()
+        .from(marketerLinks)
+        .where(eq(marketerLinks.id, id))
+        .limit(1);
+
+      if (!link) {
+        return res.status(404).json({ error: "الرابط غير موجود" });
+      }
+
+      await db
+        .update(marketerLinks)
+        .set({
+          clicks: link.clicks + 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(marketerLinks.id, id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all landing pages (admin)
+  app.get("/api/landing-pages", async (req, res) => {
+    try {
+      const pages = await db
+        .select({
+          landingPage: landingPages,
+          property: properties,
+        })
+        .from(landingPages)
+        .leftJoin(properties, eq(landingPages.propertyId, properties.id))
+        .orderBy(desc(landingPages.createdAt));
+
+      res.json(pages);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== LEADS MANAGEMENT API ====================
+
+  // Get all leads
+  app.get("/api/leads", async (req, res) => {
+    try {
+      const sellerId = req.query.sellerId as string | undefined;
+      const propertyId = req.query.propertyId as string | undefined;
+      const status = req.query.status as string | undefined;
+      const source = req.query.source as string | undefined;
+
+      const leads = await leadsService.getAllLeads({
+        sellerId,
+        propertyId,
+        status,
+        source,
+      });
+
+      res.json(leads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get lead by ID
+  app.get("/api/leads/:type/:id", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      
+      if (type !== "progressive" && type !== "property") {
+        return res.status(400).json({ error: "Invalid lead type" });
+      }
+
+      const lead = await leadsService.getLeadById(id, type);
+      
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+
+      res.json(lead);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Convert lead to buyer preference
+  app.post("/api/leads/:type/:id/convert", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { preferences } = req.body;
+
+      if (type !== "progressive" && type !== "property") {
+        return res.status(400).json({ error: "Invalid lead type" });
+      }
+
+      if (!preferences || !preferences.city || !preferences.propertyType) {
+        return res.status(400).json({ error: "City and property type are required" });
+      }
+
+      const result = await leadsService.convertLeadToBuyerPreference(
+        id,
+        type as "progressive" | "property",
+        preferences
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update lead status
+  app.put("/api/leads/:type/:id/status", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { status } = req.body;
+
+      if (type !== "progressive" && type !== "property") {
+        return res.status(400).json({ error: "Invalid lead type" });
+      }
+
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+
+      await leadsService.updateLeadStatus(id, type as "progressive" | "property", status);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add notes to lead
+  app.post("/api/leads/:type/:id/notes", async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const { notes } = req.body;
+
+      if (type !== "progressive" && type !== "property") {
+        return res.status(400).json({ error: "Invalid lead type" });
+      }
+
+      if (!notes) {
+        return res.status(400).json({ error: "Notes are required" });
+      }
+
+      await leadsService.addLeadNotes(id, type as "progressive" | "property", notes);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get seller leads
+  app.get("/api/sellers/:id/leads", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const status = req.query.status as string | undefined;
+
+      const leads = await leadsService.getAllLeads({
+        sellerId: id,
+        status,
+      });
+
+      res.json(leads);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   return httpServer;
 }

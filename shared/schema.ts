@@ -699,3 +699,265 @@ export const webauthnChallenges = pgTable("webauthn_challenges", {
 export const insertWebauthnChallengeSchema = createInsertSchema(webauthnChallenges).omit({ id: true, createdAt: true });
 export type InsertWebauthnChallenge = z.infer<typeof insertWebauthnChallengeSchema>;
 export type WebauthnChallenge = typeof webauthnChallenges.$inferSelect;
+
+// ==================== FORM BUILDER SYSTEM ====================
+
+// Form configurations - defines forms (buyer_form, seller_form)
+export const formConfigs = pgTable("form_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // buyer_form, seller_form
+  formType: text("form_type").notNull(), // buyer, seller
+  displayName: text("display_name").notNull(), // اسم العرض
+  description: text("description"),
+  submissionEndpoint: text("submission_endpoint"), // "/api/buyers/register", "/api/sellers/register", custom
+  submissionHandler: text("submission_handler"), // "buyer", "seller", "custom"
+  embeddingConfig: jsonb("embedding_config"), // { pages: [], shortcode: "", componentName: "" }
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFormConfigSchema = createInsertSchema(formConfigs).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFormConfig = z.infer<typeof insertFormConfigSchema>;
+export type FormConfig = typeof formConfigs.$inferSelect;
+
+// Form steps - steps within each form
+export const formSteps = pgTable("form_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formId: varchar("form_id").references(() => formConfigs.id).notNull(),
+  title: text("title").notNull(), // عنوان الخطوة
+  description: text("description"), // وصف الخطوة
+  icon: text("icon"), // اسم الأيقونة من lucide-react
+  order: integer("order").notNull(), // ترتيب الخطوة
+  isRequired: boolean("is_required").notNull().default(true), // هل الخطوة إلزامية
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFormStepSchema = createInsertSchema(formSteps).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFormStep = z.infer<typeof insertFormStepSchema>;
+export type FormStep = typeof formSteps.$inferSelect;
+
+// Form fields - fields within each step
+export const formFields = pgTable("form_fields", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stepId: varchar("step_id").references(() => formSteps.id).notNull(),
+  name: text("name").notNull(), // اسم الحقل (key)
+  label: text("label").notNull(), // التسمية المعروضة
+  type: text("type").notNull(), // text, number, select, multi_select, chips, range, city_picker, district_picker, property_type_picker, smart_tags_picker, location_map, date
+  placeholder: text("placeholder"),
+  helpText: text("help_text"), // نص مساعد
+  required: boolean("required").notNull().default(false),
+  defaultValue: text("default_value"), // القيمة الافتراضية
+  validation: jsonb("validation"), // قواعد التحقق { min, max, pattern, etc }
+  showCondition: jsonb("show_condition"), // { field: "propertyType", operator: "equals", value: "villa" }
+  order: integer("order").notNull(), // ترتيب الحقل داخل الخطوة
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFormFieldSchema = createInsertSchema(formFields).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFormField = z.infer<typeof insertFormFieldSchema>;
+export type FormField = typeof formFields.$inferSelect;
+
+// Field options - options for select/multi_select/chips fields
+export const fieldOptions = pgTable("field_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fieldId: varchar("field_id").references(() => formFields.id).notNull(),
+  value: text("value").notNull(), // القيمة
+  label: text("label").notNull(), // التسمية المعروضة
+  icon: text("icon"), // اسم الأيقونة من lucide-react
+  color: text("color"), // لون الخيار (hex)
+  order: integer("order").notNull(), // ترتيب الخيار
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFieldOptionSchema = createInsertSchema(fieldOptions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFieldOption = z.infer<typeof insertFieldOptionSchema>;
+export type FieldOption = typeof fieldOptions.$inferSelect;
+
+// Form field configs - special configurations for complex fields
+export const formFieldConfigs = pgTable("form_field_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fieldId: varchar("field_id").references(() => formFields.id).notNull(),
+  configType: text("config_type").notNull(), // "city_picker", "property_type", "smart_tags", "district_picker", "location_map", "custom"
+  configData: jsonb("config_data"), // إعدادات خاصة لكل نوع
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFormFieldConfigSchema = createInsertSchema(formFieldConfigs).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFormFieldConfig = z.infer<typeof insertFormFieldConfigSchema>;
+export type FormFieldConfig = typeof formFieldConfigs.$inferSelect;
+
+// Cities - المدن
+export const cities = pgTable("cities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  nameEn: text("name_en"),
+  region: text("region").notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCitySchema = createInsertSchema(cities).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCity = z.infer<typeof insertCitySchema>;
+export type City = typeof cities.$inferSelect;
+
+// Districts - الأحياء
+export const districts = pgTable("districts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cityId: varchar("city_id").references(() => cities.id).notNull(),
+  name: text("name").notNull(),
+  nameEn: text("name_en"),
+  direction: text("direction"), // north, south, east, west, center
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDistrictSchema = createInsertSchema(districts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDistrict = z.infer<typeof insertDistrictSchema>;
+export type District = typeof districts.$inferSelect;
+
+// Directions - الاتجاهات
+export const directions = pgTable("directions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(), // north, south, east, west, center
+  labelAr: text("label_ar").notNull(),
+  labelEn: text("label_en"),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDirectionSchema = createInsertSchema(directions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDirection = z.infer<typeof insertDirectionSchema>;
+export type Direction = typeof directions.$inferSelect;
+
+// Smart Tags - إدارة التاقات الذكية المرتبطة بأنواع العقارات
+export const smartTags = pgTable("smart_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyType: text("property_type").notNull(), // villa, apartment, tower, etc.
+  tag: text("tag").notNull(), // اسم التاق
+  label: text("label").notNull(), // التسمية المعروضة
+  icon: text("icon"), // أيقونة اختيارية
+  order: integer("order").notNull().default(0), // ترتيب العرض
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSmartTagSchema = createInsertSchema(smartTags).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSmartTag = z.infer<typeof insertSmartTagSchema>;
+export type SmartTag = typeof smartTags.$inferSelect;
+
+// Appointments - booking system for matches
+export const appointments = pgTable("appointments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  matchId: varchar("match_id").references(() => matches.id), // ربط بالموافقة/المطابقة
+  buyerId: varchar("buyer_id").references(() => users.id).notNull(),
+  sellerId: varchar("seller_id").references(() => users.id).notNull(),
+  appointmentDate: timestamp("appointment_date").notNull(), // تاريخ الموعد
+  timeSlot: text("time_slot").notNull(), // الفترة الزمنية (morning, afternoon, evening)
+  status: text("status").notNull().default("pending"), // pending, confirmed, cancelled, completed
+  notes: text("notes"), // ملاحظات إضافية
+  location: text("location"), // موقع الموعد
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
+export type Appointment = typeof appointments.$inferSelect;
+
+// ==================== LANDING PAGES SYSTEM ====================
+
+// Landing pages - property landing pages for marketing funnels
+export const landingPages = pgTable("landing_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").references(() => properties.id).notNull(),
+  slug: text("slug").notNull().unique(), // URL slug (e.g., "villa-123")
+  formName: text("form_name"), // اسم الفورم المرتبط (من Form Builder)
+  isActive: boolean("is_active").notNull().default(true),
+  // Locked content configuration (JSON)
+  lockedContent: jsonb("locked_content").default(sql`'{}'::jsonb`), // { map: true, floorPlan: true, sellerContact: true, extraImages: true }
+  // Tracking
+  viewsCount: integer("views_count").notNull().default(0),
+  leadsCount: integer("leads_count").notNull().default(0),
+  bookingsCount: integer("bookings_count").notNull().default(0),
+  // Metadata
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLandingPageSchema = createInsertSchema(landingPages).omit({ id: true, createdAt: true, updatedAt: true, viewsCount: true, leadsCount: true, bookingsCount: true });
+export type InsertLandingPage = z.infer<typeof insertLandingPageSchema>;
+export type LandingPage = typeof landingPages.$inferSelect;
+
+// Marketer links - tracking links for marketers/affiliates
+export const marketerLinks = pgTable("marketer_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  landingPageId: varchar("landing_page_id").references(() => landingPages.id).notNull(),
+  marketerId: varchar("marketer_id").references(() => users.id), // null for external marketers
+  marketerName: text("marketer_name"), // For external marketers without accounts
+  trackingCode: text("tracking_code").notNull().unique(), // Unique ref code (e.g., "ahmed2024")
+  // Statistics
+  clicks: integer("clicks").notNull().default(0),
+  conversions: integer("conversions").notNull().default(0), // Leads that completed stage 1
+  bookings: integer("bookings").notNull().default(0), // Appointments booked
+  // Commission
+  commissionRate: real("commission_rate").default(0.0), // Percentage (0-100)
+  totalCommission: integer("total_commission").notNull().default(0), // Total commission earned (SAR)
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMarketerLinkSchema = createInsertSchema(marketerLinks).omit({ id: true, createdAt: true, updatedAt: true, clicks: true, conversions: true, bookings: true, totalCommission: true });
+export type InsertMarketerLink = z.infer<typeof insertMarketerLinkSchema>;
+export type MarketerLink = typeof marketerLinks.$inferSelect;
+
+// Progressive profiles - staged lead capture (Progressive Profiling)
+export const progressiveProfiles = pgTable("progressive_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  visitorPhone: text("visitor_phone").notNull(), // Phone is the identifier
+  propertyInterestedId: varchar("property_interested_id").references(() => properties.id).notNull(),
+  landingPageId: varchar("landing_page_id").references(() => landingPages.id),
+  marketerLinkId: varchar("marketer_link_id").references(() => marketerLinks.id),
+  // Stage tracking
+  stage: integer("stage").notNull().default(1), // 1: basic (name+phone), 2: preferences, 3: complete
+  // Stage 1 data
+  basicData: jsonb("basic_data").default(sql`'{}'::jsonb`), // { name, phone, email? }
+  // Stage 2 data (preferences)
+  preferences: jsonb("preferences").default(sql`'{}'::jsonb`), // { city, districts, budgetMin, budgetMax, propertyType, etc }
+  // Conversion tracking
+  isConvertedToBuyer: boolean("is_converted_to_buyer").notNull().default(false),
+  buyerPreferenceId: varchar("buyer_preference_id").references(() => buyerPreferences.id),
+  userId: varchar("user_id").references(() => users.id), // If user account was created
+  // Unlock token for content access
+  unlockToken: text("unlock_token").unique(),
+  // Tracking
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertProgressiveProfileSchema = createInsertSchema(progressiveProfiles).omit({ id: true, createdAt: true, updatedAt: true, lastActivityAt: true });
+export type InsertProgressiveProfile = z.infer<typeof insertProgressiveProfileSchema>;
+export type ProgressiveProfile = typeof progressiveProfiles.$inferSelect;

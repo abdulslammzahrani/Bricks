@@ -21,85 +21,18 @@ import {
   ArrowUp, School, Stethoscope, Fuel, Briefcase, Truck, Users, Activity,
   Armchair, Trees as TreeIcon, Key, FileSignature, Tag
 } from "lucide-react";
-import { saudiCities } from "@shared/saudi-locations";
+import { directionLabels, Direction } from "@shared/saudi-locations";
+import { useQuery } from "@tanstack/react-query";
 
 // ==================================================================================
 // 🔧🔧 منطقة الإعدادات (CONFIGURATION ZONE) 🔧🔧
 // ==================================================================================
 
-const SPECIFIC_TAGS: Record<string, string[]> = {
-  "villa": ["مسبح", "قبو", "مصعد", "تكييف مركزي", "ملحق خارجي", "مسطحات خضراء", "واجهة مودرن", "شقة استثمارية", "غرفة كبار سن", "درج داخلي", "نظام سمارت هوم", "عوازل حرارية", "إشراف هندسي", "ضمانات هيكل", "غرفة غسيل", "غرفة سينما"],
-  "apartment": ["مدخل خاص", "سطح خاص", "موقف خاص", "غرفة سائق", "غرفة خادمة", "دخول ذكي", "بلكونة", "مطبخ راكب", "مكيفات راكبة", "خزان مستقل", "قريبة من مسجد", "ألياف بصرية", "تشطيب فاخر"],
-  "residential_building": ["موقع زاوية", "واجهة كلادينج", "مصعد (ماركة عالمية)", "عدادات مستقلة", "تمديدات سبليت", "مدخل فندقي", "غرفة حارس", "أنظمة دفاع مدني", "خزان مياه كبير", "مواقف مرصوفة", "نظام انتركوم", "سطح معزول", "قريب من الخدمات", "صك إلكتروني", "عقود إلكترونية"],
-  "tower": ["مهبط طائرات (Helipad)", "نظام إدارة مباني (BMS)", "مصاعد ذكية (Destination Control)", "واجهات زجاجية (Double Glazed)", "ردهة استقبال فندقية", "نادي صحي وسبا", "قاعة مؤتمرات مشتركة", "مصلى مركزي", "مواقف ذكية/Valet", "مولدات احتياطية كاملة", "تكييف مركزي (Chiller)", "أنظمة مراقبة CCTV", "ألياف بصرية (Fiber)", "نظام تنظيف واجهات", "حدائق معلقة (Roof Garden)", "كافتيريا داخلية"],
-  "showroom": ["ارتفاع سقف مضاعف", "واجهة زجاجية (Curtain Wall)", "رخصة مطعم/كافيه", "جلسات خارجية مرخصة", "مواقف أمامية واسعة", "مدخل خدمة خلفي", "تمديدات غاز مركزية", "نظام تهوية (Ventilation)", "إمكانية التجزئة", "موقع زاوية", "مساحة إعلانية", "مدخل ذوي همم (Ramp)", "عداد كهرباء مستقل", "تكييف مركزي مستقل", "أرضيات فاخرة", "نظام صوتي مدمج"],
-  "office": ["أرضيات مرتفعة (Raised Floors)", "إطلالة بانورامية", "دخول ذكي (Access Control)", "غرفة خوادم (Server Room)", "مطبخ تحضيري (Pantry)", "عوازل صوتية", "تصميم مرن (Open Plan)", "دورة مياه خاصة", "غرفة أرشيف", "إضاءة LED", "نظام سلامة (Sprinklers)", "ستائر ذكية", "أثاث مكتبي", "قاعة اجتماعات زجاجية", "خدمة نظافة", "واي فاي مركزي"],
-  "commercial_building": ["على شارع تجاري", "معارض مؤجرة", "مكاتب جاهزة", "رخصة دفاع مدني", "عدادات مستقلة", "كاميرات مراقبة", "مصعد", "قبو مواقف"],
-  "complex": ["سور وبوابات (Gated)", "حراسة 24/7", "مسبح مشترك", "نادي رياضي (Gym)", "حدائق (Landscape)", "ألعاب أطفال", "ميني ماركت", "قاعة مناسبات", "صيانة ونظافة دائمة", "مواقف مظللة", "دخول ذكي", "مسجد/مصلى", "محطة معالجة مياه", "مولد احتياطي", "مكافحة حريق مركزية", "كافيه لاونج"],
-  "commercial_land": ["رخصة بناء جاهزة", "موقع حيوي", "أرض مستوية", "خدمات واصلة", "شارع مسفلت", "قريبة من معالم", "سهولة الوصول", "خالية من العوائق", "مصرحة متعدد", "إمكانية الدمج", "تقرير مساحي", "واجهة تجارية", "منطقة نمو", "بعيدة عن السيول", "مسموح القبو", "سور مؤقت"],
-  "school": ["معامل حاسب آلي", "مختبرات علوم", "مكتبة شاملة", "مسرح مدرسي", "مسبح داخلي", "ملاعب رياضية", "عيادة طبية", "مقصف/كافيتيريا", "غرف معلمين مؤثثة", "مصلى واسع", "ساحات مظللة", "نظام مراقبة", "بوابات آمنة", "منطقة حافلات (Drop-off)", "تسهيلات لأصحاب الهمم", "غرف فنون/مرسم"],
-  "warehouse": ["رصيف تحميل (Dock Levelers)", "أرضية إيبوكسي", "نظام رفوف (Racking Ready)", "عزل حراري (Sandwich Panel)", "إضاءة طبيعية", "مكتب إداري داخلي", "مرافق للعمال", "غرفة حارس", "سور خرساني", "كهرباء 3 فاز", "نظام إطفاء متطور", "ساحة مناورة شاحنات", "تهوية صناعية", "كاميرات مراقبة", "مخارج طوارئ", "غرف تبريد"],
-  "gas_station": ["عقود Anchor Tenants", "سوبر ماركت (C-Store)", "طلبات سيارة (Drive-thru)", "منطقة مطاعم", "مغسلة أوتوماتيكية", "مغسلة يدوية", "مركز خدمة سيارات", "صراف آلي (ATM)", "مصلى ودورات مياه", "سكن عمال", "مضخات ديزل للشاحنات", "استرجاع أبخرة", "مظلة LED حديثة", "خدمات مجانية (هواء/ماء)", "ربط أمني (شموس)", "خزانات مزدوجة (Double Wall)"],
-  "factory": ["رافعات علوية (Cranes)", "أرضيات صناعية", "نظام إطفاء آلي", "رصيف تحميل", "مبنى إداري", "مختبر جودة", "مستودع مواد", "شبكة هواء مضغوط", "نظام تهوية", "ميزان شاحنات", "غرفة مولدات", "سكن عمال", "خزانات وقود", "تصريف صناعي", "ورشة صيانة", "شهادات أيزو"],
-  "health_center": ["غرفة أشعة (X-Ray)", "مختبر تحاليل", "صيدلية داخلية", "غرفة تعقيم", "مداخل ذوي همم", "غرفة نفايات طبية", "مولد طوارئ UPS", "غرفة طوارئ", "نظام استدعاء تمريض", "أرضيات فينيل طبي", "تكييف HEPA", "مواقف إسعاف", "استراحة أطباء", "دورات مياه خاصة", "شاشات انتظار", "دفاع مدني طبي"],
-  "industrial_land": ["داخل مدينة صناعية", "طرق شاحنات", "قرب ميناء", "محطة كهرباء", "شبكة غاز صناعي", "تصريف صناعي", "تصريح سكن عمال", "أرضية صلبة", "خدمات لوجستية", "أمن صناعي", "مخططات معتمدة", "إمكانية التجزئة", "إعفاءات جمركية", "شبكة اتصال", "تخزين خارجي", "مسورة بالكامل"],
-  "farm": ["فيلا/استراحة", "مجالس خارجية", "مسبح", "شبكة ري حديثة", "خزانات ضخمة", "بيوت محمية", "حظائر مواشي", "سكن عمال", "طرق مرصوفة", "مستودع أعلاف", "أشجار مثمرة", "مسطحات خضراء", "منطقة شواء", "سور كامل", "غطاسات ومضخات", "بوابة إلكترونية"]
-};
-
-// 2️⃣ إعدادات الأزرار الذكية
-const SMART_RANGES = {
-  area: ["100-200", "200-300", "300-400", "400-600", "600-900", "900-1500", "1500-3000", "3000+"],
-  floors: ["1-3", "4-7", "8-12", "13-20", "20-30", "30+"],
-  elevators: ["1", "2", "3", "4", "6", "8", "10+"],
-  units_small: ["1-5", "6-10", "11-20", "21-35"],
-  units_large: ["20-50", "50-100", "100-200", "200+"],
-  rooms: ["1", "2", "3", "4", "5", "6", "7+"],
-  bathrooms: ["1", "2", "3", "4", "5+"],
-  streets: ["1", "2", "3", "4"],
-  pumps: ["2", "4", "6", "8", "10", "12+"],
-  tanks: ["30k", "50k", "70k", "100k+"],
-  income: ["< 100k", "100k-200k", "200k-500k", "500k-1M", "1M+"],
-  roi: ["5%", "6%", "7%", "8%", "9%", "10%+"],
-  facadeWidth: ["10-15m", "15-20m", "20-30m", "30m+"],
-  ceilingHeight: ["3-4m", "4-6m", "6-8m", "8m+"],
-  power: ["Normal", "200 KVA", "500 KVA", "1000 KVA+"],
-  capacity: ["< 100", "100-300", "300-500", "500-1000", "1000+"]
-};
-
-// ==================================================================================
-
-const SAUDI_BANKS = ["الراجحي", "الأهلي (SNB)", "الرياض", "الإنماء", "الأول (SAB)", "البلاد", "الجزيرة", "العربي", "الاستثمار", "الفرنسي"];
-
-interface ListingData {
-  name: string; phone: string; email: string; 
-  propertyCategory: "residential" | "commercial" | "";
-  offerType: "sale" | "rent" | ""; 
-  propertyCondition: "new" | "used" | "under_construction" | "";
-  cities: string[]; districts: string[]; 
-  propertyType: string; 
-  // Specs
-  minArea: string; maxArea: string;
-  rooms: string; bathrooms: string; livingRooms: string; hasMaidRoom: boolean;
-  facade: string; streetWidth: string; plotLocation: string;
-  annualIncome: string; roi: string; unitsCount: string; propertyAge: string;
-  floorsCount: string; elevatorsCount: string; bua: string; buildingClass: string; parkingCapacity: string;
-  facadeWidth: string; ceilingHeight: string; hasMezzanine: boolean; groundArea: string; mezzanineArea: string; powerCapacity: string;
-  floorNumber: string; nla: string; finishingStatus: string; acType: string;
-  studentCapacity: string; classroomsCount: string; labsCount: string; municipalityClass: string;
-  hasCivilDefense: string; floorLoad: string;
-  pumpsCount: string; tanksCapacity: string; stationCategory: string;
-  shopsCount: string; apartmentsCount: string;
-  buildingsCount: string; occupancyRate: string;
-  zoning: string;
-  activityType: string; buildingRatio: string;
-  wellsCount: string; waterType: string; treesCount: string; farmFacade: string;
-  productionArea: string; licenseType: string; craneLoad: string;
-  clinicsCount: string; waitingArea: string; healthLicense: string;
-  // Price
-  targetPrice: string; 
-  paymentPreference: "cash" | "finance" | ""; bankName: string; 
-  smartTags: string[]; notes: string; 
-}
+import { 
+  SPECIFIC_TAGS, SMART_RANGES, SAUDI_BANKS, 
+  getPropertyTypesByCategory, getTagsForPropertyType,
+  type ListingData 
+} from "@/lib/property-form-config";
 
 const ScrollableOptions = ({ label, options, selected, onSelect, unit = "" }: { label: string, options: string[], selected: string, onSelect: (val: string) => void, unit?: string }) => (
   <div className="mb-4">
@@ -282,6 +215,7 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
   const [citySearch, setCitySearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [selectedDirection, setSelectedDirection] = useState<Direction | "all">("all");
 
   const firstName = listingData.name ? listingData.name.split(" ")[0] : "";
 
@@ -305,9 +239,48 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
   function validateSaudiPhone(phone: string) { let normalized = phone.replace(/[^\d]/g, ''); if (normalized.startsWith('966')) normalized = '0' + normalized.slice(3); return normalized.startsWith('05') && normalized.length === 10 ? { isValid: true, normalized, error: '' } : { isValid: false, normalized: '', error: 'رقم غير صحيح' }; }
   const handlePhoneChange = (value: string) => { const validation = validateSaudiPhone(value); setListingData(f => ({ ...f, phone: value })); setPhoneError(value.trim() ? (validation.isValid ? "" : validation.error) : ""); };
   const isPhoneValid = useMemo(() => listingData.phone.trim() ? validateSaudiPhone(listingData.phone).isValid : false, [listingData.phone]);
-  const filteredCities = useMemo(() => saudiCities.filter(c => c.name.includes(citySearch)), [citySearch]);
-  const availableDistricts = useMemo(() => { if (listingData.cities.length === 0) return []; return saudiCities.find(c => c.name === listingData.cities[0])?.neighborhoods || []; }, [listingData.cities]);
-  const filteredDistricts = useMemo(() => availableDistricts.filter(d => d.name.includes(districtSearch)), [availableDistricts, districtSearch]);
+  // Fetch cities from API (fallback to static data)
+  const { data: citiesFromAPI } = useQuery({
+    queryKey: ["/api/form-builder/cities"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "/api/form-builder/cities");
+        if (!res.ok) throw new Error("Failed to fetch cities");
+        return await res.json();
+      } catch (error) {
+        console.warn("Failed to fetch cities from API, using fallback:", error);
+        const { saudiCities } = await import("@shared/saudi-locations");
+        return saudiCities;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const availableCities = citiesFromAPI || [];
+  
+  const filteredCities = useMemo(() => availableCities.filter((c: { name: string }) => c.name.includes(citySearch)), [availableCities, citySearch]);
+  const availableDistricts = useMemo(() => { 
+    if (listingData.cities.length === 0) return []; 
+    const selectedCity = availableCities.find((c: { name: string }) => c.name === listingData.cities[0]);
+    return selectedCity?.neighborhoods || []; 
+  }, [availableCities, listingData.cities]);
+  const filteredDistricts = useMemo(() => {
+    let districts = availableDistricts;
+    // تصفية حسب الاتجاه
+    if (selectedDirection !== "all") {
+      districts = districts.filter(d => d.direction === selectedDirection);
+    }
+    // تصفية حسب البحث
+    if (districtSearch) {
+      districts = districts.filter(d => d.name.includes(districtSearch));
+    }
+    return districts;
+  }, [availableDistricts, districtSearch, selectedDirection]);
+  
+  // التحقق من وجود أحياء مع اتجاهات في المدينة المحددة
+  const hasDirections = useMemo(() => {
+    return availableDistricts.some(d => d.direction);
+  }, [availableDistricts]);
   const toggleFeature = (tag: string) => { setListingData(prev => ({ ...prev, smartTags: prev.smartTags.includes(tag) ? prev.smartTags.filter(t => t !== tag) : [...prev.smartTags, tag] })); };
 
   const toggleCity = (cityName: string) => {
@@ -703,7 +676,51 @@ const AdvancedListingForm = memo(function AdvancedListingForm({
                   </div>
                 )}
                 {activeCard === 2 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={citySearch} onChange={e => setCitySearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5"><div className="grid grid-cols-3 gap-2">{filteredCities.map(c => { const isSelected = listingData.cities.includes(c.name); return (<button key={c.name} onClick={() => toggleCity(c.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<span className="truncate">{c.name}</span></button>); })}</div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
-                {activeCard === 3 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div><div className="h-[200px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5">{filteredDistricts.length > 0 ? (<div className="grid grid-cols-3 gap-2">{filteredDistricts.map(d => { const isSelected = listingData.districts.includes(d.name); return (<button key={`${d.cityName}-${d.name}`} onClick={() => toggleDistrict(d.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>{isSelected && <Check className="h-2.5 w-2.5" />}<div className="flex flex-col items-center overflow-hidden w-full"><span className="truncate w-full">{d.name}</span><span className="text-[8px] opacity-70 font-normal truncate w-full">{d.cityName}</span></div></button>); })}</div>) : (<div className="h-full flex flex-col items-center justify-center text-muted-foreground"><MapPin className="h-6 w-6 mb-2 opacity-20" /><p className="text-xs">لا توجد أحياء مطابقة</p></div>)}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
+                {activeCard === 3 && <div className="space-y-3 animate-in slide-in-from-right-4">
+                  {/* فلتر الاتجاهات */}
+                  {hasDirections && (
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      <button
+                        onClick={() => setSelectedDirection("all")}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${selectedDirection === "all" ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                      >
+                        الكل
+                      </button>
+                      {(["north", "south", "east", "west", "center"] as Direction[]).map(dir => (
+                        <button
+                          key={dir}
+                          onClick={() => setSelectedDirection(dir)}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-0.5 ${selectedDirection === dir ? "bg-primary text-white" : "bg-muted hover:bg-muted/80"}`}
+                        >
+                          <Compass className="w-2.5 h-2.5" />
+                          {directionLabels[dir]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="relative"><Search className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" /><Input placeholder="بحث..." value={districtSearch} onChange={e => setDistrictSearch(e.target.value)} className="h-10 pr-8 text-xs rounded-lg" /></div>
+                  <div className="h-[160px] overflow-y-auto pr-1 custom-scrollbar border rounded-lg p-2 bg-muted/5">
+                    {filteredDistricts.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {filteredDistricts.map(d => { 
+                          const isSelected = listingData.districts.includes(d.name); 
+                          return (
+                            <button key={d.name} onClick={() => toggleDistrict(d.name)} className={`py-2.5 px-1 rounded border text-[10px] font-bold ${isSelected ? "bg-primary text-white" : "bg-white hover:bg-muted border-border"}`}>
+                              {isSelected && <Check className="h-2.5 w-2.5" />}
+                              <span className="truncate">{d.name}</span>
+                            </button>
+                          ); 
+                        })}
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                        <MapPin className="h-6 w-6 mb-2 opacity-20" />
+                        <p className="text-xs">لا توجد أحياء مطابقة</p>
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button>
+                </div>}
                 {activeCard === 4 && <div className="space-y-3 animate-in slide-in-from-right-4"><div className="grid grid-cols-4 gap-2">{propertyTypes.map(type => { const Icon = type.icon; return (<button key={type.value} onClick={() => handleSelection('propertyType', type.value)} className={`p-2 rounded-lg border flex flex-col items-center gap-1 transition-transform active:scale-95 ${listingData.propertyType === type.value ? "border-primary bg-primary/5 scale-105" : "border-border"}`}><Icon className="h-5 w-5" /><span className="text-[10px] font-bold text-center">{type.label}</span></button>)})}</div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}
                 {activeCard === 5 && renderCard5Content()}
                 {activeCard === 6 && <div className="space-y-4 flex flex-col justify-center h-full min-h-[300px]"><div><label className="text-xs font-medium mb-1.5 block">السعر المطلوب</label><div className="grid grid-cols-2 gap-1.5">{getPriceRanges().map(b => <button key={b.value} onClick={() => setListingData(f => ({ ...f, targetPrice: b.value }))} className={`py-2 px-1 rounded border text-[10px] font-bold ${listingData.targetPrice === b.value ? "bg-primary text-white" : "border-border"}`}>{b.label}</button>)}</div></div><div><label className="text-xs font-medium mb-1.5 block">خيارات الدفع المقبولة</label><div className="grid grid-cols-2 gap-2"><button onClick={() => handleSelection('paymentPreference', 'cash')} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "cash" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>كاش فقط</button><button onClick={() => handleSelection('paymentPreference', 'finance', false)} className={`p-2 rounded border text-xs font-bold ${listingData.paymentPreference === "finance" ? "bg-primary/10 border-primary text-primary" : "border-border"}`}>أقبل التمويل</button></div></div><Button onClick={goNext} disabled={!canProceed()} className="w-full h-10 rounded-lg">التالي</Button></div>}

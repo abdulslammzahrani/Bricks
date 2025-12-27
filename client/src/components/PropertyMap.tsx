@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Icon } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Home, Building2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Property {
   id: string;
@@ -51,11 +53,73 @@ const customIcon = new Icon({
   shadowSize: [41, 41],
 });
 
+interface DistrictCoords {
+  city: string;
+  district: string;
+  latitude: number;
+  longitude: number;
+}
+
 export function PropertyMap({ properties }: PropertyMapProps) {
+  // Fetch district coordinates for properties that don't have coordinates
+  const propertiesNeedingCoords = useMemo(() => {
+    return properties.filter(p => !p.latitude || !p.longitude);
+  }, [properties]);
+
+  // Fetch district coordinates from API
+  const { data: districtCoordsMap = {} } = useQuery<Record<string, DistrictCoords>>({
+    queryKey: ["district-coords", propertiesNeedingCoords.map(p => `${p.city}-${p.district}`).join(",")],
+    queryFn: async () => {
+      const coordsMap: Record<string, DistrictCoords> = {};
+      
+      // Fetch coordinates for each unique city-district pair
+      const uniquePairs = Array.from(
+        new Set(propertiesNeedingCoords.map(p => `${p.city}-${p.district}`))
+      );
+
+      await Promise.all(
+        uniquePairs.map(async (pair) => {
+          const [city, district] = pair.split("-");
+          try {
+            // Try to get district coordinates from API
+            const districtsRes = await apiRequest("GET", `/api/form-builder/districts/${city}`);
+            const districts = await districtsRes.json();
+            const districtData = districts.find((d: any) => d.name === district);
+            
+            if (districtData && districtData.latitude && districtData.longitude) {
+              coordsMap[pair] = {
+                city,
+                district,
+                latitude: districtData.latitude,
+                longitude: districtData.longitude,
+              };
+            }
+          } catch (error) {
+            // Fallback to city coordinates
+            console.warn(`Failed to fetch coordinates for ${city}-${district}:`, error);
+          }
+        })
+      );
+
+      return coordsMap;
+    },
+    enabled: propertiesNeedingCoords.length > 0,
+  });
+
   const getPropertyCoordinates = (property: Property): [number, number] => {
+    // 1. Use property's own coordinates if available
     if (property.latitude && property.longitude) {
       return [property.latitude, property.longitude];
     }
+
+    // 2. Try to get district coordinates from API
+    const districtKey = `${property.city}-${property.district}`;
+    const districtCoords = districtCoordsMap[districtKey];
+    if (districtCoords) {
+      return [districtCoords.latitude, districtCoords.longitude];
+    }
+
+    // 3. Fallback to city coordinates with small random offset
     const cityCoord = cityCoordinates[property.city] || [24.7136, 46.6753];
     const offset = Math.random() * 0.05 - 0.025;
     return [cityCoord[0] + offset, cityCoord[1] + offset];
