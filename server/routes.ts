@@ -19,11 +19,14 @@ import {
   progressiveProfiles,
   matches,
   properties,
+  conversations,
+  messages,
+  appointments,
 } from "@shared/schema";
 import * as landingPageService from "./landing-page-service";
 import * as leadsService from "./leads-service";
 import { handleFormSubmission } from "./routes/form-submission";
-import { eq, desc, sql, or } from "drizzle-orm";
+import { eq, desc, sql, or, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { analyzeIntakeWithAI, transcribeAudio } from "./ai-service";
@@ -1048,6 +1051,76 @@ export async function registerRoutes(
     }
   });
 
+  // Get all matches for current user
+  app.get("/api/matches", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+
+      // Get user's preferences
+      const preferences = await storage.getBuyerPreferencesByUser(userId);
+      const preferenceIds = preferences.map((p) => p.id);
+
+      if (preferenceIds.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all matches for user's preferences
+      const allMatches = await db
+        .select()
+        .from(matches)
+        .where(inArray(matches.buyerPreferenceId, preferenceIds))
+        .orderBy(desc(matches.matchScore));
+
+      // Enrich with property and preference details
+      const enrichedMatches = await Promise.all(
+        allMatches.map(async (match) => {
+          const property = match.propertyId
+            ? await storage.getProperty(match.propertyId)
+            : null;
+          const buyerPreference = match.buyerPreferenceId
+            ? await storage.getBuyerPreference(match.buyerPreferenceId)
+            : null;
+
+          return {
+            ...match,
+            property,
+            buyerPreference,
+          };
+        }),
+      );
+
+      res.json(enrichedMatches);
+    } catch (error: any) {
+      console.error("Error fetching matches:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update match status
+  app.patch("/api/matches/:matchId", async (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ error: "الحالة مطلوبة" });
+      }
+
+      const match = await storage.updateMatchStatus(matchId, status);
+      if (!match) {
+        return res.status(404).json({ error: "المطابقة غير موجودة" });
+      }
+
+      res.json(match);
+    } catch (error: any) {
+      console.error("Error updating match status:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ============ PREFERENCE CRUD ROUTES ============
 
   // Create new preference
@@ -1397,6 +1470,357 @@ export async function registerRoutes(
     }
   });
 
+  // Get all properties for admin (with seller info)
+  app.get("/api/admin/properties", async (req, res) => {
+    console.log("[API /admin/properties] Route handler called");
+    try {
+      const properties = await storage.getAllPropertiesForAdmin();
+      const sellers = await storage.getUsers("seller");
+      console.log(`[API /admin/properties] Found ${properties.length} properties and ${sellers.length} sellers`);
+      
+      // Enrich properties with seller info
+      let propertiesWithSellers = properties.map(property => {
+        const seller = sellers.find(s => s.id === property.sellerId);
+        return {
+          ...property,
+          seller: seller ? {
+            id: seller.id,
+            name: seller.name,
+            phone: seller.phone,
+            email: seller.email,
+          } : null,
+        };
+      });
+
+      // Add sample properties if less than 10 exist (for testing)
+      if (propertiesWithSellers.length < 10) {
+        const sampleProperties = [
+          {
+            id: "sample-prop-1",
+            sellerId: "sample-seller-1",
+            propertyType: "فيلا",
+            city: "الرياض",
+            district: "الياسمين",
+            price: 3500000,
+            area: "450",
+            rooms: "6",
+            bathrooms: "5",
+            description: "فيلا فاخرة في حي الياسمين - الرياض. فيلا عصرية بتصميم فاخر تقع في أرقى أحياء الرياض. تتميز بمساحات واسعة وتشطيبات راقية مع حديقة كبيرة ومسبح خاص.",
+            status: "ready",
+            furnishing: "furnished",
+            yearBuilt: "2020",
+            amenities: ["parking", "garden", "pool", "ac", "wifi", "security"],
+            images: ["https://images.unsplash.com/photo-1598635031829-4bfae29d33eb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 1250,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-1",
+              name: "أحمد محمد العتيبي",
+              phone: "+966 50 123 4567",
+              email: "ahmed@example.com",
+            },
+          },
+          {
+            id: "sample-prop-2",
+            sellerId: "sample-seller-2",
+            propertyType: "شقة",
+            city: "جدة",
+            district: "الكورنيش",
+            price: 45000,
+            area: "180",
+            rooms: "3",
+            bathrooms: "2",
+            description: "شقة عصرية للإيجار في برج سكني - جدة. شقة فاخرة بإطلالة بحرية رائعة، تتميز بموقع استراتيجي قريب من جميع الخدمات. تشطيبات فاخرة ومطبخ راكب.",
+            status: "ready",
+            furnishing: "semi_furnished",
+            yearBuilt: "2022",
+            amenities: ["parking", "ac", "wifi", "elevator"],
+            images: ["https://images.unsplash.com/photo-1515263487990-61b07816b324?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: "[transactionType:rent]",
+            isActive: true,
+            viewsCount: 890,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-2",
+              name: "خالد أحمد الزهراني",
+              phone: "+966 55 234 5678",
+              email: "khaled@example.com",
+            },
+          },
+          {
+            id: "sample-prop-3",
+            sellerId: "sample-seller-3",
+            propertyType: "شقة",
+            city: "الرياض",
+            district: "النرجس",
+            price: 2800000,
+            area: "220",
+            rooms: "4",
+            bathrooms: "3",
+            description: "شقة للبيع في حي النرجس - الرياض. شقة واسعة ومريحة مع إطلالة جميلة، تشطيبات عالية الجودة ومطبخ راكب بالكامل.",
+            status: "ready",
+            furnishing: "furnished",
+            yearBuilt: "2021",
+            amenities: ["parking", "ac", "wifi", "elevator", "balcony"],
+            images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 650,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-3",
+              name: "سعد عبدالله الدوسري",
+              phone: "+966 56 345 6789",
+              email: "saad@example.com",
+            },
+          },
+          {
+            id: "sample-prop-4",
+            sellerId: "sample-seller-4",
+            propertyType: "فيلا",
+            city: "الرياض",
+            district: "الملقا",
+            price: 4200000,
+            area: "520",
+            rooms: "7",
+            bathrooms: "6",
+            description: "فيلا راقية في حي الملقا - الرياض. فيلا ضخمة بتصميم كلاسيكي أنيق، تتميز بحديقة واسعة ومسبح أولمبي وموقف سيارات متعدد.",
+            status: "ready",
+            furnishing: "furnished",
+            yearBuilt: "2019",
+            amenities: ["parking", "garden", "pool", "ac", "wifi", "security", "maid_room"],
+            images: ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 2100,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-4",
+              name: "محمد سعيد القحطاني",
+              phone: "+966 50 456 7890",
+              email: "mohammed@example.com",
+            },
+          },
+          {
+            id: "sample-prop-5",
+            sellerId: "sample-seller-5",
+            propertyType: "شقة",
+            city: "الدمام",
+            district: "الكورنيش",
+            price: 32000,
+            area: "150",
+            rooms: "2",
+            bathrooms: "2",
+            description: "شقة للإيجار في كورنيش الدمام. شقة حديثة بإطلالة بحرية خلابة، قريبة من الشاطئ والمرافق الترفيهية.",
+            status: "ready",
+            furnishing: "unfurnished",
+            yearBuilt: "2023",
+            amenities: ["parking", "ac", "wifi", "balcony"],
+            images: ["https://images.unsplash.com/photo-1493809842364-78817add7ffb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: "[transactionType:rent]",
+            isActive: true,
+            viewsCount: 720,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-5",
+              name: "عبدالرحمن فهد العتيبي",
+              phone: "+966 55 567 8901",
+              email: "abdulrahman@example.com",
+            },
+          },
+          {
+            id: "sample-prop-6",
+            sellerId: "sample-seller-6",
+            propertyType: "عمارة",
+            city: "الرياض",
+            district: "طريق الملك فهد",
+            price: 8500000,
+            area: "800",
+            rooms: "12",
+            bathrooms: "8",
+            description: "عمارة سكنية للبيع في موقع استراتيجي - الرياض. عمارة متعددة الطوابق مع شقق مستقلة، استثمار ممتاز.",
+            status: "ready",
+            furnishing: "unfurnished",
+            yearBuilt: "2018",
+            amenities: ["parking", "ac", "wifi", "security", "elevator"],
+            images: ["https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 1850,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-6",
+              name: "فهد راشد النعيم",
+              phone: "+966 50 678 9012",
+              email: "fahad@example.com",
+            },
+          },
+          {
+            id: "sample-prop-7",
+            sellerId: "sample-seller-7",
+            propertyType: "شقة",
+            city: "الرياض",
+            district: "العليا",
+            price: 1950000,
+            area: "185",
+            rooms: "3",
+            bathrooms: "2",
+            description: "شقة للبيع في حي العليا - الرياض. شقة أنيقة في موقع ممتاز، قريبة من الخدمات والمراكز التجارية.",
+            status: "ready",
+            furnishing: "semi_furnished",
+            yearBuilt: "2020",
+            amenities: ["parking", "ac", "wifi", "elevator"],
+            images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 540,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-7",
+              name: "نواف خالد العنزي",
+              phone: "+966 56 789 0123",
+              email: "nawaf@example.com",
+            },
+          },
+          {
+            id: "sample-prop-8",
+            sellerId: "sample-seller-8",
+            propertyType: "فيلا",
+            city: "جدة",
+            district: "الشاطئ",
+            price: 5500000,
+            area: "600",
+            rooms: "8",
+            bathrooms: "7",
+            description: "فيلا ساحرة على شاطئ جدة. فيلا فاخرة بإطلالة بحرية مباشرة، تتميز بتصميم عصري وحديقة واسعة ومسبح خاص.",
+            status: "ready",
+            furnishing: "furnished",
+            yearBuilt: "2021",
+            amenities: ["parking", "garden", "pool", "ac", "wifi", "security", "maid_room"],
+            images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 3200,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-8",
+              name: "يوسف عبدالعزيز المطيري",
+              phone: "+966 50 890 1234",
+              email: "youssef@example.com",
+            },
+          },
+          {
+            id: "sample-prop-9",
+            sellerId: "sample-seller-9",
+            propertyType: "شقة",
+            city: "الرياض",
+            district: "الملز",
+            price: 28000,
+            area: "140",
+            rooms: "2",
+            bathrooms: "2",
+            description: "شقة للإيجار في حي الملز - الرياض. شقة مريحة في موقع حيوي، مناسبة للعائلات الصغيرة.",
+            status: "ready",
+            furnishing: "unfurnished",
+            yearBuilt: "2019",
+            amenities: ["parking", "ac", "wifi"],
+            images: ["https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: "[transactionType:rent]",
+            isActive: true,
+            viewsCount: 380,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-9",
+              name: "طارق إبراهيم الحربي",
+              phone: "+966 55 901 2345",
+              email: "tariq@example.com",
+            },
+          },
+          {
+            id: "sample-prop-10",
+            sellerId: "sample-seller-10",
+            propertyType: "فيلا",
+            city: "الرياض",
+            district: "الربيع",
+            price: 4800000,
+            area: "580",
+            rooms: "8",
+            bathrooms: "6",
+            description: "فيلا راقية في حي الربيع - الرياض. فيلا ضخمة بتصميم عصري، تتميز بمساحات واسعة وحديقة كبيرة ومسبح أولمبي.",
+            status: "ready",
+            furnishing: "furnished",
+            yearBuilt: "2022",
+            amenities: ["parking", "garden", "pool", "ac", "wifi", "security", "gym", "maid_room"],
+            images: ["https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080"],
+            smartTags: [],
+            notes: null,
+            isActive: true,
+            viewsCount: 1680,
+            latitude: null,
+            longitude: null,
+            createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+            updatedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+            seller: {
+              id: "sample-seller-10",
+              name: "بندر صالح الدوسري",
+              phone: "+966 50 012 3456",
+              email: "bandar@example.com",
+            },
+          },
+        ];
+
+        // Filter out duplicates by ID
+        const existingIds = new Set(propertiesWithSellers.map(p => p.id));
+        const newSampleProperties = sampleProperties.filter(p => !existingIds.has(p.id));
+        propertiesWithSellers = [...propertiesWithSellers, ...newSampleProperties];
+        console.log(`[API /admin/properties] Added ${newSampleProperties.length} sample properties. Total: ${propertiesWithSellers.length}`);
+      }
+      
+      console.log(`[API /admin/properties] Returning ${propertiesWithSellers.length} properties`);
+      res.json(propertiesWithSellers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get single property with seller info
   app.get("/api/properties/:id", async (req, res) => {
     try {
@@ -1560,9 +1984,9 @@ export async function registerRoutes(
   // Get conversations for a user
   app.get("/api/conversations", async (req, res) => {
     try {
-      const { userId } = req.query;
-      if (!userId || typeof userId !== "string") {
-        return res.status(400).json({ error: "userId is required" });
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
       }
 
       const convs = await storage.getConversationsByUser(userId);
@@ -2176,6 +2600,269 @@ export async function registerRoutes(
 
       res.json(clients);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ============ ADS ROUTES ============
+  
+  // Get all ads (unified endpoint for buyer preferences, properties, and investments)
+  app.get("/api/ads", async (req, res) => {
+    console.log("[API /ads] Route handler called");
+    try {
+      const { adType, transactionType, city, status } = req.query;
+      console.log("[API /ads] Query params:", { adType, transactionType, city, status });
+      
+      // Get all buyer preferences
+      const preferences = await storage.getAllBuyerPreferencesForAdmin();
+      const preferenceUsers = await storage.getUsers("buyer");
+      
+      // Get all properties
+      const properties = await storage.getAllPropertiesForAdmin();
+      const propertyUsers = await storage.getUsers("seller");
+      
+      // Transform buyer preferences to ads
+      const preferenceAds = preferences.map((pref) => {
+        const user = preferenceUsers.find((u) => u.id === pref.userId);
+        // Determine adType based on purpose
+        const adType = pref.purpose === "investment" ? "investment_request" : "buyer_preference";
+        
+        return {
+          id: pref.id,
+          adType,
+          transactionType: pref.transactionType, // "buy" | "rent"
+          userId: pref.userId,
+          userName: user?.name || "غير معروف",
+          userPhone: user?.phone || "",
+          userEmail: user?.email || "",
+          city: pref.city,
+          districts: pref.districts,
+          propertyType: pref.propertyType,
+          price: null,
+          budgetMin: pref.budgetMin,
+          budgetMax: pref.budgetMax,
+          area: pref.area,
+          rooms: pref.rooms,
+          description: pref.notes || "",
+          status: pref.isActive ? "active" : "inactive",
+          createdAt: null,
+          updatedAt: null,
+          // Investment specific fields
+          investmentStrategy: pref.purpose === "investment" ? pref.notes : null,
+          purpose: pref.purpose,
+        };
+      });
+      
+      // Transform properties to ads
+      const propertyAds = properties.map((prop) => {
+        const user = propertyUsers.find((u) => u.id === prop.sellerId);
+        // Properties are always listings, determine if investment based on notes or other criteria
+        const isInvestment = prop.notes?.includes("[investment]") || prop.notes?.includes("استثمار");
+        const adType = isInvestment ? "investment_opportunity" : "property_listing";
+        
+        return {
+          id: prop.id,
+          adType,
+          transactionType: "sale", // Properties are for sale by default (can be extended to support rent)
+          userId: prop.sellerId,
+          userName: user?.name || "غير معروف",
+          userPhone: user?.phone || "",
+          userEmail: user?.email || "",
+          city: prop.city,
+          districts: [prop.district],
+          propertyType: prop.propertyType,
+          price: prop.price,
+          budgetMin: null,
+          budgetMax: null,
+          area: prop.area,
+          rooms: prop.rooms,
+          bathrooms: prop.bathrooms,
+          description: prop.description || "",
+          status: prop.isActive ? (prop.status === "ready" ? "active" : "under_construction") : "inactive",
+          createdAt: prop.createdAt?.toISOString() || null,
+          updatedAt: prop.updatedAt?.toISOString() || null,
+          images: prop.images || [],
+          viewsCount: prop.viewsCount,
+        };
+      });
+      
+      // Combine all ads
+      let allAds = [...preferenceAds, ...propertyAds];
+      
+      // Add sample ads for testing (always add 5 sample ads for demo purposes)
+      // TODO: Remove this in production or make it conditional based on environment
+      const sampleAds = [
+          {
+            id: "sample-1",
+            adType: "property_listing" as const,
+            transactionType: "sale" as const,
+            userId: "sample-user-1",
+            userName: "أحمد محمد العتيبي",
+            userPhone: "+966 50 123 4567",
+            userEmail: "ahmed@example.com",
+            city: "الرياض",
+            districts: ["الياسمين"],
+            propertyType: "فيلا",
+            price: 3500000,
+            budgetMin: null,
+            budgetMax: null,
+            area: "450",
+            rooms: "6",
+            bathrooms: "5",
+            description: "فيلا فاخرة في حي الياسمين - الرياض. فيلا عصرية بتصميم فاخر تقع في أرقى أحياء الرياض. تتميز بمساحات واسعة وتشطيبات راقية مع حديقة كبيرة ومسبح خاص.",
+            status: "active" as const,
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            images: [
+              "https://images.unsplash.com/photo-1598635031829-4bfae29d33eb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
+            ],
+            viewsCount: 1250,
+            investmentStrategy: null,
+            purpose: null,
+          },
+          {
+            id: "sample-2",
+            adType: "property_listing" as const,
+            transactionType: "rent" as const,
+            userId: "sample-user-2",
+            userName: "خالد أحمد الزهراني",
+            userPhone: "+966 55 234 5678",
+            userEmail: "khaled@example.com",
+            city: "جدة",
+            districts: ["الكورنيش"],
+            propertyType: "شقة",
+            price: 45000,
+            budgetMin: null,
+            budgetMax: null,
+            area: "180",
+            rooms: "3",
+            bathrooms: "2",
+            description: "شقة عصرية للإيجار في برج سكني - جدة. شقة فاخرة بإطلالة بحرية رائعة، تتميز بموقع استراتيجي قريب من جميع الخدمات. تشطيبات فاخرة ومطبخ راكب.",
+            status: "active" as const,
+            createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            images: [
+              "https://images.unsplash.com/photo-1515263487990-61b07816b324?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
+            ],
+            viewsCount: 890,
+            investmentStrategy: null,
+            purpose: null,
+          },
+          {
+            id: "sample-3",
+            adType: "buyer_preference" as const,
+            transactionType: "buy" as const,
+            userId: "sample-user-3",
+            userName: "عبدالله سعيد القحطاني",
+            userPhone: "+966 56 345 6789",
+            userEmail: "abdullah@example.com",
+            city: "الرياض",
+            districts: ["النرجس", "الياسمين", "الملقا"],
+            propertyType: "فيلا",
+            price: null,
+            budgetMin: 2500000,
+            budgetMax: 3500000,
+            area: "400",
+            rooms: "5",
+            bathrooms: "4",
+            description: "مطلوب فيلا للشراء في شمال الرياض. أبحث عن فيلا في أحياء شمال الرياض (النرجس، الياسمين، الملقا). المساحة المطلوبة من 400-500 متر مربع.",
+            status: "active" as const,
+            createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            images: [],
+            viewsCount: 450,
+            investmentStrategy: null,
+            purpose: "residence",
+          },
+          {
+            id: "sample-4",
+            adType: "investment_opportunity" as const,
+            transactionType: "investment" as const,
+            userId: "sample-user-4",
+            userName: "راشد عبدالعزيز النعيم",
+            userPhone: "+966 50 111 2222",
+            userEmail: "rashed@example.com",
+            city: "الرياض",
+            districts: ["طريق الملك فهد"],
+            propertyType: "مجمع تجاري",
+            price: 18500000,
+            budgetMin: null,
+            budgetMax: null,
+            area: "1200",
+            rooms: null,
+            bathrooms: null,
+            description: "مجمع تجاري استثماري بعائد 12% سنوياً - الرياض. مجمع تجاري متكامل مؤجر بالكامل لشركات عالمية بعقود طويلة الأمد. عائد استثماري مضمون 12% سنوياً. موقع استراتيجي على طريق الملك فهد.",
+            status: "active" as const,
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            images: [
+              "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080",
+            ],
+            viewsCount: 2150,
+            investmentStrategy: "عائد مضمون 12% سنوياً",
+            purpose: "investment",
+          },
+          {
+            id: "sample-5",
+            adType: "investment_request" as const,
+            transactionType: "investment" as const,
+            userId: "sample-user-5",
+            userName: "فهد محمد العنزي",
+            userPhone: "+966 56 555 6666",
+            userEmail: "fahad@example.com",
+            city: "الرياض",
+            districts: ["شمال الرياض"],
+            propertyType: "عمارة أو مجمع",
+            price: null,
+            budgetMin: 10000000,
+            budgetMax: 15000000,
+            area: "1000",
+            rooms: null,
+            bathrooms: null,
+            description: "مطلوب عقار استثماري بعائد لا يقل عن 8%. أبحث عن فرصة استثمارية في عقار سكني أو تجاري مؤجر بعائد سنوي لا يقل عن 8%. الميزانية حتى 15 مليون ريال.",
+            status: "active" as const,
+            createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+            images: [],
+            viewsCount: 680,
+            investmentStrategy: "عائد لا يقل عن 8%",
+            purpose: "investment",
+          },
+        ];
+        // Always add sample ads for testing (filter out duplicates by ID)
+        const existingIds = new Set(allAds.map(ad => ad.id));
+        const newSampleAds = sampleAds.filter(ad => !existingIds.has(ad.id));
+        allAds = [...allAds, ...newSampleAds];
+        console.log(`[API /ads] Added ${newSampleAds.length} sample ads. Total ads: ${allAds.length}`);
+      
+      // Apply filters
+      if (adType) {
+        allAds = allAds.filter(ad => ad.adType === adType);
+      }
+      
+      if (transactionType) {
+        allAds = allAds.filter(ad => ad.transactionType === transactionType);
+      }
+      
+      if (city) {
+        allAds = allAds.filter(ad => ad.city === city);
+      }
+      
+      if (status) {
+        allAds = allAds.filter(ad => ad.status === status);
+      }
+      
+      // Sort by creation date (newest first)
+      allAds.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      console.log(`[API /ads] Returning ${allAds.length} ads after filtering`);
+      res.json(allAds);
+    } catch (error: any) {
+      console.error("Error fetching ads:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -4414,14 +5101,19 @@ export async function registerRoutes(
 
   app.get("/api/appointments", async (req, res) => {
     try {
-      const { userId, matchId, status } = req.query;
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+
+      const { matchId, status } = req.query;
       let query = db.select().from(appointments);
       
-      if (userId) {
-        query = query.where(
-          or(eq(appointments.buyerId, userId as string), eq(appointments.sellerId, userId as string))
-        );
-      }
+      // Filter by current user (buyer or seller)
+      query = query.where(
+        or(eq(appointments.buyerId, userId), eq(appointments.sellerId, userId))
+      );
+      
       if (matchId) {
         query = query.where(eq(appointments.matchId, matchId as string));
       }
@@ -4430,8 +5122,33 @@ export async function registerRoutes(
       }
       
       const result = await query.orderBy(desc(appointments.appointmentDate));
-      res.json(result);
+      
+      // Enrich with property and user details
+      const enrichedAppointments = await Promise.all(
+        result.map(async (apt) => {
+          const property = apt.matchId
+            ? await db.select().from(matches).where(eq(matches.id, apt.matchId)).limit(1).then(async (matches) => {
+                if (matches.length > 0 && matches[0].propertyId) {
+                  return await storage.getProperty(matches[0].propertyId);
+                }
+                return null;
+              })
+            : null;
+          const buyer = await storage.getUser(apt.buyerId);
+          const seller = await storage.getUser(apt.sellerId);
+
+          return {
+            ...apt,
+            property,
+            buyer: buyer ? { id: buyer.id, name: buyer.name, phone: buyer.phone } : null,
+            seller: seller ? { id: seller.id, name: seller.name, phone: seller.phone } : null,
+          };
+        })
+      );
+      
+      res.json(enrichedAppointments);
     } catch (error: any) {
+      console.error("Error fetching appointments:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -4466,6 +5183,128 @@ export async function registerRoutes(
       await db.delete(appointments).where(eq(appointments.id, req.params.id));
       res.json({ success: true });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== CRM API ====================
+  
+  // Get CRM customers (leads from preferences and properties)
+  app.get("/api/crm/customers", async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+
+      // Get user's properties to find buyers
+      const userProperties = await storage.getPropertiesBySeller(userId);
+      const propertyIds = userProperties.map((p) => p.id);
+
+      // Get matches for user's properties (these are potential customers)
+      const matches = propertyIds.length > 0
+        ? await db
+            .select()
+            .from(matches)
+            .where(inArray(matches.propertyId, propertyIds))
+            .orderBy(desc(matches.createdAt))
+        : [];
+
+      // Get unique buyers from matches
+      const buyerIds = [...new Set(matches.map((m) => m.buyerPreferenceId).filter(Boolean))];
+      
+      const customers = await Promise.all(
+        buyerIds.map(async (prefId) => {
+          if (!prefId) return null;
+          
+          const preference = await storage.getBuyerPreference(prefId);
+          if (!preference) return null;
+
+          const buyer = await storage.getUser(preference.userId);
+          if (!buyer) return null;
+
+          // Get match status to determine CRM stage
+          const userMatches = matches.filter((m) => m.buyerPreferenceId === prefId);
+          const latestMatch = userMatches[0];
+          
+          let stage: string = "new";
+          if (latestMatch) {
+            if (latestMatch.status === "closed") {
+              stage = "closed";
+            } else if (latestMatch.status === "contacted" || latestMatch.status === "viewing") {
+              stage = "contacted";
+            } else if (latestMatch.status === "negotiating") {
+              stage = "negotiating";
+            }
+          }
+
+          return {
+            id: buyer.id,
+            name: buyer.name,
+            phone: buyer.phone,
+            email: buyer.email,
+            stage,
+            priority: latestMatch && latestMatch.matchScore > 90 ? "high" : latestMatch && latestMatch.matchScore > 75 ? "medium" : "low",
+            interestedIn: `${preference.propertyType} في ${preference.city}`,
+            budget: preference.budgetMax,
+            notes: preference.notes,
+            createdAt: preference.createdAt || new Date().toISOString(),
+          };
+        })
+      );
+
+      res.json(customers.filter(Boolean));
+    } catch (error: any) {
+      console.error("Error fetching CRM customers:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update customer stage
+  app.patch("/api/crm/customers/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { stage } = req.body;
+
+      if (!stage) {
+        return res.status(400).json({ error: "المرحلة مطلوبة" });
+      }
+
+      // Update related matches status based on CRM stage
+      const userPreferences = await db
+        .select()
+        .from(buyerPreferences)
+        .where(eq(buyerPreferences.userId, id))
+        .limit(1);
+
+      if (userPreferences.length > 0) {
+        const prefId = userPreferences[0].id;
+        const relatedMatches = await db
+          .select()
+          .from(matches)
+          .where(eq(matches.buyerPreferenceId, prefId));
+
+        // Map CRM stage to match status
+        const statusMap: Record<string, string> = {
+          new: "new",
+          contacted: "contacted",
+          qualified: "viewing",
+          negotiating: "negotiating",
+          closed: "closed",
+          lost: "rejected",
+        };
+
+        const matchStatus = statusMap[stage] || "new";
+
+        // Update matches
+        for (const match of relatedMatches) {
+          await storage.updateMatchStatus(match.id, matchStatus);
+        }
+      }
+
+      res.json({ success: true, stage });
+    } catch (error: any) {
+      console.error("Error updating customer stage:", error);
       res.status(500).json({ error: error.message });
     }
   });

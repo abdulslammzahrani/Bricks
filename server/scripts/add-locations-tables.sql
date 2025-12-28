@@ -53,3 +53,4 @@ CREATE INDEX IF NOT EXISTS idx_districts_order ON districts("order");
 CREATE INDEX IF NOT EXISTS idx_directions_code ON directions(code);
 CREATE INDEX IF NOT EXISTS idx_directions_order ON directions("order");
 
+

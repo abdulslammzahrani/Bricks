@@ -30,6 +30,31 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000, // تحذير عند تجاوز 1MB للـ chunk
+    rollupOptions: {
+      output: {
+        // تقسيم الـ chunks حسب المكتبات الكبيرة
+        manualChunks: {
+          // فصل مكتبات UI الكبيرة
+          'radix-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-tooltip',
+          ],
+          // فصل مكتبات الرسوم البيانية
+          'charts': ['recharts'],
+          // فصل مكتبات الخرائط
+          'maps': ['leaflet', 'react-leaflet'],
+          // فصل مكتبات الحركات
+          'animations': ['framer-motion', '@react-spring/web'],
+          // فصل مكتبات النماذج
+          'forms': ['react-hook-form', '@hookform/resolvers'],
+        },
+      },
+    },
   },
   server: {
     fs: {

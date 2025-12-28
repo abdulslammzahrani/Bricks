@@ -20,6 +20,12 @@ import ResetPasswordPage from "@/pages/reset-password";
 import RegisterPage from "@/pages/register";
 import OfferPage from "@/pages/offer";
 import MarketerDashboard from "@/pages/marketer-dashboard";
+import MatchesPage from "@/pages/matches";
+import MessagesPageRoute from "@/pages/messages";
+import AppointmentsPage from "@/pages/appointments";
+import CRMPageRoute from "@/pages/crm";
+import AdsPage from "@/pages/ads";
+import PropertiesPage from "@/pages/properties";
 
 /**
  * Router Component - تعريف جميع الـ Routes في التطبيق
@@ -54,6 +60,12 @@ function Router() {
       {/* صفحات المستخدم - ملفات: pages/profile.tsx, dashboard.tsx */}
       <Route path="/profile" component={ProfilePage} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/matches" component={MatchesPage} />
+      <Route path="/messages" component={MessagesPageRoute} />
+      <Route path="/appointments" component={AppointmentsPage} />
+      <Route path="/crm" component={CRMPageRoute} />
+      <Route path="/ads" component={AdsPage} />
+      <Route path="/properties" component={PropertiesPage} />
       
       {/* صفحة عرض العقار (Landing Page) - ملف: pages/offer.tsx */}
       {/* 📍 للبحث عن نموذج التقاط العملاء: ابحث عن LeadCaptureForm أو FormRenderer */}

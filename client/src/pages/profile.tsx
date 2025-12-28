@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock, BarChart3, Settings, Car, Snowflake, Wifi, Shield, Trees, Dumbbell, Users, Droplets, Bath, Ruler, Calendar } from "lucide-react";
+import { Home, Building2, Heart, Phone, Mail, User, LogOut, ArrowRight, Eye, MapPin, Plus, Pencil, Trash2, Upload, Image, X, Map, ChevronDown, ChevronUp, Check, Loader2, MessageCircle, Zap, Lock, BarChart3, Settings, Car, Snowflake, Wifi, Shield, Trees, Dumbbell, Users, Droplets, Bath, Ruler, Calendar, Search, Filter, LayoutGrid, List as ListIcon } from "lucide-react";
 import { Link, useSearch, useLocation } from "wouter";
 import { FileUploadButton } from "@/components/FileUploadButton";
 import { PropertyMap } from "@/components/PropertyMap";
@@ -98,6 +98,20 @@ export default function ProfilePage() {
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [inlineEditData, setInlineEditData] = useState<Record<string, any>>({});
   const [savingField, setSavingField] = useState<string | null>(null);
+
+  // Filters and search for preferences
+  const [preferencesSearchQuery, setPreferencesSearchQuery] = useState("");
+  const [preferencesFilterCity, setPreferencesFilterCity] = useState<string>("all");
+  const [preferencesFilterType, setPreferencesFilterType] = useState<string>("all");
+  const [preferencesFilterStatus, setPreferencesFilterStatus] = useState<string>("all");
+  const [preferencesViewMode, setPreferencesViewMode] = useState<"grid" | "list" | "map">("grid");
+
+  // Filters and search for properties
+  const [propertiesSearchQuery, setPropertiesSearchQuery] = useState("");
+  const [propertiesFilterCity, setPropertiesFilterCity] = useState<string>("all");
+  const [propertiesFilterType, setPropertiesFilterType] = useState<string>("all");
+  const [propertiesFilterStatus, setPropertiesFilterStatus] = useState<string>("all");
+  const [propertiesViewMode, setPropertiesViewMode] = useState<"grid" | "list" | "map">("grid");
 
   // Update activeTab when URL param changes
   useEffect(() => {
@@ -864,9 +878,207 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
+                {/* Filters and Search */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                          type="text"
+                          value={preferencesSearchQuery}
+                          onChange={(e) => setPreferencesSearchQuery(e.target.value)}
+                          placeholder="ابحث في الرغبات..."
+                          className="pr-10"
+                        />
+                      </div>
+
+                      <Select value={preferencesFilterCity} onValueChange={setPreferencesFilterCity}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="المدينة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">كل المدن</SelectItem>
+                          {cities.map((city) => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={preferencesFilterType} onValueChange={setPreferencesFilterType}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="نوع العقار" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">كل الأنواع</SelectItem>
+                          {propertyTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={preferencesFilterStatus} onValueChange={setPreferencesFilterStatus}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="الحالة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">كل الحالات</SelectItem>
+                          <SelectItem value="active">نشط</SelectItem>
+                          <SelectItem value="inactive">متوقف</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="flex items-center gap-2 border rounded-lg p-1">
+                        <Button
+                          variant={preferencesViewMode === "grid" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setPreferencesViewMode("grid")}
+                        >
+                          <LayoutGrid className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant={preferencesViewMode === "list" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setPreferencesViewMode("list")}
+                        >
+                          <ListIcon className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant={preferencesViewMode === "map" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setPreferencesViewMode("map")}
+                        >
+                          <Map className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Stats Cards */}
+                {preferences && Array.isArray(preferences) && preferences.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Heart className="w-5 h-5 text-emerald-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">إجمالي الرغبات</p>
+                            <p className="text-xl font-bold text-gray-900">{preferences.length}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">نشطة</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {preferences.filter((p: any) => p.isActive !== false).length}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5 text-purple-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">متوسطة الميزانية</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {preferences.length > 0
+                                ? Math.round(
+                                    preferences.reduce((sum: number, p: any) => sum + (p.budgetMax || 0), 0) /
+                                    preferences.length
+                                  ).toLocaleString("ar-SA")
+                                : 0}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-5 h-5 text-orange-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">مدن مختلفة</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {new Set(preferences.map((p: any) => p.city)).size}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
               {preferences && Array.isArray(preferences) && preferences.length > 0 ? (
-                <div className="grid gap-4">
-                  {preferences.map((pref: any) => (
+                (() => {
+                  // Filter preferences
+                  const filteredPreferences = preferences.filter((pref: any) => {
+                    const matchesSearch = 
+                      preferencesSearchQuery === "" ||
+                      pref.city?.toLowerCase().includes(preferencesSearchQuery.toLowerCase()) ||
+                      pref.propertyType?.toLowerCase().includes(preferencesSearchQuery.toLowerCase()) ||
+                      pref.districts?.some((d: string) => d.toLowerCase().includes(preferencesSearchQuery.toLowerCase())) ||
+                      pref.notes?.toLowerCase().includes(preferencesSearchQuery.toLowerCase()) ||
+                      pref.smartTags?.some((t: string) => t.toLowerCase().includes(preferencesSearchQuery.toLowerCase()));
+                    
+                    const matchesCity = preferencesFilterCity === "all" || pref.city === preferencesFilterCity;
+                    const matchesType = preferencesFilterType === "all" || pref.propertyType === preferencesFilterType;
+                    const matchesStatus = 
+                      preferencesFilterStatus === "all" ||
+                      (preferencesFilterStatus === "active" && pref.isActive !== false) ||
+                      (preferencesFilterStatus === "inactive" && pref.isActive === false);
+
+                    return matchesSearch && matchesCity && matchesType && matchesStatus;
+                  });
+
+                  if (filteredPreferences.length === 0) {
+                    return (
+                      <Card>
+                        <CardContent className="py-12 text-center">
+                          <Heart className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                          <h3 className="font-bold text-lg mb-1">لا توجد رغبات</h3>
+                          <p className="text-muted-foreground text-sm">
+                            لم يتم العثور على رغبات بناءً على الفلاتر المحددة
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  if (preferencesViewMode === "map") {
+                    return (
+                      <Card>
+                        <CardContent className="p-0">
+                          <div className="h-[600px] w-full">
+                            <PropertyMap
+                              properties={filteredPreferences.map((pref: any) => ({
+                                id: pref.id,
+                                city: pref.city,
+                                district: pref.districts?.[0] || "",
+                                lat: null,
+                                lng: null,
+                              }))}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  return (
+                    <div className={preferencesViewMode === "grid" ? "grid gap-4" : "space-y-4"}>
+                      {filteredPreferences.map((pref: any) => {
+                        return (
                     <Card key={pref.id}>
                       <CardContent className="p-4">
                         <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
@@ -1178,8 +1390,11 @@ export default function ProfilePage() {
                         )}
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
@@ -1210,19 +1425,201 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
-                {properties && Array.isArray(properties) && properties.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-medium flex items-center gap-2">
-                      <Map className="h-4 w-4 text-green-600" />
-                      خريطة عقاراتي
-                    </h3>
-                    <PropertyMap properties={properties as any[]} />
+                {/* Filters and Search */}
+                {properties && Array.isArray(properties) && properties.length > 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative flex-1 min-w-[200px]">
+                          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            type="text"
+                            value={propertiesSearchQuery}
+                            onChange={(e) => setPropertiesSearchQuery(e.target.value)}
+                            placeholder="ابحث في العقارات..."
+                            className="pr-10"
+                          />
+                        </div>
+
+                        <Select value={propertiesFilterCity} onValueChange={setPropertiesFilterCity}>
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="المدينة" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">كل المدن</SelectItem>
+                            {cities.map((city) => (
+                              <SelectItem key={city} value={city}>{city}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={propertiesFilterType} onValueChange={setPropertiesFilterType}>
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="نوع العقار" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">كل الأنواع</SelectItem>
+                            {propertyTypes.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={propertiesFilterStatus} onValueChange={setPropertiesFilterStatus}>
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="الحالة" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">كل الحالات</SelectItem>
+                            <SelectItem value="active">نشط</SelectItem>
+                            <SelectItem value="inactive">غير نشط</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <div className="flex items-center gap-2 border rounded-lg p-1">
+                          <Button
+                            variant={propertiesViewMode === "grid" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setPropertiesViewMode("grid")}
+                          >
+                            <LayoutGrid className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant={propertiesViewMode === "list" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setPropertiesViewMode("list")}
+                          >
+                            <ListIcon className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant={propertiesViewMode === "map" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setPropertiesViewMode("map")}
+                          >
+                            <Map className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Stats Cards */}
+                {properties && Array.isArray(properties) && properties.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-5 h-5 text-green-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">إجمالي العقارات</p>
+                            <p className="text-xl font-bold text-gray-900">{properties.length}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">نشطة</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {properties.filter((p: any) => p.isActive !== false).length}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Eye className="w-5 h-5 text-purple-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">إجمالي المشاهدات</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {properties.reduce((sum: number, p: any) => sum + (p.viewsCount || 0), 0).toLocaleString("ar-SA")}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-5 h-5 text-orange-600" />
+                          <div>
+                            <p className="text-xs text-gray-600">متوسط السعر</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {properties.length > 0
+                                ? Math.round(
+                                    properties.reduce((sum: number, p: any) => sum + (p.price || 0), 0) /
+                                    properties.length
+                                  ).toLocaleString("ar-SA")
+                                : 0}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                ) : null}
+                )}
 
                 {properties && Array.isArray(properties) && properties.length > 0 ? (
-                <div className="grid gap-4">
-                  {properties.map((prop: any) => (
+                  (() => {
+                    // Filter properties
+                    const filteredProperties = properties.filter((prop: any) => {
+                      const matchesSearch = 
+                        propertiesSearchQuery === "" ||
+                        prop.city?.toLowerCase().includes(propertiesSearchQuery.toLowerCase()) ||
+                        prop.district?.toLowerCase().includes(propertiesSearchQuery.toLowerCase()) ||
+                        prop.propertyType?.toLowerCase().includes(propertiesSearchQuery.toLowerCase()) ||
+                        prop.notes?.toLowerCase().includes(propertiesSearchQuery.toLowerCase()) ||
+                        prop.smartTags?.some((t: string) => t.toLowerCase().includes(propertiesSearchQuery.toLowerCase()));
+                      
+                      const matchesCity = propertiesFilterCity === "all" || prop.city === propertiesFilterCity;
+                      const matchesType = propertiesFilterType === "all" || prop.propertyType === propertiesFilterType;
+                      const matchesStatus = 
+                        propertiesFilterStatus === "all" ||
+                        (propertiesFilterStatus === "active" && prop.isActive !== false) ||
+                        (propertiesFilterStatus === "inactive" && prop.isActive === false);
+
+                      return matchesSearch && matchesCity && matchesType && matchesStatus;
+                    });
+
+                    if (filteredProperties.length === 0) {
+                      return (
+                        <Card>
+                          <CardContent className="py-12 text-center">
+                            <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                            <h3 className="font-bold text-lg mb-1">لا توجد عقارات</h3>
+                            <p className="text-muted-foreground text-sm">
+                              لم يتم العثور على عقارات بناءً على الفلاتر المحددة
+                            </p>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+
+                    if (propertiesViewMode === "map") {
+                      return (
+                        <Card>
+                          <CardContent className="p-0">
+                            <div className="h-[600px] w-full">
+                              <PropertyMap properties={filteredProperties as any[]} />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+
+                    return (
+                      <div className={propertiesViewMode === "grid" ? "grid gap-4" : "space-y-4"}>
+                        {filteredProperties.map((prop: any) => {
+                          return (
                     <Card key={prop.id}>
                       <CardContent className="p-4">
                         <div className="flex flex-wrap gap-2 mb-3 items-center justify-between">
@@ -1589,8 +1986,11 @@ export default function ProfilePage() {
                         )}
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">

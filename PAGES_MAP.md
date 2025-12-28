@@ -287,3 +287,4 @@ activeSection === "اسم_القسم"
 4. **الصفحات الثابتة:** الصفحات الثابتة (FAQ, Privacy, Terms) تستخدم نفس المكون `static-page.tsx` مع slug مختلف.
 
 
+

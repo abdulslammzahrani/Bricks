@@ -23,7 +23,9 @@ import {
   MessageCircle, 
   Home, 
   LogOut,
-  User as UserIcon 
+  User as UserIcon,
+  Calendar,
+  Target
 } from "lucide-react";
 
 interface MemberLayoutProps {
@@ -58,8 +60,10 @@ export default function MemberLayout({ children, activeTab }: MemberLayoutProps)
     { id: "home", label: "الرئيسية", icon: Home, href: "/" },
     { id: "preferences", label: "رغباتي", icon: Heart, href: "/profile?tab=preferences" },
     { id: "properties", label: "عروضي", icon: Building2, href: "/profile?tab=properties" },
-    { id: "matches", label: "المتطابقة", icon: Zap, href: "/profile?tab=matches" },
-    { id: "messages", label: "الرسائل", icon: MessageCircle, href: "/profile?tab=messages" },
+    { id: "matches", label: "المطابقات", icon: Zap, href: "/matches" },
+    { id: "messages", label: "الرسائل", icon: MessageCircle, href: "/messages" },
+    { id: "appointments", label: "المواعيد", icon: Calendar, href: "/appointments" },
+    { id: "crm", label: "CRM", icon: Target, href: "/crm" },
   ];
 
   const sidebarStyle = {

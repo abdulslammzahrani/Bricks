@@ -133,7 +133,7 @@ import { MatchBreakdownView } from "@/components/MatchBreakdownView";
 import type { User, BuyerPreference, Property, Match, ContactRequest, SendLog, StaticPage } from "@shared/schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { MatchCard, MatchCardCompact } from "@/components/MatchCard";
 import { MarketPulse, MarketPulseCompact } from "@/components/MarketPulse";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -397,7 +397,47 @@ const menuItems = [
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState("overview");
+  const [location] = useLocation();
+  
+  // Read section from URL hash on mount and when location changes
+  const getInitialSection = () => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && menuItems.some(item => item.id === hash)) {
+        return hash;
+      }
+    }
+    return "overview";
+  };
+  
+  const [activeSection, setActiveSection] = useState(getInitialSection);
+  
+  // Listen for hash changes and custom events
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && menuItems.some(item => item.id === hash)) {
+        setActiveSection(hash);
+      }
+    };
+    
+    const handleSectionChange = (event: CustomEvent) => {
+      if (event.detail?.section) {
+        setActiveSection(event.detail.section);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('admin-section-change', handleSectionChange as EventListener);
+    
+    // Check hash on mount
+    handleHashChange();
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('admin-section-change', handleSectionChange as EventListener);
+    };
+  }, []);
   const [selectedCity, setSelectedCity] = useState("جدة");
   const [searchQuery, setSearchQuery] = useState("");
   const [userFilter, setUserFilter] = useState<string>("all");

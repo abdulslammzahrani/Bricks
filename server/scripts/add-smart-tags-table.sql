@@ -24,3 +24,4 @@ CREATE INDEX IF NOT EXISTS idx_smart_tags_order ON smart_tags("order");
 -- Add unique constraint on property_type + tag combination
 CREATE UNIQUE INDEX IF NOT EXISTS idx_smart_tags_unique ON smart_tags(property_type, tag);
 
+

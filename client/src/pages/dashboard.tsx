@@ -1,15 +1,39 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { User, Home, Bell, Settings, LogOut, Lock, Building2, MapPin, Wallet, Clock, AlertTriangle } from "lucide-react";
+import { 
+  Bell, 
+  Lock, 
+  AlertTriangle, 
+  Search,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Download,
+  Plus,
+  PieChart as PieChartIcon,
+  BarChart3,
+  Menu,
+  FileCheck,
+  Handshake,
+  Target,
+  Home,
+  DollarSign,
+  Users,
+  Building2,
+  FileText
+} from "lucide-react";
+import { DashboardSidebar, DashboardSidebarContent } from "@/components/DashboardSidebar";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 
 interface UserData {
   id: string;
@@ -20,25 +44,38 @@ interface UserData {
   requiresPasswordReset: boolean;
 }
 
-interface BuyerPreference {
-  id: string;
-  city: string;
-  districts: string[];
-  propertyType: string;
-  budgetMin: number | null;
-  budgetMax: number | null;
-  paymentMethod: string | null;
-  isActive: boolean;
-  smartTags?: string[];
-  notes?: string | null;
-}
+// Sample data for charts
+const statusData = [
+  { name: "مكتمل", value: 30, color: "hsl(142, 76%, 36%)" },
+  { name: "قيد المعالجة", value: 45, color: "hsl(221, 83%, 53%)" },
+  { name: "معلق", value: 15, color: "hsl(32, 95%, 44%)" },
+  { name: "ملغي", value: 10, color: "hsl(0, 84%, 40%)" },
+];
+
+const revenueData = [
+  { month: "يناير", revenue: 200, deals: 5 },
+  { month: "فبراير", revenue: 300, deals: 8 },
+  { month: "مارس", revenue: 400, deals: 10 },
+  { month: "أبريل", revenue: 500, deals: 12 },
+  { month: "مايو", revenue: 600, deals: 15 },
+  { month: "يونيو", revenue: 700, deals: 18 },
+  { month: "يوليو", revenue: 800, deals: 20 },
+  { month: "أغسطس", revenue: 900, deals: 22 },
+  { month: "سبتمبر", revenue: 950, deals: 24 },
+  { month: "أكتوبر", revenue: 1000, deals: 25 },
+  { month: "نوفمبر", revenue: 1050, deals: 26 },
+  { month: "ديسمبر", revenue: 1100, deals: 28 },
+];
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedYear, setSelectedYear] = useState("2025");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const prevLocationRef = useRef<string | null>(null);
 
   // Use session-based auth via cookies (no localStorage)
   const userQuery = useQuery<{ user: UserData }>({
@@ -70,18 +107,42 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const preferencesQuery = useQuery<BuyerPreference[]>({
-    queryKey: ["/api/buyers", user?.id, "preferences"],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const res = await fetch(`/api/buyers/${user.id}/preferences`, {
-        credentials: "include",
-      });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!user?.id,
-  });
+  // Debug: Log mobile menu state changes
+  useEffect(() => {
+    console.log('Mobile menu state changed:', mobileMenuOpen);
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu when location changes (but not on initial mount)
+  useEffect(() => {
+    if (prevLocationRef.current !== null && prevLocationRef.current !== location) {
+      // Location actually changed, close menu if open
+      console.log('Location changed from', prevLocationRef.current, 'to', location);
+      if (mobileMenuOpen) {
+        console.log('Closing menu due to location change');
+        setMobileMenuOpen(false);
+      }
+    }
+    // Update prevLocationRef
+    prevLocationRef.current = location;
+  }, [location, mobileMenuOpen]);
+
+  // Fetch stats - using mock data for now
+  const kpiData = {
+    newClients: 89,
+    newClientsChange: -3,
+    propertiesSold: 142,
+    propertiesSoldChange: 8,
+    assetValue: 85.2,
+    assetValueChange: 18,
+    managedProperties: 248,
+    managedPropertiesChange: 12,
+  };
+
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/16d572c6-1305-46aa-bfbd-260998199616',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard.tsx:118',message:'KPI data loaded',data:{kpiData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  }, [kpiData]);
+  // #endregion
 
   const changePasswordMutation = useMutation({
     mutationFn: async ({ newPassword }: { newPassword: string }) => {
@@ -114,23 +175,6 @@ export default function Dashboard() {
     },
   });
 
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error("فشل تسجيل الخروج");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.clear();
-      navigate("/");
-    },
-  });
-
   const handlePasswordChange = () => {
     if (newPassword.length < 6) {
       toast({
@@ -151,27 +195,12 @@ export default function Dashboard() {
     changePasswordMutation.mutate({ newPassword });
   };
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
-
-  const formatBudget = (amount: number | null) => {
-    if (!amount) return "غير محدد";
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(1)} مليون ريال`;
-    }
-    return `${(amount / 1000).toFixed(0)} ألف ريال`;
-  };
-
-  const getPropertyTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      apartment: "شقة",
-      villa: "فيلا",
-      land: "أرض",
-      building: "عمارة",
-      duplex: "دبلكس",
-    };
-    return types[type] || type;
+  // Get current date in Arabic
+  const getCurrentDate = () => {
+    const date = new Date();
+    const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const dayName = days[date.getDay()];
+    return `${dayName}، ${date.toLocaleDateString("ar-SA")}`;
   };
 
   if (userQuery.isLoading) {
@@ -203,176 +232,377 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">بركس</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" data-testid="button-notifications">
-              <Bell className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" data-testid="button-settings">
-              <Settings className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="button-logout">
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-2" data-testid="text-welcome">
-            أهلاً {user.name.split(" ")[0]}
-          </h1>
-          <p className="text-muted-foreground">
-            هذه صفحتك الخاصة لمتابعة طلباتك والعقارات المناسبة
-          </p>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card data-testid="card-user-info">
-            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
-              <CardTitle className="text-lg">معلوماتك</CardTitle>
-              <User className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">الاسم:</span>
-                <span className="font-medium" data-testid="text-user-name">{user.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">الجوال:</span>
-                <span className="font-medium" data-testid="text-user-phone">{user.phone}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">الدور:</span>
-                <Badge variant="secondary" data-testid="badge-user-role">
-                  {user.role === "buyer" ? "مشتري" : user.role === "seller" ? "بائع" : "مستثمر"}
-                </Badge>
-              </div>
+    <div className="flex min-h-screen w-full overflow-x-hidden" dir="rtl">
+      <DashboardSidebar />
+      <main className="flex-1 flex flex-col bg-background lg:mr-64 w-full min-w-0">
+          {/* Header Bar */}
+          <header className="sticky top-0 z-50 bg-background border-b border-border w-full">
+            <div className="flex h-16 items-center gap-2 sm:gap-4 px-3 sm:px-6 w-full">
+              {/* Mobile: Hamburger Menu */}
               <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-4"
-                onClick={() => setShowPasswordModal(true)}
-                data-testid="button-change-password"
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden h-9 w-9"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('Hamburger clicked, opening menu, current state:', mobileMenuOpen);
+                  setMobileMenuOpen(true);
+                }}
+                type="button"
               >
-                <Lock className="h-4 w-4 ml-2" />
-                تغيير كلمة المرور
+                <Menu className="h-5 w-5" />
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2" data-testid="card-preferences">
-            <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
-              <div>
-                <CardTitle className="text-lg">طلباتك</CardTitle>
-                <CardDescription>العقارات التي تبحث عنها</CardDescription>
+              
+              {/* Mobile: Logo */}
+              <div className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full bg-primary">
+                <span className="text-white font-bold text-sm">P</span>
               </div>
-              <Home className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {preferencesQuery.isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : preferencesQuery.data && preferencesQuery.data.length > 0 ? (
-                <div className="space-y-4">
-                  {preferencesQuery.data.map((pref) => (
-                    <div 
-                      key={pref.id} 
-                      className="border rounded-md p-4 space-y-3"
-                      data-testid={`preference-${pref.id}`}
-                    >
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <Badge>{getPropertyTypeLabel(pref.propertyType)}</Badge>
-                          {pref.isActive ? (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">نشط</Badge>
-                          ) : (
-                            <Badge variant="secondary">متوقف</Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="grid gap-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{pref.city}</span>
-                          {pref.districts.length > 0 && (
-                            <span className="text-muted-foreground">({pref.districts.join("، ")})</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {pref.budgetMin && pref.budgetMax 
-                              ? `من ${formatBudget(pref.budgetMin)} إلى ${formatBudget(pref.budgetMax)}`
-                              : pref.budgetMax 
-                                ? `حتى ${formatBudget(pref.budgetMax)}`
-                                : "غير محدد"}
-                          </span>
-                        </div>
-                        {pref.paymentMethod && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>{pref.paymentMethod === "cash" ? "كاش" : "تمويل بنكي"}</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Smart Tags */}
-                      {(pref.smartTags && Array.isArray(pref.smartTags) && pref.smartTags.length > 0) || (pref as any).smart_tags ? (
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t">
-                          {((pref.smartTags && Array.isArray(pref.smartTags)) ? pref.smartTags : ((pref as any).smart_tags || [])).map((tag: string, idx: number) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : null}
-                      
-                      {/* Notes */}
-                      {(pref.notes && pref.notes.trim()) || (pref as any).notes ? (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground font-medium mb-1">ملاحظات:</p>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{pref.notes || (pref as any).notes || ""}</p>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Home className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>لا توجد طلبات بعد</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
-        <Card className="mt-6" data-testid="card-matches">
-          <CardHeader>
-            <CardTitle>العقارات المطابقة</CardTitle>
-            <CardDescription>عقارات تناسب متطلباتك</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12 text-muted-foreground">
-              <Building2 className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <p className="text-lg mb-2">نبحث لك عن عقارات مناسبة</p>
-              <p className="text-sm">سنرسل لك إشعار عند توفر عقارات تطابق متطلباتك</p>
+              {/* Search Bar */}
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="ابحث عن العقارات، العملاء، المعاملات..."
+                    className="pr-10 w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Right Side Actions */}
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                {/* Desktop: Date */}
+                <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden md:inline">{getCurrentDate()}</span>
+                </div>
+                
+                {/* Notifications */}
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                    3
+                  </span>
+                </Button>
+
+                {/* Desktop: User Avatar */}
+                <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary">
+                  <span className="text-white font-bold text-sm">P</span>
+                </div>
+
+                {/* Desktop: Add Property */}
+                <Button className="bg-primary hover:bg-primary/90 hidden sm:inline-flex">
+                  <Plus className="h-4 w-4 mr-2" />
+                  إضافة عقار
+                </Button>
+
+                {/* Desktop: Export */}
+                <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                  <Download className="h-4 w-4 mr-2" />
+                  <span className="hidden lg:inline">تصدير</span>
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </main>
+          </header>
 
+          {/* Main Content */}
+          <div className="flex-1 overflow-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 pb-20 lg:pb-4 w-full">
+            <div className="w-full max-w-full lg:max-w-[800px] lg:mx-auto">
+              {/* Welcome Section */}
+              <div className="mb-4 sm:mb-6 lg:mb-8">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1 sm:mb-2">مرحباً بك في بركس 👋</h1>
+                <p className="text-xs sm:text-sm lg:text-base text-muted-foreground">
+                  إليك نظرة عامة على أداء عقاراتك هذا الشهر
+                </p>
+              </div>
+
+            {/* KPI Cards - Horizontal Scroll on mobile (2 visible), Grid on desktop (4 columns) */}
+            <div className="mb-6 sm:mb-8">
+              {/* Mobile: Horizontal Scroll Layout (2 visible, rest scrollable) */}
+              {/* #region agent log */}
+              {(() => {
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+                fetch('http://127.0.0.1:7242/ingest/16d572c6-1305-46aa-bfbd-260998199616',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard.tsx:285',message:'Rendering KPI cards',data:{isMobile,windowWidth:typeof window !== 'undefined' ? window.innerWidth : null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                return null;
+              })()}
+              {/* #endregion */}
+              <div className="lg:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory -mx-3 sm:-mx-4">
+                <div className="flex gap-3 sm:gap-4 px-3 sm:px-4">
+                  {/* العقارات المباعة - الأول */}
+                  <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up flex-shrink-0 w-[calc(50vw-18px)] sm:w-[280px] snap-start" style={{ animationDelay: "0.1s" }}>
+                    <CardContent className="p-3 sm:p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                            <Home className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          </div>
+                          <span className="text-xs sm:text-sm text-gray-600 font-medium">العقارات المباعة</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs sm:text-sm text-green-500">
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>+{kpiData.propertiesSoldChange}%</span>
+                        </div>
+                      </div>
+                      <p className="text-3xl sm:text-4xl font-bold text-center">{kpiData.propertiesSold}</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* عملاء جدد - الثاني */}
+                  <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up flex-shrink-0 w-[calc(50vw-18px)] sm:w-[240px] snap-start" style={{ animationDelay: "0.2s" }}>
+                    <CardContent className="p-3 sm:p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${kpiData.newClientsChange < 0 ? 'bg-red-500' : 'bg-green-500'}`}>
+                            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          </div>
+                          <span className="text-xs sm:text-sm text-gray-600 font-medium">عملاء جدد</span>
+                        </div>
+                        <div className={`flex items-center gap-1 text-xs sm:text-sm ${kpiData.newClientsChange < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                          {kpiData.newClientsChange < 0 ? (
+                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                          ) : (
+                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          )}
+                          <span>{kpiData.newClientsChange < 0 ? '' : '+'}{Math.abs(kpiData.newClientsChange)}%</span>
+                        </div>
+                      </div>
+                      <p className="text-3xl sm:text-4xl font-bold text-center">{kpiData.newClients}</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* قيمة الأصول - الثالث */}
+                  <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up flex-shrink-0 w-[calc(50vw-18px)] sm:w-[240px] snap-start" style={{ animationDelay: "0.3s" }}>
+                    <CardContent className="p-3 sm:p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          </div>
+                          <span className="text-xs sm:text-sm text-gray-600 font-medium">قيمة الأصول</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs sm:text-sm text-green-500">
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>+{kpiData.assetValueChange}%</span>
+                        </div>
+                      </div>
+                      <p className="text-3xl sm:text-4xl font-bold text-center">{kpiData.assetValue} م</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* العقارات المدارة - الرابع */}
+                  <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up flex-shrink-0 w-[calc(50vw-18px)] sm:w-[240px] snap-start" style={{ animationDelay: "0.4s" }}>
+                    <CardContent className="p-3 sm:p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                          </div>
+                          <span className="text-xs sm:text-sm text-gray-600 font-medium">العقارات المدارة</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs sm:text-sm text-green-500">
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span>+{kpiData.managedPropertiesChange}%</span>
+                        </div>
+                      </div>
+                      <p className="text-3xl sm:text-4xl font-bold text-center">{kpiData.managedProperties}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              {/* Desktop: Grid Layout (3 columns - all visible) */}
+              <div className="hidden lg:grid lg:grid-cols-3 gap-4">
+                {/* العقارات المباعة - الأول */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+                  <CardContent className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                          <Home className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-sm text-gray-600 font-medium">العقارات المباعة</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-green-500">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>+{kpiData.propertiesSoldChange}%</span>
+                      </div>
+                    </div>
+                    <p className="text-4xl font-bold text-center">{kpiData.propertiesSold}</p>
+                  </CardContent>
+                </Card>
+
+                {/* عملاء جدد - الثاني */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+                  <CardContent className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${kpiData.newClientsChange < 0 ? 'bg-red-500' : 'bg-green-500'}`}>
+                          <Users className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-sm text-gray-600 font-medium">عملاء جدد</span>
+                      </div>
+                      <div className={`flex items-center gap-1 text-sm ${kpiData.newClientsChange < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                        {kpiData.newClientsChange < 0 ? (
+                          <TrendingDown className="h-4 w-4" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4" />
+                        )}
+                        <span>{kpiData.newClientsChange < 0 ? '' : '+'}{Math.abs(kpiData.newClientsChange)}%</span>
+                      </div>
+                    </div>
+                    <p className="text-4xl font-bold text-center">{kpiData.newClients}</p>
+                  </CardContent>
+                </Card>
+
+                {/* قيمة الأصول - الثالث */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
+                  <CardContent className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                          <DollarSign className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-sm text-gray-600 font-medium">قيمة الأصول</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-green-500">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>+{kpiData.assetValueChange}%</span>
+                      </div>
+                    </div>
+                    <p className="text-4xl font-bold text-center">{kpiData.assetValue} م</p>
+                  </CardContent>
+                </Card>
+
+                {/* العقارات المدارة - الرابع */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+                  <CardContent className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-5 w-5 text-white" />
+                        </div>
+                        <span className="text-sm text-gray-600 font-medium">العقارات المدارة</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-green-500">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>+{kpiData.managedPropertiesChange}%</span>
+                      </div>
+                    </div>
+                    <p className="text-4xl font-bold text-center">{kpiData.managedProperties}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+                {/* Status Analysis Chart */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl">
+                      <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      تحليل الحالة
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-3 sm:px-6">
+                    <div className="h-[220px] sm:h-[250px] lg:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={60}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {statusData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {statusData.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-xs sm:text-sm">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span>{item.name}</span>
+                          </div>
+                          <span className="font-medium">{item.value}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Revenue Generation Chart */}
+                <Card className="hover:shadow-md transition-all duration-200 animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl">
+                        <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                        توليد الإيرادات
+                      </CardTitle>
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-[90px] sm:w-[100px] h-7 sm:h-8 text-xs sm:text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2025">2025</SelectItem>
+                          <SelectItem value="2024">2024</SelectItem>
+                          <SelectItem value="2023">2023</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-3 sm:px-6">
+                    <div className="h-[220px] sm:h-[250px] lg:h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={revenueData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 10 }}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }}
+                            domain={[0, 1200]}
+                          />
+                          <RechartsTooltip />
+                          <Bar dataKey="revenue" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="deals" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm">الإيرادات (ألف ريال)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm">الصفقات</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+      {/* Password Change Dialog */}
       <Dialog open={showPasswordModal} onOpenChange={(open) => {
         if (!user?.requiresPasswordReset) {
           setShowPasswordModal(open);
@@ -442,6 +672,99 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      </main>
+
+      {/* Bottom Navigation Bar - Mobile Only */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-[100] safe-area-inset-bottom">
+        <div className="flex items-center justify-around h-16 px-2 pb-2">
+          <button
+            onClick={() => navigate("/deals")}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors py-1 ${
+              location === "/deals" 
+                ? "text-emerald-600" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <FileCheck className={`h-5 w-5 ${location === "/deals" ? "text-emerald-600" : "text-gray-500"}`} />
+            <span className="text-xs font-medium">الصفقات</span>
+          </button>
+          
+          <button
+            onClick={() => navigate("/matches")}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors py-1 ${
+              location === "/matches" 
+                ? "text-emerald-600" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Handshake className={`h-5 w-5 ${location === "/matches" ? "text-emerald-600" : "text-gray-500"}`} />
+            <span className="text-xs font-medium">المطابقات</span>
+          </button>
+          
+          <button
+            onClick={() => navigate("/crm")}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors py-1 ${
+              location === "/crm" 
+                ? "text-emerald-600" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Target className={`h-5 w-5 ${location === "/crm" ? "text-emerald-600" : "text-gray-500"}`} />
+            <span className="text-xs font-medium">CRM</span>
+          </button>
+          
+          <button
+            onClick={() => navigate("/ads")}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors py-1 relative ${
+              location === "/ads" 
+                ? "text-emerald-600" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <div className={`absolute top-0 w-10 h-10 rounded-full ${location === "/ads" ? "bg-emerald-50" : ""}`}></div>
+            <Bell className={`h-5 w-5 relative z-10 ${location === "/ads" ? "text-emerald-600" : "text-gray-500"}`} />
+            <span className={`text-xs font-medium relative z-10 ${location === "/ads" ? "text-emerald-600" : "text-gray-500"}`}>الإعلانات</span>
+          </button>
+          
+          <button
+            onClick={() => navigate("/dashboard")}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors py-1 ${
+              location === "/dashboard" || (typeof location === 'string' && location.startsWith("/dashboard"))
+                ? "text-emerald-600" 
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Home className={`h-5 w-5 ${location === "/dashboard" || (typeof location === 'string' && location.startsWith("/dashboard")) ? "text-emerald-600" : "text-gray-500"}`} />
+            <span className="text-xs font-medium">الرئيسية</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Menu Sheet */}
+      <Sheet 
+        open={mobileMenuOpen} 
+        onOpenChange={(open) => {
+          console.log('Sheet onOpenChange called:', open, 'current state:', mobileMenuOpen);
+          setMobileMenuOpen(open);
+        }}
+        modal={true}
+      >
+        <SheetContent 
+          side="right" 
+          className="w-64 p-0 z-[9999]" 
+          dir="rtl"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>القائمة</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col h-full bg-white">
+            <DashboardSidebarContent onNavigate={() => {
+              console.log('Closing menu from navigation');
+              setMobileMenuOpen(false);
+            }} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
